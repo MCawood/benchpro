@@ -1,0 +1,225 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Architecture Documentation &mdash; BenchPRO 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Project Structure" href="project_structure.html" />
+    <link rel="prev" title="Welcome to BenchPRO’s Documentation" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            BenchPRO
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Architecture Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="project_structure.html">Project Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="domain_models.html">Domain Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="executors.html">Executor System</a></li>
+<li class="toctree-l2"><a class="reference internal" href="validation.html">Validation System</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#core-concepts">Core Concepts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#layer-organization">Layer Organization</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#domain-layer-benchpro-core-domain">Domain Layer (<code class="docutils literal notranslate"><span class="pre">benchpro.core.domain</span></code>)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#infrastructure-layer-benchpro-core-infrastructure">Infrastructure Layer (<code class="docutils literal notranslate"><span class="pre">benchpro.core.infrastructure</span></code>)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ports-layer-benchpro-core-ports">Ports Layer (<code class="docutils literal notranslate"><span class="pre">benchpro.core.ports</span></code>)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#services-layer-benchpro-core-services">Services Layer (<code class="docutils literal notranslate"><span class="pre">benchpro.core.services</span></code>)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#design-principles">Design Principles</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guides/index.html">User Guides</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">BenchPRO</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Architecture Documentation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/architecture/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="architecture-documentation">
+<h1>Architecture Documentation<a class="headerlink" href="#architecture-documentation" title="Link to this heading"></a></h1>
+<p>This section provides detailed information about BenchPRO’s architecture and design decisions.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="project_structure.html">Project Structure</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="project_structure.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="project_structure.html#directory-structure">Directory Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="project_structure.html#key-components">Key Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="project_structure.html#template-organization">Template Organization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="project_structure.html#development-guidelines">Development Guidelines</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="domain_models.html">Domain Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="domain_models.html#task-model">Task Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="domain_models.html#job-model">Job Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="domain_models.html#state-management">State Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="domain_models.html#resource-management">Resource Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="domain_models.html#usage-example">Usage Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="executors.html">Executor System</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="executors.html#executor-interface">Executor Interface</a></li>
+<li class="toctree-l2"><a class="reference internal" href="executors.html#local-executor">Local Executor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="executors.html#usage-example">Usage Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="executors.html#future-extensions">Future Extensions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="validation.html">Validation System</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="validation.html#core-validators">Core Validators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="validation.html#usage-in-models">Usage in Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="validation.html#validation-process">Validation Process</a></li>
+<li class="toctree-l2"><a class="reference internal" href="validation.html#error-handling">Error Handling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="validation.html#best-practices">Best Practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="validation.html#custom-validators">Custom Validators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="validation.html#future-enhancements">Future Enhancements</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<section id="core-concepts">
+<h2>Core Concepts<a class="headerlink" href="#core-concepts" title="Link to this heading"></a></h2>
+<p>BenchPRO is built around several key architectural concepts:</p>
+<ol class="arabic simple">
+<li><p><strong>Domain-Driven Design</strong>: The architecture is organized around business concepts and domain logic.</p></li>
+<li><p><strong>Clean Architecture</strong>: Clear separation between domain logic and technical implementations.</p></li>
+<li><p><strong>Ports and Adapters</strong>: Flexible integration with different execution environments.</p></li>
+<li><p><strong>Asynchronous Execution</strong>: Non-blocking operations for improved performance.</p></li>
+</ol>
+</section>
+<section id="layer-organization">
+<h2>Layer Organization<a class="headerlink" href="#layer-organization" title="Link to this heading"></a></h2>
+<p>The codebase is organized into the following layers:</p>
+<section id="domain-layer-benchpro-core-domain">
+<h3>Domain Layer (<code class="docutils literal notranslate"><span class="pre">benchpro.core.domain</span></code>)<a class="headerlink" href="#domain-layer-benchpro-core-domain" title="Link to this heading"></a></h3>
+<p>Contains the core business logic and entities:</p>
+<ul class="simple">
+<li><p>Task and Job models</p></li>
+<li><p>State management</p></li>
+<li><p>Resource specifications</p></li>
+<li><p>Domain events and validation rules</p></li>
+</ul>
+</section>
+<section id="infrastructure-layer-benchpro-core-infrastructure">
+<h3>Infrastructure Layer (<code class="docutils literal notranslate"><span class="pre">benchpro.core.infrastructure</span></code>)<a class="headerlink" href="#infrastructure-layer-benchpro-core-infrastructure" title="Link to this heading"></a></h3>
+<p>Implements technical concerns:</p>
+<ul class="simple">
+<li><p>Local executor implementation</p></li>
+<li><p>Resource monitoring</p></li>
+<li><p>Process management</p></li>
+<li><p>File system operations</p></li>
+</ul>
+</section>
+<section id="ports-layer-benchpro-core-ports">
+<h3>Ports Layer (<code class="docutils literal notranslate"><span class="pre">benchpro.core.ports</span></code>)<a class="headerlink" href="#ports-layer-benchpro-core-ports" title="Link to this heading"></a></h3>
+<p>Defines interfaces and protocols:</p>
+<ul class="simple">
+<li><p>Executor interface</p></li>
+<li><p>Resource management protocols</p></li>
+<li><p>Error handling contracts</p></li>
+</ul>
+</section>
+<section id="services-layer-benchpro-core-services">
+<h3>Services Layer (<code class="docutils literal notranslate"><span class="pre">benchpro.core.services</span></code>)<a class="headerlink" href="#services-layer-benchpro-core-services" title="Link to this heading"></a></h3>
+<p>Implements application use cases:</p>
+<ul class="simple">
+<li><p>Job submission and management</p></li>
+<li><p>Resource allocation</p></li>
+<li><p>Task scheduling</p></li>
+</ul>
+</section>
+</section>
+<section id="design-principles">
+<h2>Design Principles<a class="headerlink" href="#design-principles" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Separation of Concerns</strong>: Each component has a single, well-defined responsibility.</p></li>
+<li><p><strong>Interface Segregation</strong>: Clean interfaces for different types of operations.</p></li>
+<li><p><strong>Dependency Inversion</strong>: High-level modules don’t depend on low-level implementations.</p></li>
+<li><p><strong>Single Responsibility</strong>: Each class and module has one reason to change.</p></li>
+</ol>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="Welcome to BenchPRO’s Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="project_structure.html" class="btn btn-neutral float-right" title="Project Structure" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, BenchPRO Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,384 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Executors &mdash; BenchPRO 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Validation" href="validation.html" />
+    <link rel="prev" title="Domain Models" href="models.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            BenchPRO
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../architecture/index.html">Architecture Documentation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="core.html">Core API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html">Domain Models</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Executors</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#executor-interface">Executor Interface</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.ports.executor.ExecutorError"><code class="docutils literal notranslate"><span class="pre">ExecutorError</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.ports.executor.ResourceError"><code class="docutils literal notranslate"><span class="pre">ResourceError</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.ports.executor.ExecutionError"><code class="docutils literal notranslate"><span class="pre">ExecutionError</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.ports.executor.Executor"><code class="docutils literal notranslate"><span class="pre">Executor</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#local-executor">Local Executor</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.infrastructure.local_executor.LocalExecutor"><code class="docutils literal notranslate"><span class="pre">LocalExecutor</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#future-executors">Future Executors</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="validation.html">Validation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#core-api">Core API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#domain-models">Domain Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#executors">Executors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#validation">Validation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../guides/index.html">User Guides</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">BenchPRO</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">API Reference</a></li>
+      <li class="breadcrumb-item active">Executors</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/executors.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="executors">
+<h1>Executors<a class="headerlink" href="#executors" title="Link to this heading"></a></h1>
+<p>This section covers the executor system in BenchPRO.</p>
+<section id="executor-interface">
+<h2>Executor Interface<a class="headerlink" href="#executor-interface" title="Link to this heading"></a></h2>
+<p id="module-benchpro.core.ports.executor">Executor interface for BenchPRO.</p>
+<dl class="py exception">
+<dt class="sig sig-object py" id="benchpro.core.ports.executor.ExecutorError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">benchpro.core.ports.executor.</span></span><span class="sig-name descname"><span class="pre">ExecutorError</span></span><a class="reference internal" href="../_modules/benchpro/core/ports/executor.html#ExecutorError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.ports.executor.ExecutorError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<p>Base class for executor-related errors.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="benchpro.core.ports.executor.ResourceError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">benchpro.core.ports.executor.</span></span><span class="sig-name descname"><span class="pre">ResourceError</span></span><a class="reference internal" href="../_modules/benchpro/core/ports/executor.html#ResourceError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.ports.executor.ResourceError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="index.html#benchpro.core.ports.executor.ExecutorError" title="benchpro.core.ports.executor.ExecutorError"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExecutorError</span></code></a></p>
+<p>Error related to resource allocation or monitoring.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="benchpro.core.ports.executor.ExecutionError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">benchpro.core.ports.executor.</span></span><span class="sig-name descname"><span class="pre">ExecutionError</span></span><a class="reference internal" href="../_modules/benchpro/core/ports/executor.html#ExecutionError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.ports.executor.ExecutionError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="index.html#benchpro.core.ports.executor.ExecutorError" title="benchpro.core.ports.executor.ExecutorError"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExecutorError</span></code></a></p>
+<p>Error during task/job execution.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="benchpro.core.ports.executor.Executor">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">benchpro.core.ports.executor.</span></span><span class="sig-name descname"><span class="pre">Executor</span></span><a class="reference internal" href="../_modules/benchpro/core/ports/executor.html#Executor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.ports.executor.Executor" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></a></p>
+<p>Abstract base class for job executors.</p>
+<p>An executor is responsible for:
+1. Validating resource requirements
+2. Managing task/job execution
+3. Monitoring resource usage
+4. Handling execution errors</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.ports.executor.Executor.validate_resources">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">validate_resources</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/benchpro/core/ports/executor.html#Executor.validate_resources"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.ports.executor.Executor.validate_resources" title="Link to this definition"></a></dt>
+<dd><p>Validate that required resources are available.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>job</strong> (<a class="reference internal" href="models.html#benchpro.core.domain.job.Job" title="benchpro.core.domain.job.Job"><em>Job</em></a>) – Job to validate resources for</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="index.html#benchpro.core.ports.executor.ResourceError" title="benchpro.core.ports.executor.ResourceError"><strong>ResourceError</strong></a> – If resources are not available or invalid</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.ports.executor.Executor.submit_job">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">submit_job</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/benchpro/core/ports/executor.html#Executor.submit_job"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.ports.executor.Executor.submit_job" title="Link to this definition"></a></dt>
+<dd><p>Submit a job for execution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>job</strong> (<a class="reference internal" href="models.html#benchpro.core.domain.job.Job" title="benchpro.core.domain.job.Job"><em>Job</em></a>) – Job to submit</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="index.html#benchpro.core.ports.executor.ExecutionError" title="benchpro.core.ports.executor.ExecutionError"><strong>ExecutionError</strong></a> – If job submission fails</p></li>
+<li><p><a class="reference internal" href="index.html#benchpro.core.ports.executor.ResourceError" title="benchpro.core.ports.executor.ResourceError"><strong>ResourceError</strong></a> – If required resources are not available</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.ports.executor.Executor.cancel_job">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">cancel_job</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/benchpro/core/ports/executor.html#Executor.cancel_job"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.ports.executor.Executor.cancel_job" title="Link to this definition"></a></dt>
+<dd><p>Cancel a running job.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>job</strong> (<a class="reference internal" href="models.html#benchpro.core.domain.job.Job" title="benchpro.core.domain.job.Job"><em>Job</em></a>) – Job to cancel</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="index.html#benchpro.core.ports.executor.ExecutionError" title="benchpro.core.ports.executor.ExecutionError"><strong>ExecutionError</strong></a> – If job cancellation fails</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.ports.executor.Executor.get_job_status">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_job_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/benchpro/core/ports/executor.html#Executor.get_job_status"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.ports.executor.Executor.get_job_status" title="Link to this definition"></a></dt>
+<dd><p>Get current status of a job.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>job</strong> (<a class="reference internal" href="models.html#benchpro.core.domain.job.Job" title="benchpro.core.domain.job.Job"><em>Job</em></a>) – Job to get status for</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Dictionary with status information</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="index.html#benchpro.core.ports.executor.ExecutionError" title="benchpro.core.ports.executor.ExecutionError"><strong>ExecutionError</strong></a> – If status check fails</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.13)"><em>Dict</em></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)">str</a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)">str</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.ports.executor.Executor.get_resource_usage">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_resource_usage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/benchpro/core/ports/executor.html#Executor.get_resource_usage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.ports.executor.Executor.get_resource_usage" title="Link to this definition"></a></dt>
+<dd><p>Get current resource usage of a job.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>job</strong> (<a class="reference internal" href="models.html#benchpro.core.domain.job.Job" title="benchpro.core.domain.job.Job"><em>Job</em></a>) – Job to get resource usage for</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Dictionary with resource usage metrics</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="index.html#benchpro.core.ports.executor.ExecutionError" title="benchpro.core.ports.executor.ExecutionError"><strong>ExecutionError</strong></a> – If resource check fails</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.13)"><em>Dict</em></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)">str</a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)">float</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.ports.executor.Executor.cleanup_job">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">cleanup_job</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/benchpro/core/ports/executor.html#Executor.cleanup_job"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.ports.executor.Executor.cleanup_job" title="Link to this definition"></a></dt>
+<dd><p>Clean up resources after job completion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>job</strong> (<a class="reference internal" href="models.html#benchpro.core.domain.job.Job" title="benchpro.core.domain.job.Job"><em>Job</em></a>) – Job to clean up after</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="index.html#benchpro.core.ports.executor.ExecutionError" title="benchpro.core.ports.executor.ExecutionError"><strong>ExecutionError</strong></a> – If cleanup fails</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="local-executor">
+<h2>Local Executor<a class="headerlink" href="#local-executor" title="Link to this heading"></a></h2>
+<p id="module-benchpro.core.infrastructure.local_executor">Local executor implementation.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="benchpro.core.infrastructure.local_executor.LocalExecutor">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">benchpro.core.infrastructure.local_executor.</span></span><span class="sig-name descname"><span class="pre">LocalExecutor</span></span><a class="reference internal" href="../_modules/benchpro/core/infrastructure/local_executor.html#LocalExecutor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.infrastructure.local_executor.LocalExecutor" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="index.html#benchpro.core.ports.executor.Executor" title="benchpro.core.ports.executor.Executor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Executor</span></code></a></p>
+<p>Executes jobs on the local machine.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.infrastructure.local_executor.LocalExecutor.validate_resources">
+<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">validate_resources</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/benchpro/core/infrastructure/local_executor.html#LocalExecutor.validate_resources"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.infrastructure.local_executor.LocalExecutor.validate_resources" title="Link to this definition"></a></dt>
+<dd><p>Validate that the local machine has sufficient resources for the job.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>job</strong> (<a class="reference internal" href="models.html#benchpro.core.domain.job.Job" title="benchpro.core.domain.job.Job"><em>Job</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.infrastructure.local_executor.LocalExecutor.submit_job">
+<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">submit_job</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/benchpro/core/infrastructure/local_executor.html#LocalExecutor.submit_job"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.infrastructure.local_executor.LocalExecutor.submit_job" title="Link to this definition"></a></dt>
+<dd><p>Submit a job for execution on the local machine.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>job</strong> (<a class="reference internal" href="models.html#benchpro.core.domain.job.Job" title="benchpro.core.domain.job.Job"><em>Job</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.infrastructure.local_executor.LocalExecutor.cancel_job">
+<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">cancel_job</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/benchpro/core/infrastructure/local_executor.html#LocalExecutor.cancel_job"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.infrastructure.local_executor.LocalExecutor.cancel_job" title="Link to this definition"></a></dt>
+<dd><p>Cancel a running job.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>job</strong> (<a class="reference internal" href="models.html#benchpro.core.domain.job.Job" title="benchpro.core.domain.job.Job"><em>Job</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.infrastructure.local_executor.LocalExecutor.get_job_status">
+<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_job_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/benchpro/core/infrastructure/local_executor.html#LocalExecutor.get_job_status"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.infrastructure.local_executor.LocalExecutor.get_job_status" title="Link to this definition"></a></dt>
+<dd><p>Get the current status of a job.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>job</strong> (<a class="reference internal" href="models.html#benchpro.core.domain.job.Job" title="benchpro.core.domain.job.Job"><em>Job</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.13)"><em>Dict</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.infrastructure.local_executor.LocalExecutor.get_resource_usage">
+<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_resource_usage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/benchpro/core/infrastructure/local_executor.html#LocalExecutor.get_resource_usage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.infrastructure.local_executor.LocalExecutor.get_resource_usage" title="Link to this definition"></a></dt>
+<dd><p>Get the current resource usage of a job.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>job</strong> (<a class="reference internal" href="models.html#benchpro.core.domain.job.Job" title="benchpro.core.domain.job.Job"><em>Job</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.13)"><em>Dict</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.infrastructure.local_executor.LocalExecutor.cleanup_job">
+<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">cleanup_job</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/benchpro/core/infrastructure/local_executor.html#LocalExecutor.cleanup_job"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.infrastructure.local_executor.LocalExecutor.cleanup_job" title="Link to this definition"></a></dt>
+<dd><p>Clean up any resources associated with a job.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>job</strong> (<a class="reference internal" href="models.html#benchpro.core.domain.job.Job" title="benchpro.core.domain.job.Job"><em>Job</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="future-executors">
+<h2>Future Executors<a class="headerlink" href="#future-executors" title="Link to this heading"></a></h2>
+<p>Additional executors (e.g., SLURM, AWS Batch) will be documented here as they are implemented.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="models.html" class="btn btn-neutral float-left" title="Domain Models" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="validation.html" class="btn btn-neutral float-right" title="Validation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, BenchPRO Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

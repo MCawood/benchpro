@@ -1,0 +1,21 @@
+name: hello_world
+version: "1.0.0"
+type: application
+
+description: |
+  A simple Hello World application that demonstrates the basic build profile structure.
+
+build:
+  language: c
+  compiler: gcc
+  binary:
+    directory: bin
+    executable: hello_world
+
+source:
+  files:
+    - hello_world.c
+
+variables:
+  MESSAGE: "Hello from BenchPro!"
+  REPEAT_COUNT: 1 

@@ -1,0 +1,30 @@
+#!/bin/bash
+#
+# Build template for matrix_mult application
+
+set -e  # Exit on error
+
+echo "Building matrix_mult application..."
+
+# Setup build environment
+BUILD_DIR="{{ working_dir }}"
+INSTALL_DIR="{{ install_dir }}"
+
+cd "${BUILD_DIR}"
+
+# Export build variables
+export MATRIX_SIZE="{{ variables.MATRIX_SIZE }}"
+export USE_PARALLEL="{{ variables.USE_PARALLEL }}"
+export NUM_THREADS="{{ variables.NUM_THREADS }}"
+export BLOCK_SIZE="{{ variables.BLOCK_SIZE }}"
+
+# Compile
+echo "Compiling with {{ build.compiler }}..."
+gcc {{ build.optimization }} -fopenmp -o {{ build.binary.executable }} matrix_mult.c -lm
+
+# Install
+echo "Installing to ${INSTALL_DIR}..."
+mkdir -p ${INSTALL_DIR}/{{ build.binary.directory }}
+cp {{ build.binary.executable }} ${INSTALL_DIR}/{{ build.binary.directory }}/
+
+echo "Build completed successfully!"

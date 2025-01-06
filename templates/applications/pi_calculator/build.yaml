@@ -1,0 +1,22 @@
+name: pi_calculator
+version: "1.0.0"
+type: application
+
+description: |
+  A Monte Carlo π calculator that demonstrates a simple numerical computation.
+
+build:
+  language: c++
+  compiler: g++
+  optimization: -O2
+  binary:
+    directory: bin
+    executable: calc_pi
+
+source:
+  files:
+    - calc_pi.cpp
+
+variables:
+  NUM_POINTS: "1000000"
+  NUM_THREADS: "1" 

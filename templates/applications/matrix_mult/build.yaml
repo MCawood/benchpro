@@ -1,0 +1,26 @@
+name: matrix_mult
+version: "1.0.0"
+type: application
+
+description: |
+  A matrix multiplication benchmark that demonstrates CPU performance and memory bandwidth.
+  Performs multiplication of two matrices of configurable size using different algorithms.
+
+build:
+  language: c
+  compiler: gcc
+  binary:
+    directory: bin
+    executable: matrix_mult
+
+source:
+  files:
+    - matrix_mult.c
+    - matrix_ops.h
+    - matrix_ops.c
+
+variables:
+  MATRIX_SIZE: 1024  # Default matrix size
+  ALGORITHM: "standard"  # Can be "standard", "blocked", or "strassen"
+  BLOCK_SIZE: 32  # Block size for blocked algorithm
+  NUM_THREADS: 1  # Number of threads for parallel execution 

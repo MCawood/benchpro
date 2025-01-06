@@ -1,0 +1,28 @@
+#!/bin/bash
+#
+# Build template for hello_world application
+
+set -e  # Exit on error
+
+echo "Building hello_world application..."
+
+# Setup build environment
+BUILD_DIR="{{ working_dir }}"
+INSTALL_DIR="{{ install_dir }}"
+
+cd "${BUILD_DIR}"
+
+# Export build variables
+export MESSAGE="{{ variables.MESSAGE }}"
+export REPEAT_COUNT="{{ variables.REPEAT_COUNT }}"
+
+# Compile
+echo "Compiling with {{ build.compiler }}..."
+gcc -o {{ build.binary.executable }} hello_world.c
+
+# Install
+echo "Installing to ${INSTALL_DIR}..."
+mkdir -p ${INSTALL_DIR}/{{ build.binary.directory }}
+cp {{ build.binary.executable }} ${INSTALL_DIR}/{{ build.binary.directory }}/
+
+echo "Build completed successfully!" 

@@ -1,0 +1,28 @@
+#!/bin/bash
+#
+# Build template for pi_calculator application
+
+set -e  # Exit on error
+
+echo "Building pi_calculator application..."
+
+# Setup build environment
+BUILD_DIR="{{ working_dir }}"
+INSTALL_DIR="{{ install_dir }}"
+
+cd "${BUILD_DIR}"
+
+# Export build variables
+export NUM_POINTS="{{ variables.NUM_POINTS }}"
+export NUM_THREADS="{{ variables.NUM_THREADS }}"
+
+# Compile
+echo "Compiling with {{ build.compiler }}..."
+g++ {{ build.optimization }} -fopenmp -o {{ build.binary.executable }} calc_pi.cpp
+
+# Install
+echo "Installing to ${INSTALL_DIR}..."
+mkdir -p ${INSTALL_DIR}/{{ build.binary.directory }}
+cp {{ build.binary.executable }} ${INSTALL_DIR}/{{ build.binary.directory }}/
+
+echo "Build completed successfully!" 

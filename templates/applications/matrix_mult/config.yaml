@@ -1,0 +1,61 @@
+name: matrix_mult_benchmark
+version: "1.0.0"
+type: benchmark
+
+description: |
+  Matrix multiplication benchmark comparing different algorithms:
+  - Standard (naive) multiplication
+  - Cache-friendly blocked multiplication
+  - Strassen's algorithm
+
+parameters:
+  matrix_size:
+    description: Size of the square matrices (N x N)
+    type: integer
+    default: 1024
+    min: 64
+    max: 8192
+    
+  algorithm:
+    description: Matrix multiplication algorithm to use
+    type: string
+    default: standard
+    enum: [standard, blocked, strassen]
+    
+  block_size:
+    description: Block size for blocked algorithm
+    type: integer
+    default: 32
+    min: 8
+    max: 256
+    
+  num_threads:
+    description: Number of OpenMP threads to use
+    type: integer
+    default: 1
+    min: 1
+    max: 128
+
+metrics:
+  - name: execution_time
+    unit: seconds
+    description: Total execution time
+    
+  - name: gflops
+    unit: GFLOPS
+    description: Billion floating point operations per second
+    
+  - name: memory_bandwidth
+    unit: GB/s
+    description: Memory bandwidth utilization
+
+results:
+  format: json
+  fields:
+    - algorithm
+    - matrix_size
+    - block_size
+    - num_threads
+    - execution_time
+    - gflops
+    - memory_bandwidth 

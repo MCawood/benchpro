@@ -1,0 +1,295 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Creation &mdash; BenchPRO 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Getting Started" href="getting_started.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            BenchPRO
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../architecture/index.html">Architecture Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">User Guides</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Task Creation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#task-basics">Task Basics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#creating-a-task">Creating a Task</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#basic-task-creation">Basic Task Creation</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#template-scripts">Template Scripts</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#resource-requirements">Resource Requirements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#environment-variables">Environment Variables</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#task-validation">Task Validation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#error-handling">Error Handling</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#best-practices">Best Practices</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#use-clear-names">1. Use Clear Names</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#organize-working-directories">2. Organize Working Directories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#template-organization">3. Template Organization</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#resource-estimation">4. Resource Estimation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#getting-started">Getting Started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#basic-usage">Basic Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#advanced-topics">Advanced Topics</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">BenchPRO</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">User Guides</a></li>
+      <li class="breadcrumb-item active">Task Creation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/guides/task_creation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="task-creation">
+<h1>Task Creation<a class="headerlink" href="#task-creation" title="Link to this heading"></a></h1>
+<p>This guide explains how to create and configure tasks in BenchPRO.</p>
+<section id="task-basics">
+<h2>Task Basics<a class="headerlink" href="#task-basics" title="Link to this heading"></a></h2>
+<p>A task represents a single unit of work to be executed. It consists of:</p>
+<ul class="simple">
+<li><p>A name</p></li>
+<li><p>A working directory</p></li>
+<li><p>A template script</p></li>
+<li><p>Resource requirements</p></li>
+<li><p>Environment variables</p></li>
+</ul>
+</section>
+<section id="creating-a-task">
+<h2>Creating a Task<a class="headerlink" href="#creating-a-task" title="Link to this heading"></a></h2>
+<section id="basic-task-creation">
+<h3>Basic Task Creation<a class="headerlink" href="#basic-task-creation" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">benchpro.core.domain</span> <span class="kn">import</span> <span class="n">Task</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+
+<span class="n">task</span> <span class="o">=</span> <span class="n">Task</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;example_task&quot;</span><span class="p">,</span>
+    <span class="n">working_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/path/to/work&quot;</span><span class="p">),</span>
+    <span class="n">template_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/path/to/script.sh&quot;</span><span class="p">),</span>
+    <span class="n">variables</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;cores&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="s2">&quot;memory&quot;</span><span class="p">:</span> <span class="s2">&quot;8G&quot;</span><span class="p">}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="template-scripts">
+<h2>Template Scripts<a class="headerlink" href="#template-scripts" title="Link to this heading"></a></h2>
+<p>Template scripts are shell scripts that define the actual work:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/bin/bash</span>
+<span class="c1"># example_script.sh</span>
+
+<span class="c1"># Use variables passed from the task</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Using </span><span class="si">${</span><span class="nv">cores</span><span class="si">}</span><span class="s2"> cores and </span><span class="si">${</span><span class="nv">memory</span><span class="si">}</span><span class="s2"> memory&quot;</span>
+
+<span class="c1"># Do some work</span>
+sleep<span class="w"> </span><span class="m">10</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Task completed&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="resource-requirements">
+<h2>Resource Requirements<a class="headerlink" href="#resource-requirements" title="Link to this heading"></a></h2>
+<p>Specify resource requirements through variables:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">task</span> <span class="o">=</span> <span class="n">Task</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;resource_intensive_task&quot;</span><span class="p">,</span>
+    <span class="n">working_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/path/to/work&quot;</span><span class="p">),</span>
+    <span class="n">template_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/path/to/script.sh&quot;</span><span class="p">),</span>
+    <span class="n">variables</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;cores&quot;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
+        <span class="s2">&quot;memory&quot;</span><span class="p">:</span> <span class="s2">&quot;16G&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;walltime&quot;</span><span class="p">:</span> <span class="mi">3600</span><span class="p">,</span>
+        <span class="s2">&quot;gpu&quot;</span><span class="p">:</span> <span class="kc">True</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="environment-variables">
+<h2>Environment Variables<a class="headerlink" href="#environment-variables" title="Link to this heading"></a></h2>
+<p>Add environment variables to the task:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">task</span> <span class="o">=</span> <span class="n">Task</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;env_task&quot;</span><span class="p">,</span>
+    <span class="n">working_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/path/to/work&quot;</span><span class="p">),</span>
+    <span class="n">template_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/path/to/script.sh&quot;</span><span class="p">),</span>
+    <span class="n">variables</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;cores&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="s2">&quot;memory&quot;</span><span class="p">:</span> <span class="s2">&quot;8G&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;ENV&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;PATH&quot;</span><span class="p">:</span> <span class="s2">&quot;/custom/path:$PATH&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;LD_LIBRARY_PATH&quot;</span><span class="p">:</span> <span class="s2">&quot;/custom/lib:$LD_LIBRARY_PATH&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="task-validation">
+<h2>Task Validation<a class="headerlink" href="#task-validation" title="Link to this heading"></a></h2>
+<p>Tasks are automatically validated:</p>
+<ul class="simple">
+<li><p>Working directory must exist</p></li>
+<li><p>Template script must exist and be executable</p></li>
+<li><p>Variables must be valid types</p></li>
+<li><p>Resource requirements must be valid</p></li>
+</ul>
+</section>
+<section id="error-handling">
+<h2>Error Handling<a class="headerlink" href="#error-handling" title="Link to this heading"></a></h2>
+<p>Handle task creation errors:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">benchpro.core.validation</span> <span class="kn">import</span> <span class="n">ValidationError</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">task</span> <span class="o">=</span> <span class="n">Task</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;invalid_task&quot;</span><span class="p">,</span>
+        <span class="n">working_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/nonexistent&quot;</span><span class="p">),</span>
+        <span class="n">template_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/also/nonexistent&quot;</span><span class="p">),</span>
+        <span class="n">variables</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;invalid&quot;</span><span class="p">:</span> <span class="nb">object</span><span class="p">()}</span>
+    <span class="p">)</span>
+<span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Task validation failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading"></a></h2>
+<section id="use-clear-names">
+<h3>1. Use Clear Names<a class="headerlink" href="#use-clear-names" title="Link to this heading"></a></h3>
+<p>Choose descriptive task names:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">task</span> <span class="o">=</span> <span class="n">Task</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;data_preprocessing_step1&quot;</span><span class="p">,</span>
+    <span class="c1"># ...</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="organize-working-directories">
+<h3>2. Organize Working Directories<a class="headerlink" href="#organize-working-directories" title="Link to this heading"></a></h3>
+<p>Create a clear directory structure:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/path/to/project&quot;</span><span class="p">)</span>
+<span class="n">task</span> <span class="o">=</span> <span class="n">Task</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;analysis&quot;</span><span class="p">,</span>
+    <span class="n">working_dir</span><span class="o">=</span><span class="n">base_dir</span> <span class="o">/</span> <span class="s2">&quot;analysis&quot;</span> <span class="o">/</span> <span class="s2">&quot;step1&quot;</span><span class="p">,</span>
+    <span class="c1"># ...</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="template-organization">
+<h3>3. Template Organization<a class="headerlink" href="#template-organization" title="Link to this heading"></a></h3>
+<p>Keep templates organized and documented:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">templates_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/path/to/templates&quot;</span><span class="p">)</span>
+<span class="n">task</span> <span class="o">=</span> <span class="n">Task</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;analysis&quot;</span><span class="p">,</span>
+    <span class="n">template_path</span><span class="o">=</span><span class="n">templates_dir</span> <span class="o">/</span> <span class="s2">&quot;analysis&quot;</span> <span class="o">/</span> <span class="s2">&quot;process_data.sh&quot;</span><span class="p">,</span>
+    <span class="c1"># ...</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="resource-estimation">
+<h3>4. Resource Estimation<a class="headerlink" href="#resource-estimation" title="Link to this heading"></a></h3>
+<p>Be conservative with resource estimates:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">task</span> <span class="o">=</span> <span class="n">Task</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;analysis&quot;</span><span class="p">,</span>
+    <span class="n">variables</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;cores&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>  <span class="c1"># Start with fewer cores</span>
+        <span class="s2">&quot;memory&quot;</span><span class="p">:</span> <span class="s2">&quot;8G&quot;</span><span class="p">,</span>  <span class="c1"># Request reasonable memory</span>
+        <span class="s2">&quot;walltime&quot;</span><span class="p">:</span> <span class="mi">7200</span><span class="p">,</span>  <span class="c1"># Add buffer to time estimate</span>
+    <span class="p">}</span>
+    <span class="c1"># ...</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="getting_started.html" class="btn btn-neutral float-left" title="Getting Started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, BenchPRO Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

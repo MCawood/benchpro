@@ -1,0 +1,254 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Domain Models &mdash; BenchPRO 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Executor System" href="executors.html" />
+    <link rel="prev" title="Architecture Documentation" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            BenchPRO
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Architecture Documentation</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Domain Models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#task-model">Task Model</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#key-features">Key Features:</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#job-model">Job Model</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1">Key Features:</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#state-management">State Management</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#task-states">Task States:</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#job-states">Job States:</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#resource-management">Resource Management</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#features">Features:</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#usage-example">Usage Example</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="executors.html">Executor System</a></li>
+<li class="toctree-l2"><a class="reference internal" href="validation.html">Validation System</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#core-concepts">Core Concepts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#layer-organization">Layer Organization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#design-principles">Design Principles</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guides/index.html">User Guides</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">BenchPRO</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Architecture Documentation</a></li>
+      <li class="breadcrumb-item active">Domain Models</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/architecture/domain_models.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="domain-models">
+<h1>Domain Models<a class="headerlink" href="#domain-models" title="Link to this heading"></a></h1>
+<p>The domain models form the core of BenchPRO’s business logic. They encapsulate the essential concepts and rules of the system.</p>
+<section id="task-model">
+<h2>Task Model<a class="headerlink" href="#task-model" title="Link to this heading"></a></h2>
+<p>The Task model represents a single unit of work to be executed. It manages its own state and validation rules.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Task</span><span class="p">:</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">working_dir</span><span class="p">:</span> <span class="n">Path</span>
+    <span class="n">template_path</span><span class="p">:</span> <span class="n">Path</span>
+    <span class="n">variables</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+    <span class="n">state</span><span class="p">:</span> <span class="n">TaskState</span>
+    <span class="n">error</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="key-features">
+<h3>Key Features:<a class="headerlink" href="#key-features" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>State Management</strong>: Tasks transition through various states (PENDING → RUNNING → COMPLETED/FAILED)</p></li>
+<li><p><strong>Resource Requirements</strong>: Tasks specify their resource needs (CPU, memory)</p></li>
+<li><p><strong>Error Handling</strong>: Comprehensive error tracking and reporting</p></li>
+<li><p><strong>Validation</strong>: Built-in validation for paths and variables</p></li>
+</ul>
+</section>
+</section>
+<section id="job-model">
+<h2>Job Model<a class="headerlink" href="#job-model" title="Link to this heading"></a></h2>
+<p>The Job model represents a collection of tasks that should be executed together. It manages resource allocation and overall execution state.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Job</span><span class="p">:</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">working_dir</span><span class="p">:</span> <span class="n">Path</span>
+    <span class="n">tasks</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Task</span><span class="p">]</span>
+    <span class="n">resources</span><span class="p">:</span> <span class="n">JobResources</span>
+    <span class="n">state</span><span class="p">:</span> <span class="n">JobState</span>
+    <span class="n">error</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id1">
+<h3>Key Features:<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Resource Management</strong>: Tracks and validates resource requirements</p></li>
+<li><p><strong>Task Coordination</strong>: Manages multiple tasks as a single unit</p></li>
+<li><p><strong>State Propagation</strong>: Job state reflects the collective state of its tasks</p></li>
+<li><p><strong>Error Aggregation</strong>: Collects and reports errors from all tasks</p></li>
+</ul>
+</section>
+</section>
+<section id="state-management">
+<h2>State Management<a class="headerlink" href="#state-management" title="Link to this heading"></a></h2>
+<p>Both Task and Job models use state enums to track their execution status:</p>
+<section id="task-states">
+<h3>Task States:<a class="headerlink" href="#task-states" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>PENDING</strong>: Initial state, ready for execution</p></li>
+<li><p><strong>RUNNING</strong>: Currently executing</p></li>
+<li><p><strong>COMPLETED</strong>: Successfully finished</p></li>
+<li><p><strong>FAILED</strong>: Execution failed</p></li>
+<li><p><strong>CANCELLED</strong>: Execution was cancelled</p></li>
+</ul>
+</section>
+<section id="job-states">
+<h3>Job States:<a class="headerlink" href="#job-states" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>PENDING</strong>: Initial state</p></li>
+<li><p><strong>RUNNING</strong>: One or more tasks are running</p></li>
+<li><p><strong>COMPLETED</strong>: All tasks completed successfully</p></li>
+<li><p><strong>FAILED</strong>: One or more tasks failed</p></li>
+<li><p><strong>CANCELLED</strong>: Job was cancelled</p></li>
+</ul>
+</section>
+</section>
+<section id="resource-management">
+<h2>Resource Management<a class="headerlink" href="#resource-management" title="Link to this heading"></a></h2>
+<p>Resources are tracked using the JobResources model:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">JobResources</span><span class="p">:</span>
+    <span class="n">cores</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">memory</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># e.g., &quot;8G&quot;</span>
+    <span class="n">nodes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">walltime</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3600</span>  <span class="c1"># seconds</span>
+</pre></div>
+</div>
+<section id="features">
+<h3>Features:<a class="headerlink" href="#features" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Memory Parsing</strong>: Handles human-readable memory strings (e.g., “8G”, “512M”)</p></li>
+<li><p><strong>Validation</strong>: Ensures resource requests are valid</p></li>
+<li><p><strong>Scaling</strong>: Supports both single-node and multi-node execution</p></li>
+<li><p><strong>Time Limits</strong>: Enforces execution time constraints</p></li>
+</ul>
+</section>
+</section>
+<section id="usage-example">
+<h2>Usage Example<a class="headerlink" href="#usage-example" title="Link to this heading"></a></h2>
+<p>Here’s a basic example of creating and using these models:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create a task</span>
+<span class="n">task</span> <span class="o">=</span> <span class="n">Task</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;example_task&quot;</span><span class="p">,</span>
+    <span class="n">working_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/path/to/work&quot;</span><span class="p">),</span>
+    <span class="n">template_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/path/to/script.sh&quot;</span><span class="p">),</span>
+    <span class="n">variables</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;cores&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="s2">&quot;memory&quot;</span><span class="p">:</span> <span class="s2">&quot;8G&quot;</span><span class="p">}</span>
+<span class="p">)</span>
+
+<span class="c1"># Create a job with the task</span>
+<span class="n">job</span> <span class="o">=</span> <span class="n">Job</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;example_job&quot;</span><span class="p">,</span>
+    <span class="n">working_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/path/to/job&quot;</span><span class="p">),</span>
+    <span class="n">tasks</span><span class="o">=</span><span class="p">[</span><span class="n">task</span><span class="p">],</span>
+    <span class="n">resources</span><span class="o">=</span><span class="n">JobResources</span><span class="p">(</span><span class="n">cores</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">memory</span><span class="o">=</span><span class="s2">&quot;8G&quot;</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="c1"># Task and job states are automatically managed</span>
+<span class="k">assert</span> <span class="n">job</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="n">JobState</span><span class="o">.</span><span class="n">PENDING</span>
+<span class="k">assert</span> <span class="n">task</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="n">TaskState</span><span class="o">.</span><span class="n">PENDING</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Architecture Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="executors.html" class="btn btn-neutral float-right" title="Executor System" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, BenchPRO Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
