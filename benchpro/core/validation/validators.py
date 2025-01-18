@@ -14,17 +14,22 @@ from pydantic import (
 )
 
 
-def validate_directory(path: Path) -> Path:
+def validate_directory(path: Union[str, Path]) -> Path:
     """Validate directory path."""
+    if isinstance(path, str):
+        path = Path(path)
     if not path.exists():
         raise ValueError(f"Directory does not exist: {path}")
     if not path.is_dir():
-        raise ValueError(f"Path exists but is not a directory: {path}")
+        raise ValueError(f"Path is not a directory: {path}")
     return path
 
 
-def validate_file(path: Path, extensions: Optional[List[str]] = None) -> Path:
+def validate_file(path: Union[str, Path], extensions: Optional[List[str]] = None) -> Path:
     """Validate file path."""
+    if isinstance(path, str):
+        path = Path(path)
+    path = path.resolve()  # Resolve path before checking existence
     if not path.exists():
         raise ValueError(f"File does not exist: {path}")
     if not path.is_file():

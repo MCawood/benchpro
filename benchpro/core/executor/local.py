@@ -123,20 +123,19 @@ class LocalExecutor(Executor):
         try:
             # Validate resources first
             await self.validate_resources(task)
-            
-            # Prepare environment
+
+            # Prepare environment and transition through states
+            task.transition_to(TaskState.STAGING)
             await self.prepare(task)
-            
-            # Transition to RUNNING state
-            task.transition_to(TaskState.RUNNING)
-            
+            task.transition_to(TaskState.PENDING)
+
             # Build command
             cmd = []
             if task.template_path:
                 cmd = ['bash', str(task.working_dir / "run.sh")]
             else:
                 raise TaskExecutionError("No template script provided")
-            
+
             # Start process
             process = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -145,15 +144,30 @@ class LocalExecutor(Executor):
                 cwd=str(task.working_dir),
                 env=os.environ.copy()
             )
-            
+
             self._processes[task.name] = process
-            
+            task.transition_to(TaskState.RUNNING)
+
             # Start monitoring
             monitor = asyncio.create_task(self._monitor_task(task))
             self._monitors[task.name] = monitor
-            
+
+            # Wait for completion
+            stdout, stderr = await process.communicate()
+
+            # Only treat explicitly non-zero returncodes as failures
+            if process.returncode is not None:
+                if process.returncode != 0:
+                    error_msg = stderr.decode() if stderr else "Unknown error"
+                    task.transition_to(TaskState.FAILED, error_msg)
+                    raise TaskExecutionError(f"Task failed with exit code {process.returncode}\nStderr: {error_msg}")
+                else:
+                    task.transition_to(TaskState.COMPLETED)
+
         except Exception as e:
-            task.transition_to(TaskState.FAILED, str(e))
+            # Only transition to FAILED if we're not in a terminal state
+            if task.state not in [TaskState.COMPLETED, TaskState.FAILED, TaskState.CANCELLED]:
+                task.transition_to(TaskState.FAILED, str(e))
             raise TaskExecutionError(f"Failed to start task: {str(e)}")
     
     async def status(self, task: Task) -> TaskState:
@@ -169,15 +183,25 @@ class LocalExecutor(Executor):
         if not process:
             return task.state
         
+        # Ensure proper state transitions
         if process.returncode is None:
-            if task.state != TaskState.RUNNING:
+            # Transition to RUNNING through PENDING if needed
+            if task.state == TaskState.CREATED:
+                task.transition_to(TaskState.PENDING)
+            if task.state == TaskState.PENDING:
                 task.transition_to(TaskState.RUNNING)
             return TaskState.RUNNING
         elif process.returncode == 0:
-            if task.state != TaskState.COMPLETED:
+            # Transition to COMPLETED through proper states
+            if task.state == TaskState.CREATED:
+                task.transition_to(TaskState.PENDING)
+            if task.state == TaskState.PENDING:
+                task.transition_to(TaskState.RUNNING)
+            if task.state == TaskState.RUNNING:
                 task.transition_to(TaskState.COMPLETED)
             return TaskState.COMPLETED
         else:
+            # Failed state can be reached from any state
             if task.state != TaskState.FAILED:
                 task.transition_to(TaskState.FAILED, f"Process exited with code {process.returncode}")
             return TaskState.FAILED
