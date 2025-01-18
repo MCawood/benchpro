@@ -5,4 +5,4 @@
 
 echo "Hello World!"
 sleep 1
-echo "Test completed." 
+echo "Test completed."

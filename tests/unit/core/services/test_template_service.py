@@ -22,7 +22,7 @@ def template_dir(tmp_path):
     test_app_dir.mkdir()
     
     # Create config file
-    config_file = test_app_dir / "config.yaml"
+    config_file = test_app_dir / "build.yaml"
     config_file.write_text("""name: test_app
 version: 1.0.0
 type: application
@@ -112,10 +112,10 @@ def test_load_versioned_template(template_dir, template_service):
     """Test loading a versioned template."""
     # Create versioned template directory
     version_dir = template_dir / "applications" / "test_app" / "v1.0.0"
-    version_dir.mkdir()
+    version_dir.mkdir(parents=True)
     
     # Create versioned config file
-    config_file = version_dir / "config.yaml"
+    config_file = version_dir / "build.yaml"
     config_file.write_text("""name: test_app
 version: 1.0.0
 type: application
@@ -145,6 +145,8 @@ mkdir -p {{ install_dir }}/{{ build.binary.directory }}
 cp {{ build.binary.executable }} {{ install_dir }}/{{ build.binary.directory }}/""")
     
     config, template = template_service.load_template("test_app", "build.j2", version="1.0.0")
+    assert isinstance(config, TemplateConfig)
+    assert config.name == "test_app"
     assert str(config.version) == "1.0.0"
     assert "#!/bin/bash" in template
 
@@ -155,7 +157,10 @@ def test_load_template_invalid_version(template_service):
 
 def test_validate_template_config(template_dir, template_service):
     """Test validating template configuration."""
-    config_file = template_dir / "applications" / "test_app" / "config.yaml"
+    test_app_dir = template_dir / "applications" / "test_app"
+    test_app_dir.mkdir(parents=True, exist_ok=True)
+    
+    config_file = test_app_dir / "build.yaml"
     config_file.write_text("""name: test_app
 # Missing required fields""")
     
@@ -164,7 +169,10 @@ def test_validate_template_config(template_dir, template_service):
 
 def test_validate_template_version(template_dir, template_service):
     """Test validating template version format."""
-    config_file = template_dir / "applications" / "test_app" / "config.yaml"
+    test_app_dir = template_dir / "applications" / "test_app"
+    test_app_dir.mkdir(parents=True, exist_ok=True)
+    
+    config_file = test_app_dir / "build.yaml"
     config_file.write_text("""name: test_app
 version: invalid.version
 type: application

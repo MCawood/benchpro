@@ -32,7 +32,7 @@ def test_directory_validator(tmp_path: Path):
     # Test with file instead of directory
     test_file = tmp_path / "test.txt"
     test_file.touch()
-    with pytest.raises(ValidationError, match="Path exists but is not a directory"):
+    with pytest.raises(ValidationError, match="Path is not a directory"):
         Model(directory=test_file)
 
 

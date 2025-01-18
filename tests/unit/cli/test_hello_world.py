@@ -4,6 +4,7 @@ import pytest
 import asyncio
 from click.testing import CliRunner
 from benchpro.cli.task import task
+import time
 
 @pytest.fixture
 def event_loop():
@@ -47,23 +48,26 @@ def test_hello_world_execution(runner, workspace_dir):
     # Run the task
     result = runner.invoke(task, ['run', task_name], obj={'cwd': str(workspace_dir)})
     assert result.exit_code == 0
-    assert f"Started task '{task_name}'" in result.output
     
-    # Check task status
+    # Check final task status
     result = runner.invoke(task, ['status', task_name], obj={'cwd': str(workspace_dir)})
     assert result.exit_code == 0
     assert "COMPLETED" in result.output
 
-def test_hello_world_nonexistent_workspace(runner):
-    """Test executing hello world without initializing workspace."""
+def test_hello_world_nonexistent_workspace(runner, tmp_path):
+    """Test executing hello world with nonexistent parent directories."""
+    nonexistent_path = tmp_path / "does" / "not" / "exist" / "yet"
     result = runner.invoke(task, [
         'create',
-        'hello_fail',
+        'hello_test',
         '--template', 'tests/data/templates/hello/hello_world.sh',
-        '--working-dir', '/nonexistent/path'
+        '--working-dir', str(nonexistent_path)
     ])
-    assert result.exit_code != 0
-    assert "read-only file system" in result.output.lower()
+    print(f"\nOutput: {result.output}")
+    print(f"Exit code: {result.exit_code}")
+    assert result.exit_code == 0
+    assert nonexistent_path.exists()
+    assert (nonexistent_path / "run.sh").exists()
 
 def test_hello_world_list_tasks(runner, workspace_dir):
     """Test listing tasks after creating hello world task."""

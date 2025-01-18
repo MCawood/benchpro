@@ -30,10 +30,15 @@ def mock_task(workspace):
     task_dir = workspace / "tasks" / "test-task"
     task_dir.mkdir(parents=True, exist_ok=True)
     
+    # Copy template to run.sh in task directory
+    import shutil
+    run_script = task_dir / "run.sh"
+    shutil.copy2(template_path, run_script)
+    
     return Task(
         name="test-task",
         working_dir=task_dir,
-        template_path=template_path,
+        template_path=run_script,
         variables={
             "cores": 1,
             "memory": "1G",
@@ -56,7 +61,7 @@ def test_task_run_basic(runner, workspace, mock_task, mock_executor):
     with patch('benchpro.cli.task.LocalExecutor', return_value=mock_executor):
         result = runner.invoke(task, ['run', 'test-task'], obj={'cwd': str(workspace)})
         assert result.exit_code == 0
-        assert f"Started task '{mock_task.name}'" in result.output
+        assert f"Starting task '{mock_task.name}'" in result.output
 
 def test_task_run_with_env(runner, workspace, mock_task, mock_executor):
     """Test running a task with environment variables."""
@@ -67,7 +72,7 @@ def test_task_run_with_env(runner, workspace, mock_task, mock_executor):
             '--env', 'VAR2=value2'
         ], obj={'cwd': str(workspace)})
         assert result.exit_code == 0
-        assert f"Started task '{mock_task.name}'" in result.output
+        assert f"Starting task '{mock_task.name}'" in result.output
 
 def test_task_status_running(runner, workspace, mock_task, mock_executor):
     """Test checking status of a running task."""

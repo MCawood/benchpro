@@ -3,6 +3,7 @@ import pytest
 from pathlib import Path
 from benchpro.core.domain import Task, TaskState
 from benchpro.core.validation.validators import validate_memory_string
+from benchpro.core.services.task_state_manager import InvalidStateTransitionError
 
 def test_task_creation_basic(tmp_path):
     """Test creating a task with basic parameters."""
@@ -62,6 +63,9 @@ def test_task_state_transitions(tmp_path):
     assert task.state == TaskState.CREATED
 
     # Test valid transitions
+    task.transition_to(TaskState.STAGING)
+    assert task.state == TaskState.STAGING
+
     task.transition_to(TaskState.PENDING)
     assert task.state == TaskState.PENDING
 
@@ -72,7 +76,7 @@ def test_task_state_transitions(tmp_path):
     assert task.state == TaskState.COMPLETED
 
     # Test invalid transitions
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidStateTransitionError):
         task.transition_to(TaskState.PENDING)  # Can't go back to PENDING from COMPLETED
 
 def test_task_error_handling(tmp_path):
