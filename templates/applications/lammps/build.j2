@@ -1,0 +1,63 @@
+#!/bin/bash
+#
+# Build template for LAMMPS
+
+set -e  # Exit on error
+
+echo "Building LAMMPS {{ version }}..."
+
+# Setup build environment
+BUILD_DIR="{{ working_dir }}"
+INSTALL_DIR="{{ install_dir }}"
+SOURCE_DIR="${BUILD_DIR}/lammps"
+
+# Create build directory
+cd "${BUILD_DIR}"
+
+# Clone LAMMPS repository
+echo "Cloning LAMMPS repository..."
+git clone {{ source.git.url }} "${SOURCE_DIR}"
+cd "${SOURCE_DIR}"
+git checkout {{ source.git.tag }}
+
+# Create and enter build directory
+mkdir -p build
+cd build
+
+# Configure with CMake
+echo "Configuring with CMake..."
+cmake ../cmake \
+    -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR} \
+    {% for option in build.cmake_options %}
+    {{ option }} \
+    {% endfor %}
+    {{ variables.CMAKE_FLAGS }}
+
+# Build
+echo "Building with {{ build.compiler }}..."
+cmake --build . -j{{ variables.BUILD_THREADS }}
+
+# Install
+echo "Installing to ${INSTALL_DIR}..."
+cmake --install .
+
+# Create a module file if needed
+if [ -d "${INSTALL_DIR}/modulefiles" ]; then
+    mkdir -p "${INSTALL_DIR}/modulefiles"
+    cat > "${INSTALL_DIR}/modulefiles/lammps" << 'EOF'
+#%Module1.0
+proc ModulesHelp { } {
+    puts stderr "LAMMPS {{ version }} - Molecular Dynamics Simulator"
+}
+
+module-whatis "LAMMPS {{ version }}"
+
+set root {{ variables.INSTALL_PREFIX }}
+
+prepend-path PATH $root/bin
+prepend-path LD_LIBRARY_PATH $root/lib
+prepend-path MANPATH $root/share/man
+EOF
+fi
+
+echo "Build completed successfully!" 

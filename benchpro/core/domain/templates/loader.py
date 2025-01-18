@@ -38,7 +38,7 @@ class TemplateLoader:
             logger.warning("Applications directory does not exist")
             return []
 
-        return [d.name for d in self.applications_dir.iterdir() if d.is_dir()]
+        return [d.name for d in self.applications_dir.iterdir() if d.is_dir() and (d / "build.yaml").exists()]
 
     def load_config(self, name: str, version: Optional[str] = None) -> TemplateConfig:
         """Load template configuration.
@@ -70,7 +70,7 @@ class TemplateLoader:
                 raise TemplateNotFoundError(f"Version '{version}' not found for template '{name}'")
             template_path = version_path
 
-        config_path = template_path / "config.yaml"
+        config_path = template_path / "build.yaml"
         if not config_path.exists():
             logger.error(f"Template config not found: {config_path}")
             raise TemplateNotFoundError(f"Configuration file not found for template '{name}'")

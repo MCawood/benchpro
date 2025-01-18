@@ -1,0 +1,41 @@
+name: lammps
+version: "23Jun2022"  # Using LAMMPS stable release version
+type: application
+
+description: |
+  LAMMPS (Large-scale Atomic/Molecular Massively Parallel Simulator) is a classical 
+  molecular dynamics simulation code with a focus on materials modeling. It was 
+  developed at Sandia National Laboratories, a US Department of Energy facility.
+
+build:
+  language: cpp
+  compiler: mpicxx
+  cmake_options:
+    - "-D CMAKE_BUILD_TYPE=Release"
+    - "-D BUILD_MPI=yes"
+    - "-D BUILD_OMP=no"
+  binary:
+    directory: bin
+    executable: lmp
+
+source:
+  git:
+    url: "https://github.com/lammps/lammps.git"
+    tag: "stable_23Jun2022"
+    
+dependencies:
+  required:
+    - mpi
+    - cmake
+    - make
+    - git
+  optional:
+    - fftw
+    - jpeg
+    - png
+    - zlib
+
+variables:
+  BUILD_THREADS: 8  # Number of parallel build jobs
+  CMAKE_FLAGS: ""  # Additional CMake flags
+  INSTALL_PREFIX: "/opt/lammps" 

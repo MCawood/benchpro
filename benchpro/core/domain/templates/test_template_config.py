@@ -1,3 +1,30 @@
+import pytest
+from benchpro.core.domain.templates.config import TemplateConfig
+from benchpro.core.domain.templates.exceptions import TemplateValidationError
+
+@pytest.fixture
+def valid_config():
+    """Provide a valid template configuration for testing."""
+    return {
+        "name": "test_app",
+        "version": "1.0.0",
+        "type": "application",
+        "build": {
+            "language": "c",
+            "compiler": "gcc",
+            "binary": {
+                "directory": "bin",
+                "executable": "test_app"
+            }
+        },
+        "source": {
+            "files": ["src/main.c"]
+        },
+        "variables": {
+            "TEST_VAR": "test_value"
+        }
+    }
+
 def test_valid_config_creation(valid_config):
     """Test creating a template config with valid data."""
     config = TemplateConfig(valid_config)
@@ -88,9 +115,12 @@ def test_invalid_build_config():
             "name": "test",
             "version": "1.0.0",
             "type": "application",
-            "build": build
+            "build": build,
+            "source": {
+                "files": ["src/main.c"]
+            }
         }
-        with pytest.raises(TemplateValidationError, match="Missing required"):
+        with pytest.raises(TemplateValidationError, match="validation error[s]? for BuildConfig"):
             TemplateConfig(config)
 
 def test_variable_validation():
@@ -106,6 +136,9 @@ def test_variable_validation():
                 "directory": "bin",
                 "executable": "test"
             }
+        },
+        "source": {
+            "files": ["src/main.c"]
         },
         "variables": {
             "INVALID NAME": "value",  # Space in variable name

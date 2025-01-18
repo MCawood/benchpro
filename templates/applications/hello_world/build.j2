@@ -16,13 +16,16 @@ cd "${BUILD_DIR}"
 export MESSAGE="{{ variables.MESSAGE }}"
 export REPEAT_COUNT="{{ variables.REPEAT_COUNT }}"
 
+# Create bin directory
+mkdir -p {{ build.binary.directory }}
+
 # Compile
 echo "Compiling with {{ build.compiler }}..."
-gcc -o {{ build.binary.executable }} hello_world.c
+{{ build.compiler }} -o {{ build.binary.directory }}/{{ build.binary.executable }} hello_world.c
 
 # Install
 echo "Installing to ${INSTALL_DIR}..."
 mkdir -p ${INSTALL_DIR}/{{ build.binary.directory }}
-cp {{ build.binary.executable }} ${INSTALL_DIR}/{{ build.binary.directory }}/
+cp {{ build.binary.directory }}/{{ build.binary.executable }} ${INSTALL_DIR}/{{ build.binary.directory }}/
 
 echo "Build completed successfully!" 

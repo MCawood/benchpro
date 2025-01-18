@@ -1,69 +1,9 @@
 """Template configuration functionality."""
-from typing import Dict, Any, List, Optional, ClassVar, Set
+from typing import Dict, Any, List, Optional, ClassVar, Set, Union
 from dataclasses import dataclass
 from pydantic import BaseModel, Field, model_validator, ValidationError
 from .exceptions import TemplateValidationError, TemplateVersionError
-
-@dataclass
-class Version:
-    """Semantic version representation."""
-    major: int
-    minor: int
-    patch: int
-    prerelease: str = None
-    build: str = None
-
-    def __str__(self) -> str:
-        """Convert version to string."""
-        version = f"{self.major}.{self.minor}.{self.patch}"
-        if self.prerelease:
-            version += f"-{self.prerelease}"
-        if self.build:
-            version += f"+{self.build}"
-        return version
-
-    def __eq__(self, other: Any) -> bool:
-        """Compare version with another version or string."""
-        if isinstance(other, str):
-            try:
-                other = Version.parse(other)
-            except TemplateVersionError:
-                return False
-        if not isinstance(other, Version):
-            return False
-        return (self.major == other.major and 
-                self.minor == other.minor and 
-                self.patch == other.patch and 
-                self.prerelease == other.prerelease and 
-                self.build == other.build)
-
-    @classmethod
-    def parse(cls, version_str: str) -> 'Version':
-        """Parse version string into Version object."""
-        try:
-            # Split version into parts
-            version_parts = version_str.split('-', 1)
-            version_nums = version_parts[0].split('.')
-            
-            if len(version_nums) != 3:
-                raise TemplateVersionError(f"Invalid version format: {version_str}")
-            
-            major = int(version_nums[0])
-            minor = int(version_nums[1])
-            patch = int(version_nums[2])
-            
-            # Handle prerelease and build metadata
-            prerelease = None
-            build = None
-            if len(version_parts) > 1:
-                prerelease_build = version_parts[1].split('+', 1)
-                prerelease = prerelease_build[0] if prerelease_build[0] else None
-                if len(prerelease_build) > 1:
-                    build = prerelease_build[1] if prerelease_build[1] else None
-            
-            return cls(major, minor, patch, prerelease, build)
-        except (ValueError, IndexError) as e:
-            raise TemplateVersionError(f"Invalid version format: {version_str}") from e
+from .version import Version
 
 class DynamicModel(BaseModel):
     """Base model that supports dynamic field access."""
@@ -119,6 +59,17 @@ class BuildConfig(DynamicModel):
     language: str = Field(..., description="Programming language")
     compiler: str = Field(..., description="Compiler to use")
     binary: BinaryConfig = Field(..., description="Binary configuration")
+    cmake_options: Optional[List[str]] = Field(default_factory=list, description="CMake build options")
+
+class GitSource(BaseModel):
+    """Git source configuration."""
+    url: str = Field(..., description="Git repository URL")
+    tag: str = Field(..., description="Git tag or branch")
+
+class SourceConfig(BaseModel):
+    """Source configuration supporting both files and git sources."""
+    files: Optional[List[str]] = Field(None, description="List of source files")
+    git: Optional[GitSource] = Field(None, description="Git repository configuration")
 
 class TemplateConfig(BaseModel):
     """Template configuration."""
@@ -129,7 +80,7 @@ class TemplateConfig(BaseModel):
     version: Version = Field(..., description="Template version")
     type: str = Field(..., description="Template type")
     build: BuildConfig = Field(..., description="Build configuration")
-    source: Dict[str, List[str]] = Field(default_factory=dict, description="Source files")
+    source: Optional[SourceConfig] = Field(None, description="Source configuration")
     variables: Dict[str, Any] = Field(default_factory=dict, description="Template variables")
     description: Optional[str] = Field(None, description="Template description")
 
@@ -138,7 +89,14 @@ class TemplateConfig(BaseModel):
         try:
             # Convert version string to Version object
             if isinstance(config.get('version'), str):
-                config['version'] = Version.parse(config['version'])
+                try:
+                    config['version'] = Version.parse(config['version'])
+                except ValueError as e:
+                    raise TemplateVersionError(str(e))
+            
+            # Validate type first if present
+            if 'type' in config:
+                self._validate_type(config['type'])
             
             # Convert build config to BuildConfig object
             if isinstance(config.get('build'), dict):
@@ -147,15 +105,22 @@ class TemplateConfig(BaseModel):
                 except ValidationError as e:
                     raise TemplateValidationError(str(e))
 
-            # Validate required fields first
+            # Convert source config to SourceConfig object if present
+            if isinstance(config.get('source'), dict):
+                try:
+                    config['source'] = SourceConfig(**config['source'])
+                except ValidationError as e:
+                    raise TemplateValidationError(str(e))
+
+            # Validate required fields
             missing_fields = {'name', 'version', 'type', 'build'} - set(config.keys())
             if missing_fields:
                 raise TemplateValidationError(f"Missing required field: {missing_fields.pop()}")
 
             super().__init__(**config)
-            self._validate_type(self.type)
             self._validate_variables(self.variables)
-            self._validate_source_files(self.source)
+            if self.source:
+                self._validate_source(self.source)
         except ValueError as e:
             raise TemplateValidationError(str(e))
 
@@ -173,9 +138,13 @@ class TemplateConfig(BaseModel):
             if not valid_name_pattern.match(name):
                 raise TemplateValidationError(f"Invalid variable name: {name}")
 
-    def _validate_source_files(self, source: Dict[str, Any]) -> None:
-        """Validate source files configuration."""
-        if 'files' in source and not source['files']:
+    def _validate_source(self, source: SourceConfig) -> None:
+        """Validate source configuration."""
+        # If source is provided, either files or git must be specified
+        if source.files is None and source.git is None:
+            raise TemplateValidationError("When source is provided, either source files or git repository must be specified")
+        # If files list is provided, it cannot be empty
+        if source.files is not None and not source.files:
             raise TemplateValidationError("No source files specified")
 
     def to_dict(self) -> Dict[str, Any]:
@@ -185,10 +154,12 @@ class TemplateConfig(BaseModel):
             'version': str(self.version),
             'type': self.type,
             'build': self.build,
-            'source': self.source,
             'variables': self.variables
         }
         
+        if self.source:
+            config['source'] = self.source
+            
         if self.description:
             config['description'] = self.description
             
@@ -204,7 +175,7 @@ class TemplateConfig(BaseModel):
     @classmethod
     def validate_required_fields(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         """Validate that all required fields are present."""
-        required_fields = {'name', 'version', 'type', 'build'}
+        required_fields = {'name', 'version', 'type', 'build', 'source'}
         missing = required_fields - set(values.keys())
         if missing:
             raise ValueError(f"Missing required field: {', '.join(missing)}")

@@ -1,24 +1,28 @@
 """Template version management."""
 import re
 from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
+from datetime import datetime
 
 
 @dataclass(frozen=True)
 class Version:
-    """Semantic version representation."""
-    major: int
-    minor: int
-    patch: int
-    prerelease: Optional[str] = None
-    build: Optional[str] = None
-
-    VERSION_PATTERN = re.compile(
+    """Version representation supporting both semantic versioning and date-based formats."""
+    version_str: str
+    
+    # Support both semantic versioning and date-based versions
+    SEMVER_PATTERN = re.compile(
         r'^(?P<major>0|[1-9]\d*)'
         r'\.(?P<minor>0|[1-9]\d*)'
         r'\.(?P<patch>0|[1-9]\d*)'
         r'(?:-(?P<prerelease>[0-9A-Za-z-][0-9A-Za-z-\.]*)|(?!-))?'
         r'(?:\+(?P<build>[0-9A-Za-z-][0-9A-Za-z-\.]*)|(?!\+))?$'
+    )
+    
+    DATE_PATTERN = re.compile(
+        r'^(?P<day>\d{1,2})'
+        r'(?P<month>Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)'
+        r'(?P<year>\d{4})$'
     )
 
     @classmethod
@@ -26,7 +30,7 @@ class Version:
         """Parse version string into Version object.
         
         Args:
-            version_str: Version string in semantic version format.
+            version_str: Version string in either semantic version or date format.
             
         Returns:
             Version object.
@@ -34,65 +38,102 @@ class Version:
         Raises:
             ValueError: If version string is invalid.
         """
-        match = cls.VERSION_PATTERN.match(version_str)
-        if not match:
-            raise ValueError(
-                f"Invalid version string: {version_str}. "
-                "Must follow semantic versioning format (e.g., 1.0.0, 2.1.0-alpha)"
-            )
+        # Try semantic version format
+        if cls.SEMVER_PATTERN.match(version_str):
+            return cls(version_str)
+            
+        # Try date format
+        match = cls.DATE_PATTERN.match(version_str)
+        if match:
+            # Validate date components
+            try:
+                day = int(match.group('day'))
+                month = match.group('month')
+                year = int(match.group('year'))
+                # Convert to datetime to validate date
+                datetime.strptime(f"{day}{month}{year}", "%d%b%Y")
+                return cls(version_str)
+            except ValueError:
+                pass
         
-        version_dict = match.groupdict()
-        return cls(
-            major=int(version_dict['major']),
-            minor=int(version_dict['minor']),
-            patch=int(version_dict['patch']),
-            prerelease=version_dict['prerelease'] or None,
-            build=version_dict['build'] or None
-        )
+        raise ValueError(f"Invalid version format: {version_str}")
 
     def __str__(self) -> str:
         """Convert version to string."""
-        version = f"{self.major}.{self.minor}.{self.patch}"
-        if self.prerelease:
-            version += f"-{self.prerelease}"
-        if self.build:
-            version += f"+{self.build}"
-        return version
+        return self.version_str
 
-    def __lt__(self, other: 'Version') -> bool:
-        """Compare versions."""
+    def __lt__(self, other: Union['Version', str]) -> bool:
+        """Compare versions.
+        
+        For semantic versions, follows semver comparison rules.
+        For date versions, compares dates chronologically.
+        Mixed comparisons treat semantic versions as older than date versions.
+        """
+        if isinstance(other, str):
+            try:
+                other = Version.parse(other)
+            except ValueError:
+                return NotImplemented
+                
         if not isinstance(other, Version):
             return NotImplemented
-        
-        # Compare major.minor.patch
-        for s, o in zip(
-            [self.major, self.minor, self.patch],
-            [other.major, other.minor, other.patch]
-        ):
-            if s != o:
-                return s < o
-        
-        # Handle prerelease
-        if self.prerelease is None and other.prerelease is not None:
+            
+        # If both are semantic versions
+        self_semver = self.SEMVER_PATTERN.match(self.version_str)
+        other_semver = self.SEMVER_PATTERN.match(other.version_str)
+        if self_semver and other_semver:
+            self_dict = self_semver.groupdict()
+            other_dict = other_semver.groupdict()
+            
+            # Compare major.minor.patch
+            for part in ['major', 'minor', 'patch']:
+                self_num = int(self_dict[part])
+                other_num = int(other_dict[part])
+                if self_num != other_num:
+                    return self_num < other_num
+            
+            # Handle prerelease
+            self_pre = self_dict['prerelease'] or ''
+            other_pre = other_dict['prerelease'] or ''
+            if self_pre != other_pre:
+                # No prerelease is greater than any prerelease
+                if not self_pre:
+                    return False
+                if not other_pre:
+                    return True
+                return self_pre < other_pre
+            
             return False
-        if self.prerelease is not None and other.prerelease is None:
+            
+        # If both are date versions
+        self_date = self.DATE_PATTERN.match(self.version_str)
+        other_date = self.DATE_PATTERN.match(other.version_str)
+        if self_date and other_date:
+            self_dt = datetime.strptime(self.version_str, "%d%b%Y")
+            other_dt = datetime.strptime(other.version_str, "%d%b%Y")
+            return self_dt < other_dt
+            
+        # Mixed comparison - semantic versions are considered older than date versions
+        if self_semver and other_date:
             return True
-        if self.prerelease != other.prerelease:
-            return (self.prerelease or "") < (other.prerelease or "")
-        
-        return False
+        if self_date and other_semver:
+            return False
+            
+        # Fallback to string comparison
+        return self.version_str < other.version_str
 
     def __eq__(self, other: object) -> bool:
         """Check version equality."""
+        if isinstance(other, str):
+            try:
+                other = Version.parse(other)
+            except ValueError:
+                return False
+                
         if not isinstance(other, Version):
-            return NotImplemented
-        return (
-            self.major == other.major and
-            self.minor == other.minor and
-            self.patch == other.patch and
-            self.prerelease == other.prerelease and
-            self.build == other.build
-        )
+            return False
+            
+        return self.version_str == other.version_str
 
 
 class VersionedTemplate:
