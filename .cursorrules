@@ -1,0 +1,50 @@
+# .cursorrules
+
+# 1) Exclusions: Skip media, binary, and large auto-generated files
+- exclude:
+    pattern: ".*\\.(png|jpg|gif|pdf|bin|exe|dll|so|dylib)$"
+    reason: "Exclude images, binaries, and libraries to keep the context smaller"
+
+- exclude:
+    pattern: "^.*__pycache__.*$"
+    reason: "Exclude Python cache directories"
+
+- exclude:
+    pattern: "^.*\\.egg-info.*$"
+    reason: "Exclude Python egg-info metadata"
+
+- exclude:
+    pattern: "^.*\\.git.*$"
+    reason: "Exclude Git internals"
+
+- exclude:
+    pattern: "^.*node_modules.*$"
+    reason: "Exclude Node.js modules (if present)"
+
+# 2) Chunking rules for source files
+#    You can tune max_lines & overlap_lines depending on your typical file size
+
+- chunk:
+    pattern: "^.*\\.py$"
+    max_lines: 300
+    overlap_lines: 30
+    reason: "Chunk Python source files into smaller pieces"
+
+- chunk:
+    pattern: "^.*\\.(yaml|yml)$"
+    max_lines: 300
+    overlap_lines: 30
+    reason: "Chunk YAML files for HPC configurations"
+
+- chunk:
+    pattern: "^.*\\.md$"
+    max_lines: 200
+    overlap_lines: 20
+    reason: "Chunk large Markdown documents"
+
+# 3) Optional: Exclude or chunk old BenchPRO 1.0 code if you no longer need it in context
+# - exclude:
+#     pattern: "^benchpro/1\\.0/.*$"
+#     reason: "Exclude legacy 1.0 code if it's no longer relevant"
+
+# 4) You can add more rules or refine these to match your project’s specific structure/needs.

@@ -1,0 +1,114 @@
+Local Execution Orchestrator — Scope of Work
+1. Purpose & Background
+1.1 Context
+BenchPRO primarily targets HPC environments with a scheduler (e.g., Slurm). However, some evaluation systems may not be integrated into a site scheduler. In such scenarios, local execution is desirable so users can still build and run workloads without HPC queueing systems. Currently, the local executor is synchronous or concurrency-limited only within a single BenchPRO invocation. This meets minimal testing needs but does not coordinate concurrency across multiple BenchPRO commands.
+
+1.2 Key Problem
+If multiple BenchPRO commands run concurrently on the same system, there is no unified mechanism to:
+
+Enforce a global concurrency limit (e.g., a maximum number of tasks running at once).
+Queue additional tasks in a FIFO fashion if the concurrency limit is reached.
+Track and manage state (SUCCESS, FAILED) across multiple BenchPRO invocations.
+1.3 Goal
+Build a Local Execution Orchestrator that allows BenchPRO to queue tasks locally, enforce concurrency limits across multiple invocations, handle completion/failure, and provide user-friendly status updates—all without replicating the full complexity of an HPC scheduler.
+
+2. Requirements
+Persistence Across Invocations
+
+The local executor should maintain a shared concurrency limit and queue for all BenchPRO calls on a single system.
+If one user runs benchpro build app1, and another runs benchpro build app2, both should share the same local queue mechanism.
+FIFO Task Queue
+
+If the concurrency limit is reached, new tasks are placed into a queue.
+Tasks are started in first-in-first-out order as running tasks complete and concurrency frees up.
+Basic Failure Handling
+
+If a task fails, the queue system should mark it as FAILED and either continue with subsequent tasks or stop if it’s a blocking scenario.
+Provide logs or a reference to where logs are stored so the user can investigate failures.
+Minimal Overhead
+
+Avoid replicating HPC scheduling capabilities (no priorities, reservations, job arrays, etc.).
+A simple concurrency limit and FIFO model is sufficient.
+Real-Time Status
+
+The user should be able to run benchpro local-status (for example) to see how many tasks are in the queue, running, or completed.
+Provide basic information (task name/ID, status, start time, completion time if any).
+Graceful Shutdown / Restart
+
+If the orchestrator process is killed or the machine reboots, the system should recover queued tasks without losing them.
+Running tasks may be lost or marked as “UNKNOWN/FAILED” if the process was forcibly terminated mid-run.
+Security & Isolation
+
+If multiple users on the same workstation use BenchPRO, the local queue should not inadvertently allow one user to manage or see another user’s tasks unless permitted.
+This may be handled by file permissions on queue directories or by specifying a user-specific queue.
+3. Proposed Approaches
+3.1 File-Based Queue + Supervisor Process
+Queue Directory: Store tasks as script files in a pending_tasks/ folder.
+Supervisor Daemon: A background process, benchpro_local_exec_orchestrator, watches pending_tasks/ and a running_tasks/ folder.
+If fewer than max_tasks are running, it picks the oldest script from pending_tasks/ and starts it.
+On completion or failure, the script signals the supervisor, which logs the result and starts the next script in FIFO order.
+benchpro local-status queries the supervisor or reads metadata files in running_tasks/, finished_tasks/.
+Recovery: If the supervisor restarts, it scans running_tasks/ for partial states, moves them to a “possibly failed” state, and resumes queued tasks.
+Pros:
+
+Persistent concurrency management across multiple BenchPRO processes.
+Straightforward FIFO logic.
+Very visible to the user (scripts are physically stored).
+Cons:
+
+Requires a daemon or process to run continuously or be triggered.
+Potential for race conditions if multiple supervisors start accidentally.
+Additional complexity around logging, error handling, partial tasks, etc.
+3.2 Simple Global Lock / File-Based Token Counting
+Use a shared file storing the count of tasks currently running, with a max_tasks threshold.
+When BenchPRO tries to start a task, it:
+Checks the file’s count.
+If < max_tasks, increments the count and starts the task.
+If >= max_tasks, either blocks or exits with a “queue is full” error.
+On task completion, it decrements the count.
+Pros:
+Easier than a full queue.
+No daemon necessary.
+
+Cons:
+No true queue; if the limit is reached, tasks are refused.
+Doesn’t persist tasks or handle “retry later.”
+Risk of stale locks if the process crashes.
+4. Implementation Plan (Deferred)
+4.1 Phase 1: Requirements & Design (Future)
+Conduct a Requirements Review: Confirm how many tasks typically need queueing, if a real-time daemon is acceptable, or if a simpler approach is enough.
+Choose an Approach: Decide between a file-based queue + supervisor or a simpler global lock approach. Factor in user acceptance, ease of maintenance, etc.
+4.2 Phase 2: Prototype & Testing
+Prototype the chosen solution (e.g., a minimal supervisor).
+Local Testing:
+Create integration tests that spawn multiple BenchPRO commands in parallel.
+Validate that concurrency is enforced and tasks end up in a correct “FINISHED” or “FAILED” state.
+Edge Cases:
+Supervisor restarted mid-task.
+Task script crashes or is forcibly killed.
+Two users on the same system.
+4.3 Phase 3: User-Facing Commands & Documentation
+Add a benchpro local-status or similar CLI command to show current queue, running tasks, completed tasks.
+Document usage: how to start/stop the local supervisor (if needed), troubleshooting tips, best practices for local concurrency.
+4.4 Phase 4: Polish & Release
+Incorporate user feedback, fix bugs, refine logs, handle advanced edge cases (retries, partial scripts, etc.).
+Release as an optional feature for advanced local usage.
+5. Risks & Considerations
+Complexity vs. ROI: Implementing a local queue + supervisor can be non-trivial. If most users truly need HPC concurrency, they’ll rely on Slurm or the Docker-based emulator.
+Security: If multiple system users share the same local queue, ensure file permissions or user separation.
+Stability: A background supervisor or daemon can introduce concurrency bugs (lock contention, race conditions). Thorough testing and robust error handling are crucial.
+User Confusion: Some may expect HPC-like scheduling features (priorities, reservations) once a local queue is introduced. Manage expectations with clear docs about the limited scope.
+6. Summary
+The Local Execution Orchestrator feature will allow BenchPRO to limit concurrency across multiple sessions, queue tasks locally, and persist state beyond a single CLI invocation. While beneficial for non-HPC environments, it introduces new complexity around state management, error handling, and concurrency. We recommend deferring this feature until after higher-priority tasks (like SlurmExecutor) are complete, and only implementing it if user demand justifies the overhead.
+
+Next Steps:
+
+Gather real-world requirements from stakeholders who rely on local concurrency.
+Select a minimal viable design (e.g., supervisor vs. file-based lock).
+Prototype and iterate with robust testing.
+This approach ensures BenchPRO remains focused on HPC scheduling while still providing an eventual path to local concurrency management for specialized use cases.
+
+
+
+
+
