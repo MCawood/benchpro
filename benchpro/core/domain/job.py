@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, field_validator
@@ -25,8 +25,8 @@ class JobState(str, Enum):
 
 # Valid state transitions
 VALID_TRANSITIONS = {
-    JobState.CREATED: {JobState.QUEUED, JobState.CANCELLED},
-    JobState.QUEUED: {JobState.RUNNING, JobState.CANCELLED},
+    JobState.CREATED: {JobState.QUEUED, JobState.RUNNING, JobState.FAILED, JobState.CANCELLED},
+    JobState.QUEUED: {JobState.RUNNING, JobState.FAILED, JobState.CANCELLED},
     JobState.RUNNING: {JobState.COMPLETED, JobState.FAILED, JobState.CANCELLED},
     JobState.COMPLETED: set(),  # Terminal state
     JobState.FAILED: set(),  # Terminal state
@@ -34,56 +34,32 @@ VALID_TRANSITIONS = {
 }
 
 
-class JobResources(BaseModel):
-    """Resource requirements for a job.
-    
-    Attributes:
-        cores: Number of CPU cores required
-        memory: Memory requirement (e.g., "8G", "16GB")
-        nodes: Number of nodes required (for HPC jobs)
-        walltime: Maximum runtime in seconds
-    """
-    
-    cores: int = Field(gt=0)
-    memory: MemoryString
-    nodes: int = Field(default=1, gt=0)
-    walltime: int = Field(default=3600, gt=0)  # 1 hour default
-
-
 class Job(BaseModel):
-    """A job represents a collection of related tasks.
+    """A job that can be executed by an executor.
+    
+    A job consists of one or more tasks that need to be executed
+    in sequence. The job manages the overall execution state and
+    resource requirements.
     
     Attributes:
-        id: Unique identifier for the job
-        name: Human-readable name for the job
-        working_dir: Base directory for job execution
+        name: Job name
+        working_dir: Working directory for job execution
         tasks: List of tasks to execute
         resources: Resource requirements
-        state: Current state of the job
+        state: Current job state
         error: Error message if job failed
-        created_at: When the job was created
-        started_at: When the job started running
-        completed_at: When the job completed/failed/cancelled
+        started_at: When job started running
+        completed_at: When job finished (success or failure)
     """
     
-    id: UUID = Field(default_factory=uuid4)
-    name: str = Field(..., min_length=1)
-    working_dir: DirectoryPath
-    tasks: List[Task] = Field(default_factory=list)
-    resources: JobResources
-    state: JobState = Field(default=JobState.CREATED)
-    error: Optional[str] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-
-    @field_validator("name")
-    @classmethod
-    def validate_name(cls, v: str) -> str:
-        """Validate job name."""
-        if not v.strip():
-            raise ValueError("Job name cannot be empty or whitespace")
-        return v.strip()
+    name: str = Field(..., description="Job name")
+    working_dir: DirectoryPath = Field(..., description="Working directory for job execution")
+    tasks: List[Task] = Field(..., description="List of tasks to execute")
+    resources: Dict[str, Any] = Field(default_factory=dict, description="Resource requirements")
+    state: JobState = Field(default=JobState.CREATED, description="Current job state")
+    error: Optional[str] = Field(None, description="Error message if job failed")
+    started_at: Optional[datetime] = Field(None, description="When job started running")
+    completed_at: Optional[datetime] = Field(None, description="When job finished")
 
     @field_validator("tasks")
     @classmethod
@@ -95,6 +71,15 @@ class Job(BaseModel):
 
     def _validate_state_transition(self, new_state: JobState) -> None:
         """Validate state transition."""
+        # No-op if transitioning to the same state
+        if new_state == self.state:
+            return
+
+        # Special case: Allow transition to FAILED or CANCELLED from any non-terminal state
+        if (new_state in (JobState.FAILED, JobState.CANCELLED) and 
+            self.state not in (JobState.COMPLETED, JobState.FAILED, JobState.CANCELLED)):
+            return
+
         if new_state not in VALID_TRANSITIONS[self.state]:
             raise ValueError(
                 f"Invalid state transition from {self.state} to {new_state}. "
