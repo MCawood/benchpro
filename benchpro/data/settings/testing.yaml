@@ -1,0 +1,38 @@
+metadata:
+  file_version: "1.0"
+  description: "Testing configuration that overrides defaults and site settings when testing mode is enabled"
+
+settings:
+  immutable:
+    version:
+      value: "1.0.0"
+      type: str
+      description: "BenchPro version"
+      
+  site_mutable:
+    testing:
+      value: true  # Always true in testing mode
+      type: bool
+      description: "Testing mode is enforced in testing configuration"
+      
+    workspace_root:
+      value: "testing/benchpro"  # Test-specific workspace
+      type: str
+      description: "Root directory for BenchPro workspace during testing"
+      
+    workspace_dirs:
+      value:
+        tasks: "tasks"
+        jobs: "jobs"
+        templates: "templates"
+        applications: "applications"
+        cache: "cache"
+        logs: "logs"
+      type: dict
+      description: "Directory structure for testing workspace"
+      
+  user_mutable:
+    debug:
+      value: true  # Default to debug mode in testing
+      type: bool
+      description: "Debug mode enabled by default in testing" 

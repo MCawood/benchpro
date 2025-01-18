@@ -1,0 +1,13 @@
+version: "1.0"
+
+# Site-level settings for BenchPro
+settings:
+  testing:
+    value: false
+    mutable: false  # Users cannot change this
+    description: "Testing mode controlled by site administrator"
+    
+  debug:
+    value: false
+    mutable: true   # Users can change this
+    description: "Debug mode can be controlled by users" 

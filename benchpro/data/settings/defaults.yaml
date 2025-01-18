@@ -1,0 +1,58 @@
+metadata:
+  file_version: "1.0"  # Version of this settings file format
+  last_updated: "2024-01-07T12:00:00"   # Will be set by version management script
+
+settings:
+  immutable:
+    # Core settings that cannot be changed
+    version:
+      value: "1.0.0"  # Will be updated by version management script
+      type: str
+      description: "BenchPro version"
+      
+  site_mutable:
+    # Settings that only site admin can configure
+    testing:
+      value: false
+      type: bool
+      description: "Testing mode controlled by site administrator"
+      
+    template_paths:
+      value:
+        - "${XDG_DATA_HOME:-~/.local/share}/benchpro/templates"
+        - "/usr/local/share/benchpro/templates"
+        - "/usr/share/benchpro/templates"
+      type: list
+      description: "Paths to search for templates"
+      
+  user_mutable:
+    # Settings that both site admin and users can configure
+    debug:
+      value: false
+      type: bool
+      description: "Enable debug mode" 
+
+    max_running_tasks:
+      value: 2
+      type: int
+      description: "Maximum number of concurrent tasks that can run locally" 
+
+    task_locations:
+      value:
+        build: "${PWD}"  # Default to current directory
+        benchmark: "${PWD}"
+        custom: null
+      type: dict
+      description: "Configurable locations for different task types"
+    
+    task_history_size:
+      value: 100
+      type: int
+      description: "Maximum number of tasks to keep in history"
+      
+    logging:
+      value:
+        level: "INFO"
+        format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+      type: dict
+      description: "Logging configuration" 
