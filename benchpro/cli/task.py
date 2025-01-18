@@ -7,7 +7,10 @@ import re
 from typing import Dict, List
 from benchpro.core.domain import Task, TaskState
 from benchpro.core.validation.validators import validate_memory_string, FileValidator
-from benchpro.core.executor.local import LocalExecutor
+from benchpro.core.infrastructure.local_executor import LocalExecutor
+from benchpro.core.services.logging import get_logger
+
+logger = get_logger("cli.task")
 
 @click.group()
 def task():
@@ -23,8 +26,10 @@ def init(directory):
         tasks_dir = workspace / 'tasks'
         tasks_dir.mkdir(parents=True, exist_ok=True)
         click.echo(f"Initialized BenchPRO workspace in {workspace}")
+        return 0
     except Exception as e:
-        raise click.ClickException(str(e))
+        click.echo(f"Error: {str(e)}")
+        return 1
 
 def get_workspace_dir():
     """Get the workspace directory from context or use current directory."""
@@ -77,23 +82,22 @@ def get_task(name: str) -> Task:
     if not task_dir.exists():
         raise click.ClickException(f"Task '{name}' not found")
     
-    # Find template path from task directory
-    template_path = None
-    for file in task_dir.glob('*.sh'):
-        if file.is_file():
-            template_path = file
-            break
+    # Find template path - should be run.sh in task directory
+    template_path = task_dir / "run.sh"
     
     # Load task state from file
     state_data = Task.load_state(task_dir)
     
-    return Task(
+    # Create task with loaded state
+    task = Task(
         name=name,
         working_dir=task_dir,
         template_path=template_path,
         state=state_data["state"],
         error=state_data["error"]
     )
+    
+    return task
 
 def parse_env_vars(env_vars: List[str]) -> Dict[str, str]:
     """Parse environment variables from CLI arguments.
@@ -129,18 +133,13 @@ def run_async(coro):
         The result of the coroutine execution.
     """
     try:
-        loop = asyncio.get_running_loop()
+        loop = asyncio.get_event_loop()
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
     
-    try:
-        return loop.run_until_complete(asyncio.wait_for(coro, timeout=5.0))
-    except asyncio.TimeoutError:
-        raise click.ClickException("Operation timed out")
-    finally:
-        if not loop.is_running():
-            loop.close()
+    # For task execution, we don't want a timeout since tasks can run for a long time
+    return loop.run_until_complete(coro)
 
 async def _run_task(task: Task, executor: LocalExecutor) -> None:
     """Run a task using the provided executor.
@@ -154,20 +153,18 @@ async def _run_task(task: Task, executor: LocalExecutor) -> None:
     """
     try:
         await executor.run(task)
-        # Wait for task to complete with timeout
-        try:
-            while True:
-                state = await asyncio.wait_for(executor.status(task), timeout=1.0)
-                if state in (TaskState.COMPLETED, TaskState.FAILED, TaskState.CANCELLED):
-                    break
-                await asyncio.sleep(0.1)
-        except asyncio.TimeoutError:
-            # Task is still running, which is fine
-            pass
+        # Wait for task to complete
+        while True:
+            state = await executor.status(task)
+            if state in (TaskState.COMPLETED, TaskState.FAILED, TaskState.CANCELLED):
+                break
+            await asyncio.sleep(0.1)
             
     except Exception as e:
         await executor.cleanup(task)
         raise click.ClickException(f"Failed to run task: {str(e)}")
+    finally:
+        await executor.cleanup(task)
 
 async def _get_task_status(task: Task, executor: LocalExecutor) -> TaskState:
     """Get task status using the provided executor.
@@ -182,7 +179,8 @@ async def _get_task_status(task: Task, executor: LocalExecutor) -> TaskState:
     try:
         return await asyncio.wait_for(executor.status(task), timeout=1.0)
     except asyncio.TimeoutError:
-        raise click.ClickException("Failed to get task status: Operation timed out")
+        # If we timeout getting status, just return the current task state
+        return task.state
 
 async def _stop_task(task: Task, executor: LocalExecutor) -> None:
     """Stop a task using the provided executor.
@@ -213,60 +211,68 @@ async def _stop_task(task: Task, executor: LocalExecutor) -> None:
               help='Wall time limit in seconds')
 def create(name, template, working_dir, cores, memory, walltime):
     """Create a new task with the given parameters."""
+    task_dir = Path(working_dir) if working_dir else Path.cwd() / 'tasks' / name
+
+    logger.debug("Task directory: %s", task_dir)
+    logger.debug("Parent directory: %s", task_dir.parent)
+
+    # Validate task name
+    name = validate_task_name(name)
+    
+    # Validate memory format
     try:
-        # Validate task name
-        name = validate_task_name(name)
-        
-        # Validate memory format
-        try:
-            validate_memory_string(memory)
-        except ValueError as e:
-            raise click.ClickException(f"Invalid memory format: {e}")
-        
-        # Use provided working directory or default to workspace/tasks/name
-        if working_dir:
-            task_dir = Path(working_dir)
-        else:
-            workspace = validate_workspace()
-            task_dir = workspace / 'tasks' / name
-        
-        # Create task directory
+        validate_memory_string(memory)
+    except ValueError as e:
+        raise click.ClickException(f"Invalid memory format: {e}")
+    
+    # Use provided working directory or default to workspace/tasks/name
+    if working_dir:
+        task_dir = Path(working_dir)
+        logger.debug("Task directory: %s", task_dir)
+    else:
+        workspace = validate_workspace()
+        task_dir = workspace / 'tasks' / name
+    
+    try:
+        # Create task directory and parents
         task_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Create a default template if none provided
-        template_path = None
-        if template:
-            # Validate template file
-            validator = FileValidator(extensions=[".sh"])
-            try:
-                template_path = validator(Path(template))
-                # Copy template to task directory
-                import shutil
-                dest_path = task_dir / template_path.name
-                shutil.copy2(template_path, dest_path)
-                template_path = dest_path
-            except ValueError as e:
-                raise click.ClickException(f"Invalid template file: {e}")
-            except Exception as e:
-                raise click.ClickException(f"Failed to copy template file: {str(e)}")
-        
-        task = Task(
-            name=name,
-            working_dir=task_dir,
-            template_path=template_path,
-            variables={
-                'cores': cores,
-                'memory': memory,
-                'walltime': walltime
-            }
-        )
-        
-        click.echo(f"Task '{name}' created successfully")
-        click.echo(f"Working directory: {task_dir}")
-        click.echo(f"Resources: {cores} cores, {memory} memory, {walltime}s walltime")
-        
+    except PermissionError:
+        raise click.ClickException("Permission denied when creating directory")
     except Exception as e:
-        raise click.ClickException(str(e))
+        raise click.ClickException(f"Failed to create task directory: {str(e)}")
+    
+    # Create a default template if none provided
+    template_path = None
+    if template:
+        # Validate template file
+        validator = FileValidator(extensions=[".sh"])
+        try:
+            template_path = validator(Path(template))
+            # Copy template to task directory as run.sh
+            import shutil
+            dest_path = task_dir / "run.sh"
+            shutil.copy2(template_path, dest_path)
+            template_path = dest_path
+        except ValueError as e:
+            raise click.ClickException(f"Invalid template file: {e}")
+        except Exception as e:
+            raise click.ClickException(f"Failed to copy template file: {str(e)}")
+    
+    task = Task(
+        name=name,
+        working_dir=task_dir,
+        template_path=template_path,
+        variables={
+            'cores': cores,
+            'memory': memory,
+            'walltime': walltime
+        }
+    )
+    
+    click.echo(f"Task '{name}' created successfully")
+    click.echo(f"Working directory: {task_dir}")
+    click.echo(f"Resources: {cores} cores, {memory} memory, {walltime}s walltime")
+    return 0
 
 @task.command()
 def list():
@@ -277,25 +283,54 @@ def list():
         tasks = [d.name for d in tasks_dir.iterdir() if d.is_dir()]
         if not tasks:
             click.echo("No tasks found")
-            return
+            return 0
         for task_name in sorted(tasks):
             click.echo(task_name)
+        return 0
     except Exception as e:
-        raise click.ClickException(str(e))
+        click.echo(f"Error: {str(e)}")
+        return 1
 
 @task.command()
 @click.argument('name')
-@click.option('--env', '-e', multiple=True,
-              help='Environment variables in KEY=VALUE format')
+@click.option('--env', '-e', multiple=True, help='Environment variables in KEY=VALUE format')
 def run(name, env):
     """Run a task."""
+    logger.debug("Starting run command execution")
     try:
-        workspace = validate_workspace()
         task = get_task(name)
-        env_vars = parse_env_vars(env) if env else {}
-        executor = LocalExecutor(workspace, env=env_vars)
-        run_async(_run_task(task, executor))
-        click.echo(f"Started task '{name}'")
+        executor = LocalExecutor()
+
+        # Update task variables with environment variables
+        if env:
+            for var in env:
+                key, value = var.split('=')
+                task.variables[key] = value
+
+        click.echo(f"Starting task '{name}'...")
+        logger.debug("Calling run_async(_run_task)")
+        try:
+            run_async(_run_task(task, executor))
+        except Exception as e:
+            raise click.ClickException(f"Failed to run task: {str(e)}")
+
+        logger.debug("Task execution complete, getting final status")
+        state = run_async(_get_task_status(task, executor))
+        logger.debug("Final state retrieved: %s", state)
+        click.echo(f"Task final state: {state}")
+
+        if state == TaskState.FAILED:
+            if task.error:
+                click.echo(f"Task failed with error: {task.error}", err=True)
+            raise click.ClickException("Task execution failed")
+        elif state == TaskState.CANCELLED:
+            raise click.ClickException("Task was cancelled")
+        elif state == TaskState.COMPLETED:
+            logger.debug("Task completed successfully")
+            click.echo("Task completed successfully")
+            
+    except click.ClickException:
+        raise
     except Exception as e:
         raise click.ClickException(str(e))
 
@@ -305,7 +340,7 @@ def status(name):
     """Check task status."""
     try:
         task = get_task(name)
-        executor = LocalExecutor(task.working_dir)
+        executor = LocalExecutor()
         state = run_async(_get_task_status(task, executor))
         
         status_messages = {
@@ -319,11 +354,13 @@ def status(name):
         
         click.echo(f"Task '{name}' is {status_messages[state]}")
         
-        if state == TaskState.FAILED and task.error:
-            click.echo(f"Error: {task.error}")
-            ctx = click.get_current_context()
-            ctx.exit(1)
+        if state == TaskState.FAILED:
+            if task.error:
+                click.echo(f"Error: {task.error}", err=True)
+            raise click.ClickException("Task failed")
             
+    except click.ClickException:
+        raise
     except Exception as e:
         raise click.ClickException(str(e))
 
@@ -333,8 +370,16 @@ def stop(name):
     """Stop a running task."""
     try:
         task = get_task(name)
-        executor = LocalExecutor(task.working_dir)
+        executor = LocalExecutor()
+        state = run_async(_get_task_status(task, executor))
+        
+        if state != TaskState.RUNNING:
+            raise click.ClickException(f"Task '{name}' is not running")
+            
         run_async(_stop_task(task, executor))
         click.echo(f"Stopped task '{name}'")
+            
+    except click.ClickException:
+        raise
     except Exception as e:
         raise click.ClickException(str(e))
