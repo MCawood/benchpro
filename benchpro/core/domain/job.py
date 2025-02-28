@@ -50,6 +50,7 @@ class Job(BaseModel):
         error: Error message if job failed
         started_at: When job started running
         completed_at: When job finished (success or failure)
+        id: Unique identifier for the job
     """
     
     name: str = Field(..., description="Job name")
@@ -60,6 +61,7 @@ class Job(BaseModel):
     error: Optional[str] = Field(None, description="Error message if job failed")
     started_at: Optional[datetime] = Field(None, description="When job started running")
     completed_at: Optional[datetime] = Field(None, description="When job finished")
+    id: str = Field(default_factory=lambda: str(uuid4()), description="Unique identifier for the job")
 
     @field_validator("tasks")
     @classmethod

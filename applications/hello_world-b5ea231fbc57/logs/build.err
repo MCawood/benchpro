@@ -1,0 +1,9 @@
+2025-01-09 12:43:58,129 - DEBUG - Loading template configuration for hello_world
+2025-01-09 12:43:58,130 - DEBUG - Creating build task
+2025-01-09 12:43:58,130 - DEBUG - Template root directory: /Users/mcawood/dev/benchpro/templates
+2025-01-09 12:43:58,130 - DEBUG - Source files in config: ['hello_world.c']
+2025-01-09 12:43:58,130 - DEBUG - Adding source files to staging list
+2025-01-09 12:43:58,130 - DEBUG - Full source path: /Users/mcawood/dev/benchpro/templates/hello_world/hello_world.c
+2025-01-09 12:43:58,130 - DEBUG - Checking if file exists at: /Users/mcawood/dev/benchpro/templates/hello_world/hello_world.c
+2025-01-09 12:43:58,131 - ERROR - Source file not found: /Users/mcawood/dev/benchpro/templates/hello_world/hello_world.c
+2025-01-09 12:43:58,131 - ERROR - Build failed: Source file not found: /Users/mcawood/dev/benchpro/templates/hello_world/hello_world.c

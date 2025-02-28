@@ -7,7 +7,7 @@ import re
 from typing import Dict, List
 from benchpro.core.domain import Task, TaskState
 from benchpro.core.validation.validators import validate_memory_string, FileValidator
-from benchpro.core.infrastructure.local_executor import LocalExecutor
+from benchpro.core.executor.local import LocalExecutor
 from benchpro.core.services.logging import get_logger
 
 logger = get_logger("cli.task")

@@ -5,7 +5,7 @@ from benchpro.core.services.build_orchestrator import BuildOrchestrator, BuildEr
 from benchpro.core.domain.templates.loader import TemplateLoader
 from benchpro.core.domain.templates.config import TemplateConfig
 from benchpro.core.domain.task import Task, TaskState
-from benchpro.core.infrastructure.local_executor import LocalExecutor
+from benchpro.core.executor.local import LocalExecutor
 from benchpro.core.domain.task_registry import TaskRegistry
 from benchpro.core.services.location_manager import LocationManager
 from benchpro.core.services.settings import Settings
@@ -64,9 +64,17 @@ int main() {
 
 @pytest.fixture
 def executor():
-    executor = AsyncMock(spec=LocalExecutor)
-    executor.get_job_status.return_value = {"state": "completed"}
-    executor.run = AsyncMock()
+    """Create a mock executor for testing."""
+    executor = AsyncMock()
+    executor.get_job_status = AsyncMock(return_value={"state": "completed"})
+    executor.submit_job = AsyncMock()
+    executor.cancel_job = AsyncMock()
+    executor.cleanup_job = AsyncMock()
+    executor.get_resource_usage = AsyncMock(return_value={
+        "memory_mb": 1024.0,
+        "virtual_memory_mb": 2048.0,
+        "cpu_time": 60.0
+    })
     return executor
 
 @pytest.fixture

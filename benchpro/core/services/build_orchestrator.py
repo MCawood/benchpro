@@ -13,7 +13,7 @@ from benchpro.core.domain.task import Task, TaskState
 from benchpro.core.domain.job import Job, JobState
 from benchpro.core.domain.staging import StagingFile, StagingMode
 from benchpro.core.domain.task_registry import TaskRegistry, TaskType
-from benchpro.core.infrastructure.local_executor import LocalExecutor
+from benchpro.core.executor.local import LocalExecutor
 from benchpro.core.services.staging import FileStager
 from benchpro.core.services.location_manager import LocationManager
 from benchpro.core.services.logging import get_logger

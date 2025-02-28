@@ -17,4 +17,7 @@ dependencies = [
 
 [project.scripts]
 benchpro = "benchpro.cli:cli"
-bp = "benchpro.cli:cli" 
+bp = "benchpro.cli:cli"
+
+[tool.hatch.build.targets.wheel]
+packages = ["benchpro"] 

@@ -1,0 +1,22 @@
+2025-01-09 12:43:18,182 - DEBUG - Loading template configuration for hello_world
+2025-01-09 12:43:18,183 - DEBUG - Creating build task
+2025-01-09 12:43:18,183 - DEBUG - Template root directory: /Users/mcawood/dev/benchpro/templates
+2025-01-09 12:43:18,183 - DEBUG - Loading build template
+2025-01-09 12:43:18,184 - DEBUG - Creating template context
+2025-01-09 12:43:18,186 - DEBUG - Writing build script to /Users/mcawood/dev/benchpro/applications/hello_world-c166f8f81f60/source
+2025-01-09 12:43:18,186 - DEBUG - Creating build job
+2025-01-09 12:43:18,187 - DEBUG - Starting file staging
+2025-01-09 12:43:18,187 - DEBUG - Submitting build job
+2025-01-09 12:43:18,190 - DEBUG - Monitoring build progress
+2025-01-09 12:43:18,191 - DEBUG - Job status: {'state': 'running'}
+2025-01-09 12:43:18,292 - DEBUG - Job status: {'state': 'running'}
+2025-01-09 12:43:18,393 - DEBUG - Job status: {'state': 'running'}
+2025-01-09 12:43:18,495 - DEBUG - Job status: {'state': 'failed', 'error': "Task failed with exit code 1\nStderr: clang: error: no such file or directory: 'hello_world.c'\nclang: error: no input files\n"}
+2025-01-09 12:43:18,495 - ERROR - Build failed: Task failed with exit code 1
+Stderr: clang: error: no such file or directory: 'hello_world.c'
+clang: error: no input files
+
+2025-01-09 12:43:18,495 - ERROR - Build failed: Build failed: Task failed with exit code 1
+Stderr: clang: error: no such file or directory: 'hello_world.c'
+clang: error: no input files
+

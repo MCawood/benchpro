@@ -10,7 +10,7 @@ from benchpro.core.services.settings import Settings
 from benchpro.core.services.location_manager import LocationManager
 from benchpro.core.domain.task_registry import TaskRegistry, TaskType
 from benchpro.core.domain.templates.loader import TemplateLoader
-from benchpro.core.infrastructure.local_executor import LocalExecutor
+from benchpro.core.executor.local.executor import LocalExecutor
 from benchpro.core.services.build_orchestrator import BuildOrchestrator
 
 @pytest.fixture
@@ -62,7 +62,7 @@ def task_registry(temp_workspace):
 def build_orchestrator(temp_workspace, settings, location_manager, task_registry):
     """Create build orchestrator with test components."""
     template_loader = TemplateLoader(temp_workspace / "templates")
-    executor = LocalExecutor()
+    executor = LocalExecutor(working_dir=temp_workspace / "applications")
     return BuildOrchestrator(
         template_loader=template_loader,
         executor=executor,

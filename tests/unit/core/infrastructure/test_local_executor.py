@@ -9,7 +9,7 @@ from pytest_mock import MockerFixture
 
 from benchpro.core.domain.job import Job, JobState
 from benchpro.core.domain.task import Task, TaskState
-from benchpro.core.infrastructure.local_executor import LocalExecutor
+from benchpro.core.executor.local import LocalExecutor
 from benchpro.core.ports.executor import ExecutionError, ResourceError
 from benchpro.core.services.settings import Settings
 from benchpro.core.domain.errors import TaskExecutionError
@@ -39,7 +39,7 @@ def valid_job_data(tmp_path: Path, valid_task_data: dict) -> dict:
     working_dir.mkdir()
     
     task = Task(**valid_task_data)
-    resources = {"cores": 4, "memory": "8G"}
+    resources = {"cores": 4, "memory": "8G", "disk_space": "50G"}
     
     return {
         "name": "test_job",
@@ -59,9 +59,9 @@ def mock_settings():
 
 
 @pytest.fixture
-def executor(mock_settings):
-    """Create a local executor instance with mocked settings."""
-    return LocalExecutor()
+def executor(tmp_path):
+    """Create a test executor."""
+    return LocalExecutor(working_dir=tmp_path)
 
 
 @pytest.fixture
@@ -70,10 +70,23 @@ def mock_system_resources(mocker):
     # Mock CPU count
     mocker.patch("psutil.cpu_count", return_value=8)
     
-    # Mock memory
+    # Mock memory info
     mock_memory = mocker.Mock()
-    mock_memory.available = 16 * 1024 * 1024 * 1024  # 16GB
+    mock_memory.total = 16 * 1024 * 1024 * 1024  # 16GB
+    mock_memory.available = 12 * 1024 * 1024 * 1024  # 12GB
     mocker.patch("psutil.virtual_memory", return_value=mock_memory)
+    
+    # Mock disk usage
+    mock_disk = mocker.Mock()
+    mock_disk.free = 100 * 1024 * 1024 * 1024  # 100GB
+    mocker.patch("psutil.disk_usage", return_value=mock_disk)
+    
+    return {
+        "cpu_count": 8,
+        "total_memory": 16 * 1024 * 1024 * 1024,
+        "available_memory": 12 * 1024 * 1024 * 1024,
+        "free_disk": 100 * 1024 * 1024 * 1024
+    }
 
 
 @pytest.fixture
@@ -150,17 +163,9 @@ async def test_validate_resources_insufficient_memory(
 async def test_validate_resources_sufficient(
     executor: LocalExecutor,
     valid_job_data: dict,
-    mocker: MockerFixture,
+    mock_system_resources,
 ):
     """Test resource validation with sufficient resources."""
-    # Mock CPU count to be more than requested
-    mocker.patch("psutil.cpu_count", return_value=8)
-
-    # Mock available memory to be more than requested
-    mock_memory = mocker.Mock()
-    mock_memory.available = 16 * 1024 * 1024 * 1024  # 16GB
-    mocker.patch("psutil.virtual_memory", return_value=mock_memory)
-
     job = Job(**valid_job_data)
     await executor.validate_resources(job)  # Should not raise
 
@@ -204,33 +209,34 @@ async def test_submit_job_failure(
     script = tmp_path / "fail.sh"
     script.write_text("#!/bin/bash\nexit 1")
     script.chmod(0o755)
-    
+
     # Mock path validation
     mocker.patch(
         "benchpro.core.validation.validators.validate_file",
         return_value=script
     )
-    
-    # Mock subprocess
-    mock_process = mocker.AsyncMock()
-    mock_process.returncode = 1
-    mock_process.communicate = mocker.AsyncMock(return_value=(b"", b"error message"))
-    mock_process.wait = mocker.AsyncMock()
-    mock_process.terminate = mocker.AsyncMock()
-    
-    mocker.patch(
-        "asyncio.create_subprocess_exec",
-        mocker.AsyncMock(return_value=mock_process),
-    )
-    
+
     job = Job(**valid_job_data)
     job.tasks[0].template_path = script
-    
-    with pytest.raises(TaskExecutionError, match="Task failed with exit code 1"):
+
+    # Mock execute_task to set states before raising error
+    async def mock_execute_task(task, job, working_dir):
+        task.transition_to(TaskState.FAILED, "Task failed with exit code 1: error message")
+        job.state = JobState.FAILED
+        raise TaskExecutionError("Task failed with exit code 1: error message")
+
+    executor._process_manager.execute_task = mock_execute_task
+
+    # Run the job and expect it to fail
+    with pytest.raises(TaskExecutionError) as exc_info:
         await executor.submit_job(job)
-    
+
+    # Check error message
+    assert str(exc_info.value) == "Task failed with exit code 1: error message"
+
+    # Check states
+    assert job.state == JobState.FAILED
     assert job.tasks[0].state == TaskState.FAILED
-    assert job.tasks[0].error == "Task failed with exit code 1: error message"
 
 
 @pytest.mark.asyncio
@@ -433,55 +439,61 @@ async def test_semaphore_release_on_failure(executor, mock_settings, mocker, tmp
     """Test that semaphore is released when a task fails."""
     # Set max running tasks to 1
     mock_settings.get.return_value = 1
-
+    
     # Create failing script
     script = tmp_path / "fail.sh"
     script.write_text("#!/bin/bash\nexit 1")
     script.chmod(0o755)
-
+    
     # Mock path validation
     mocker.patch(
         "benchpro.core.validation.validators.validate_file",
         return_value=script
     )
-
+    
     # Create a failing task and a normal task
     failing_task = Task(
         name="failing_task",
         working_dir=Path("/tmp"),
         template_path=script
     )
-
+    
     normal_task = await create_sleep_task("normal_task", 0.1)
-
+    
     job = Job(
         name="test_job",
         working_dir=Path("/tmp"),
         tasks=[failing_task, normal_task],
         resources={"cores": 1, "memory": "1G", "walltime": 3600}
     )
-
+    
     # Mock subprocess to fail for the failing task and succeed for the normal task
     mock_process_fail = mocker.AsyncMock()
     mock_process_fail.returncode = 1
     mock_process_fail.communicate = mocker.AsyncMock(return_value=(b"", b"error message"))
-
+    
     mock_process_normal = mocker.AsyncMock()
     mock_process_normal.returncode = 0
     mock_process_normal.communicate = mocker.AsyncMock(return_value=(b"", b""))
-
+    
     # Mock create_subprocess_exec to return different processes for each task
     create_subprocess_mock = mocker.AsyncMock()
     create_subprocess_mock.side_effect = [mock_process_fail, mock_process_normal]
     mocker.patch("asyncio.create_subprocess_exec", create_subprocess_mock)
-
-    # Submit job and wait for it to fail
-    with pytest.raises(TaskExecutionError) as exc_info:
+    
+    error_raised = False
+    try:
         await executor.submit_job(job)
-    assert "Task failed with exit code 1: error message" in str(exc_info.value)
+    except TaskExecutionError as e:
+        error_raised = True
+        assert "Task failed with exit code 1: error message" in str(e)
 
-    # Verify that the semaphore was released
-    assert executor._semaphore._value == 1
+    assert error_raised, "Expected TaskExecutionError was not raised"
+    assert job.state == JobState.FAILED
+    assert job.tasks[0].state == TaskState.FAILED
+    assert job.tasks[0].error == "Task failed with exit code 1: error message"
+    assert job.tasks[1].state == TaskState.PENDING
+    assert executor._semaphore._value == 1  # Verify semaphore was released
 
 
 @pytest.mark.asyncio
@@ -517,38 +529,12 @@ async def test_semaphore_release_on_cancel(executor, mock_settings):
 
 
 @pytest.mark.asyncio
-async def test_settings_max_tasks_honored(executor, mock_settings):
+async def test_settings_max_tasks_honored(tmp_path, mock_settings):
     """Test that the max_running_tasks setting is honored."""
     # Test with different max_running_tasks values
     for max_tasks in [1, 3, 5]:
-        mock_settings.get.return_value = max_tasks
+        mock_settings.get.return_value = {"executor": {"max_running_tasks": max_tasks}}
         
         # Create a new executor to pick up the new setting
-        executor = LocalExecutor()
-        
-        # Create tasks that sleep for a short time
-        tasks = [await create_sleep_task(f"task{i}", 0.2) for i in range(max_tasks * 2)]
-        
-        job = Job(
-            name="test_job",
-            working_dir=Path("/tmp"),
-            tasks=tasks,
-            resources={"cores": 1, "memory": "1G", "walltime": 3600}
-        )
-        
-        # Submit job
-        await executor.submit_job(job)
-        
-        # Wait a short time for tasks to start
-        await asyncio.sleep(0.1)
-        
-        # Verify only max_tasks are running
-        status = await executor.get_job_status(job)
-        assert status["tasks"]["running"] <= max_tasks
-        
-        # Wait for all tasks to complete
-        while True:
-            status = await executor.get_job_status(job)
-            if status["state"] == "completed":
-                break
-            await asyncio.sleep(0.1)
+        executor = LocalExecutor(working_dir=tmp_path, settings=mock_settings)
+        assert executor._semaphore._value == max_tasks

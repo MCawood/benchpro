@@ -17,6 +17,19 @@ settings:
       type: bool
       description: "Testing mode controlled by site administrator"
       
+    use_slurm_simulator:
+      value: false
+      type: bool
+      description: "Use local Slurm simulator instead of system Slurm installation"
+      
+    slurm_simulator:
+      value:
+        connection_type: "lima"
+        instance: "slurm"
+        env_vars: {}
+      type: dict
+      description: "Configuration for connecting to Slurm simulator via Lima"
+      
     template_paths:
       value:
         - "${XDG_DATA_HOME:-~/.local/share}/benchpro/templates"
@@ -30,29 +43,39 @@ settings:
     debug:
       value: false
       type: bool
-      description: "Enable debug mode" 
+      description: "Enable debug mode"
 
     max_running_tasks:
       value: 2
       type: int
-      description: "Maximum number of concurrent tasks that can run locally" 
+      description: "Maximum number of tasks that can run simultaneously"
 
     task_locations:
       value:
-        build: "${PWD}"  # Default to current directory
-        benchmark: "${PWD}"
+        build: "${HOME}/dev/benchpro"
+        benchmark: "${HOME}/dev/benchpro"
         custom: null
       type: dict
-      description: "Configurable locations for different task types"
+      description: "Default locations for different task types"
     
     task_history_size:
       value: 100
       type: int
-      description: "Maximum number of tasks to keep in history"
+      description: "Number of tasks to keep in history"
       
     logging:
       value:
         level: "INFO"
         format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
       type: dict
-      description: "Logging configuration" 
+      description: "Logging configuration"
+
+    executor:
+      value:
+        type: "local"
+        slurm_simulator:
+          enabled: true
+          connection_type: "lima"
+          instance: "slurm"
+      type: dict
+      description: "Task executor configuration" 

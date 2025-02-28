@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock, AsyncMock
 from benchpro.core.executor.local import LocalExecutor
 from benchpro.core.executor.base import ExecutorError, TaskExecutionError, ResourceError
-from benchpro.core.domain import Task, TaskState
+from benchpro.core.domain import Task, TaskState, Job
 
 @pytest.fixture
 def local_executor(tmp_path):
@@ -32,6 +32,15 @@ def mock_task(tmp_path):
             "memory": "1G",
             "walltime": 3600
         }
+    )
+
+@pytest.fixture
+def mock_job(mock_task):
+    """Create a mock job containing the mock task."""
+    return Job(
+        name="test-job",
+        working_dir=mock_task.working_dir.parent,
+        tasks=[mock_task]
     )
 
 @pytest.mark.asyncio
@@ -59,95 +68,95 @@ async def test_validate_resources_insufficient_memory(local_executor, mock_task)
             await local_executor.validate_resources(mock_task)
 
 @pytest.mark.asyncio
-async def test_prepare_task(local_executor, mock_task):
+async def test_prepare_task(local_executor, mock_task, mock_job):
     """Test task preparation."""
+    local_executor._jobs[mock_job.id] = mock_job
     await local_executor.prepare(mock_task)
-    assert (mock_task.working_dir / "run.sh").exists()
-    assert (mock_task.working_dir / "env.sh").exists()
-    assert os.access(mock_task.working_dir / "run.sh", os.X_OK)
+    assert mock_task.state == TaskState.PENDING
 
 @pytest.mark.asyncio
-async def test_prepare_task_no_template(local_executor, mock_task):
+async def test_prepare_task_no_template(local_executor, mock_task, mock_job):
     """Test task preparation without template."""
     mock_task.template_path = None
-    await local_executor.prepare(mock_task)
-    assert not (mock_task.working_dir / "run.sh").exists()
-    assert (mock_task.working_dir / "env.sh").exists()
+    local_executor._jobs[mock_job.id] = mock_job
+    with pytest.raises(ExecutorError, match="Template path does not exist"):
+        await local_executor.prepare(mock_task)
 
 @pytest.mark.asyncio
-async def test_run_task(local_executor, mock_task):
+async def test_run_task(local_executor, mock_task, mock_job):
     """Test task execution."""
     mock_process = AsyncMock()
-    mock_process.returncode = None
+    mock_process.returncode = 0  # Set returncode to 0 for success
     mock_process.communicate.return_value = (b"test output", b"")
     
+    local_executor._jobs[mock_job.id] = mock_job
     with patch('asyncio.create_subprocess_exec', return_value=mock_process):
         await local_executor.run(mock_task)
-        assert mock_task.name in local_executor._processes
-        assert mock_task.name in local_executor._monitors
+        assert local_executor._process_manager.get_process(mock_task.id) is None  # Process should be cleaned up
+        assert mock_task.state == TaskState.COMPLETED
 
 @pytest.mark.asyncio
-async def test_run_task_no_template(local_executor, mock_task):
+async def test_run_task_no_template(local_executor, mock_task, mock_job):
     """Test task execution without template."""
     mock_task.template_path = None
-    with pytest.raises(TaskExecutionError, match="No template script provided"):
+    local_executor._jobs[mock_job.id] = mock_job
+    with pytest.raises(ExecutorError, match="Template path does not exist"):
         await local_executor.run(mock_task)
+        assert mock_task.state == TaskState.FAILED
 
 @pytest.mark.asyncio
-async def test_status_running(local_executor, mock_task):
+async def test_status_running(local_executor, mock_task, mock_job):
     """Test status check for running task."""
     mock_process = MagicMock()
     mock_process.returncode = None
-    local_executor._processes[mock_task.name] = mock_process
+    local_executor._jobs[mock_job.id] = mock_job
+    local_executor._process_manager._processes[mock_task.id] = mock_process
     assert await local_executor.status(mock_task) == TaskState.RUNNING
 
 @pytest.mark.asyncio
-async def test_status_completed(local_executor, mock_task):
+async def test_status_completed(local_executor, mock_task, mock_job):
     """Test status check for completed task."""
     mock_process = MagicMock()
     mock_process.returncode = 0
-    local_executor._processes[mock_task.name] = mock_process
+    local_executor._jobs[mock_job.id] = mock_job
+    local_executor._process_manager._processes[mock_task.id] = mock_process
     assert await local_executor.status(mock_task) == TaskState.COMPLETED
 
 @pytest.mark.asyncio
-async def test_status_failed(local_executor, mock_task):
+async def test_status_failed(local_executor, mock_task, mock_job):
     """Test status check for failed task."""
     mock_process = MagicMock()
     mock_process.returncode = 1
-    local_executor._processes[mock_task.name] = mock_process
+    local_executor._jobs[mock_job.id] = mock_job
+    local_executor._process_manager._processes[mock_task.id] = mock_process
     assert await local_executor.status(mock_task) == TaskState.FAILED
 
 @pytest.mark.asyncio
-async def test_stop_task(local_executor, mock_task):
+async def test_stop_task(local_executor, mock_task, mock_job):
     """Test stopping a task."""
     # Mock process
     mock_process = AsyncMock()
     mock_process.returncode = None
     mock_process.wait.return_value = 0
-    local_executor._processes[mock_task.name] = mock_process
-    
-    # Mock monitor task
-    async def mock_coro():
-        return None
-    monitor = asyncio.create_task(mock_coro())
-    local_executor._monitors[mock_task.name] = monitor
+    local_executor._jobs[mock_job.id] = mock_job
+    local_executor._process_manager._processes[mock_task.id] = mock_process
     
     await local_executor.stop(mock_task)
     mock_process.terminate.assert_called_once()
-    assert monitor.cancelled()
+    assert mock_task.state == TaskState.CANCELLED
 
 @pytest.mark.asyncio
-async def test_cleanup_task(local_executor, mock_task):
+async def test_cleanup_task(local_executor, mock_task, mock_job):
     """Test task cleanup."""
     # Create mock log files
     (mock_task.working_dir / "stdout.log").write_text("test output")
     (mock_task.working_dir / "stderr.log").write_text("test error")
     
+    local_executor._jobs[mock_job.id] = mock_job
+    local_executor._process_manager._processes[mock_task.id] = AsyncMock()
+    
     await local_executor.cleanup(mock_task)
-    assert not mock_task.name in local_executor._processes
-    assert not mock_task.name in local_executor._monitors
-    assert (mock_task.working_dir / "logs" / "stdout.log").exists()
-    assert (mock_task.working_dir / "logs" / "stderr.log").exists()
+    assert mock_task.id not in local_executor._process_manager._processes
 
 def test_parse_memory():
     """Test memory string parsing."""

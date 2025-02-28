@@ -57,7 +57,9 @@ Both Task and Job models use state enums to track their execution status:
 Task States:
 ~~~~~~~~~~
 
-* **PENDING**: Initial state, ready for execution
+* **CREATED**: Initial state when task is instantiated
+* **STAGING**: Task is preparing for execution
+* **PENDING**: Task is ready for execution
 * **RUNNING**: Currently executing
 * **COMPLETED**: Successfully finished
 * **FAILED**: Execution failed
@@ -66,11 +68,34 @@ Task States:
 Job States:
 ~~~~~~~~~
 
-* **PENDING**: Initial state
-* **RUNNING**: One or more tasks are running
+* **CREATED**: Initial state when job is instantiated
+* **QUEUED**: Job is queued for execution
+* **RUNNING**: Currently executing tasks sequentially
 * **COMPLETED**: All tasks completed successfully
 * **FAILED**: One or more tasks failed
-* **CANCELLED**: Job was cancelled
+* **CANCELLED**: Execution was cancelled
+
+State Transitions:
+~~~~~~~~~~~~~~~
+
+Valid transitions between states are strictly controlled:
+
+Task Transitions:
+^^^^^^^^^^^^^^^
+
+* CREATED → STAGING/PENDING/FAILED/CANCELLED
+* STAGING → PENDING/FAILED/CANCELLED
+* PENDING → RUNNING/FAILED/CANCELLED
+* RUNNING → COMPLETED/FAILED/CANCELLED
+* COMPLETED/FAILED/CANCELLED: Terminal states
+
+Job Transitions:
+^^^^^^^^^^^^^
+
+* CREATED → QUEUED/CANCELLED
+* QUEUED → RUNNING/CANCELLED
+* RUNNING → COMPLETED/FAILED/CANCELLED
+* COMPLETED/FAILED/CANCELLED: Terminal states
 
 Resource Management
 ----------------
@@ -117,5 +142,9 @@ Here's a basic example of creating and using these models:
     )
 
     # Task and job states are automatically managed
-    assert job.state == JobState.PENDING
-    assert task.state == TaskState.PENDING 
+    assert job.state == JobState.CREATED  # Initial state
+    assert task.state == TaskState.CREATED  # Initial state
+
+    # State transitions are validated
+    job.transition_to(JobState.QUEUED)  # Valid transition
+    task.transition_to(TaskState.STAGING)  # Valid transition 

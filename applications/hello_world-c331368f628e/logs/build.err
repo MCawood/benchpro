@@ -1,0 +1,24 @@
+2025-01-09 12:44:32,172 - DEBUG - Loading template configuration for hello_world
+2025-01-09 12:44:32,174 - DEBUG - Creating build task
+2025-01-09 12:44:32,174 - DEBUG - Template root directory: /Users/mcawood/dev/benchpro/templates
+2025-01-09 12:44:32,174 - DEBUG - Source files in config: ['hello_world.c']
+2025-01-09 12:44:32,174 - DEBUG - Adding source files to staging list
+2025-01-09 12:44:32,174 - DEBUG - Full source path: /Users/mcawood/dev/benchpro/templates/applications/hello_world/hello_world.c
+2025-01-09 12:44:32,174 - DEBUG - Checking if file exists at: /Users/mcawood/dev/benchpro/templates/applications/hello_world/hello_world.c
+2025-01-09 12:44:32,174 - DEBUG - Destination path: /Users/mcawood/dev/benchpro/applications/hello_world-c331368f628e/build/hello_world.c
+2025-01-09 12:44:32,174 - DEBUG - Loading build template
+2025-01-09 12:44:32,175 - DEBUG - Creating template context
+2025-01-09 12:44:32,176 - DEBUG - Writing build script to /Users/mcawood/dev/benchpro/applications/hello_world-c331368f628e/source
+2025-01-09 12:44:32,176 - DEBUG - Creating build job
+2025-01-09 12:44:32,177 - DEBUG - Starting file staging
+2025-01-09 12:44:32,179 - DEBUG - Submitting build job
+2025-01-09 12:44:32,183 - DEBUG - Monitoring build progress
+2025-01-09 12:44:32,184 - DEBUG - Job status: {'state': 'running'}
+2025-01-09 12:44:32,285 - DEBUG - Job status: {'state': 'running'}
+2025-01-09 12:44:32,386 - DEBUG - Job status: {'state': 'running'}
+2025-01-09 12:44:32,488 - DEBUG - Job status: {'state': 'running'}
+2025-01-09 12:44:32,589 - DEBUG - Job status: {'state': 'running'}
+2025-01-09 12:44:32,690 - DEBUG - Job status: {'state': 'running'}
+2025-01-09 12:44:32,791 - DEBUG - Job status: {'state': 'completed'}
+2025-01-09 12:44:32,792 - DEBUG - Build completed successfully
+2025-01-09 12:44:32,792 - DEBUG - Build completed: {'stdout_size': 1790, 'stderr_size': 1790, 'has_errors': False, 'error_context': None, 'entry_count': 0, 'first_entry': None, 'last_entry': None}

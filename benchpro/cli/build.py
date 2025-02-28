@@ -7,12 +7,12 @@ from pathlib import Path
 from typing import Optional, Tuple, List
 
 from benchpro.core.domain.templates.loader import TemplateLoader
-from benchpro.core.infrastructure.local_executor import LocalExecutor
 from benchpro.core.services.build_orchestrator import BuildOrchestrator
 from benchpro.core.services.logging import setup_logging, get_logger
 from benchpro.core.services.settings import Settings
 from benchpro.core.services.location_manager import LocationManager
 from benchpro.core.domain.task_registry import TaskRegistry
+from benchpro.core.services.executor_factory import create_executor
 
 logger = get_logger("build")
 
@@ -126,7 +126,7 @@ def build(name: Optional[str], avail: bool, var: tuple, template_dir: str, root_
             
             # Initialize services
             logger.debug("Initializing build services")
-            executor = LocalExecutor()
+            executor = create_executor(settings)
             location_manager = LocationManager(settings)
             task_registry = TaskRegistry()
             
