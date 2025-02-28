@@ -5,12 +5,12 @@
 echo "Job Name: hello_world_bench"
 echo "Start Time: $(date)"
 
+# Create output directory if it doesn't exist
+mkdir -p results/output
+
 # Run the benchmark
 echo "Running benchmark: hello_world"
-examples/output/hello_world_bench_1740763536_cffnng/build/hello_world 
-
-# Save output to results directory
-echo "Results saved to: examples/output/hello_world_bench_1740763536_cffnng/results"
+results/output/hello_world 
 
 echo "End Time: $(date)"
 echo "Benchmark run completed successfully" 

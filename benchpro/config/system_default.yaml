@@ -1,0 +1,22 @@
+# Default system configuration for BenchPRO
+
+# System information
+system:
+  name: "default"
+  description: "Default system configuration"
+  
+# Scheduler configuration overrides for this system
+scheduler:
+  queue: "normal"
+  account: "default_account"
+  
+# Paths specific to this system
+paths:
+  scratch: "/tmp/benchpro"
+  modules: "/usr/local/modules"
+  
+# Environment settings
+environment:
+  modules:
+    - "gcc/11.2.0"
+    - "openmpi/4.1.1" 

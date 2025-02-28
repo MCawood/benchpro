@@ -1,12 +1,8 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -24,42 +20,30 @@ wheels/
 .installed.cfg
 *.egg
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pyenv
-.python-version
-
-# Virtual environments
+# Virtual Environments
 venv/
 env/
 ENV/
+.env/
+.venv/
 
-# IDE specific files
+# IDE files
 .idea/
 .vscode/
 *.swp
 *.swo
+.DS_Store
 
-# Project specific
-benchpro/config/*.yaml
-!benchpro/config/default.yaml
-benchpro/results/output/ 
+# BenchPRO specific
+examples/output/
+*.log
+registry.yaml
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Documentation
+docs/_build/ 

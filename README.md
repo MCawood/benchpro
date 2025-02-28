@@ -1,65 +1,92 @@
-# BenchPRO
+# BenchPRO 2.0
 
-BenchPRO is a benchmark execution and profiling tool designed for high-performance computing environments.
+BenchPRO is a benchmark execution and profiling tool designed for high-performance computing environments. It simplifies the process of building applications, running benchmarks, and analyzing results.
 
 ## Features
 
-- **Simplified Configuration:** YAML-based configuration for global defaults, system contextualization, and application/benchmark profiles.
-- **Modern Templating:** Job script rendering using Jinja2.
-- **User-Friendly CLI:** Command-line interface built with Click.
-- **Job Scheduler Abstraction:** Abstract interface for job submission with initial Slurm support.
-- **Modular Build Executor:** Integration of configuration and templating for job generation and execution.
-- **Result Capture:** Capture job output and provenance data.
+- **Application Building**: Streamlined process for building applications with configurable parameters
+- **Benchmark Execution**: Run benchmarks with customizable configurations
+- **Job Scheduler Integration**: Support for various HPC job schedulers (currently Slurm)
+- **Configuration Management**: Flexible YAML-based configuration system
+- **Template-Based Job Scripts**: Generate job scripts using Jinja2 templates
+- **Result Capture**: Collect and organize benchmark results
 
 ## Installation
 
-### Development Installation
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/benchpro_2.0.git
+cd benchpro_2.0
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/benchpro.git
-   cd benchpro
-   ```
+# Install dependencies
+pip install -r requirements.txt
 
-2. Create and activate a virtual environment:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+# Install in development mode
+pip install -e .
+```
 
-3. Install development dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Quick Start
 
-4. Install the package in development mode:
-   ```bash
-   pip install -e .
-   ```
-
-## Usage
-
-Basic usage examples:
+### Building an Application
 
 ```bash
-# Build and submit a job
-benchpro build --profile my_benchmark
+benchpro build-app --profile hello_world_app
+```
 
-# Check job status (future feature)
-benchpro status --job-id 12345
+### Running a Benchmark
+
+```bash
+benchpro run-benchmark --profile hello_world_bench
+```
+
+## Configuration
+
+BenchPRO uses a layered configuration approach:
+
+1. **Default Configuration**: Base settings for all jobs
+2. **System Configuration**: System-specific settings
+3. **Profile Configuration**: Task-specific settings
+4. **CLI Overrides**: Command-line parameter overrides
+
+Example application profile (`hello_world_app.yaml`):
+
+```yaml
+task_type: "application"
+job:
+  name: "hello_world_app"
+  description: "Hello World application build"
+application:
+  name: "hello_world"
+  source_dir: "examples/input/hello_world"
+  build_script: "gcc -o hello_world hello_world.c"
+  output_binary: "hello_world"
+```
+
+Example benchmark profile (`hello_world_bench.yaml`):
+
+```yaml
+task_type: "benchmark"
+job:
+  name: "hello_world_bench"
+  description: "Hello World benchmark run"
+benchmark:
+  name: "hello_world"
+  application: "hello_world"
+  input_params: ""
 ```
 
 ## Project Structure
 
 ```
 benchpro/
-    cli/        - CLI implementation using Click
-    config/     - YAML configuration files
-    templates/  - Jinja2 templates for job scripts
-    executor/   - Build executor and job scheduler abstraction
-    results/    - Modules for capturing and querying results
-    tests/      - Pytest unit and integration tests
-    docs/       - Sphinx documentation files
+├── cli/                # Command-line interface
+├── config/             # Configuration management
+├── docs/               # Documentation
+├── executor/           # Task execution system
+├── registry/           # Application registry system
+├── results/            # Result capture and analysis
+├── templates/          # Template engine and templates
+└── tests/              # Test suite
 ```
 
 ## Development
@@ -67,16 +94,26 @@ benchpro/
 ### Running Tests
 
 ```bash
-pytest
+python -m pytest
 ```
 
-### Code Formatting
+### Contributing
 
-```bash
-black benchpro
-isort benchpro
-```
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## Roadmap
+
+See the [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) file for details on the development roadmap.
 
 ## License
 
-[MIT License](LICENSE) 
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Thanks to all contributors who have helped shape BenchPRO
+- Inspired by the needs of the HPC community 
