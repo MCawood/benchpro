@@ -1,0 +1,35 @@
+#!/bin/bash
+#SBATCH --job-name={{ job.name }}
+#SBATCH --output={{ job.output_dir }}/{{ job.name }}_%j.out
+#SBATCH --error={{ job.output_dir }}/{{ job.name }}_%j.err
+#SBATCH --time={{ scheduler.time_limit }}
+#SBATCH --nodes={{ scheduler.nodes }}
+#SBATCH --ntasks-per-node={{ scheduler.tasks_per_node }}
+{% if scheduler.queue is defined %}
+#SBATCH --partition={{ scheduler.queue }}
+{% endif %}
+{% if scheduler.account is defined %}
+#SBATCH --account={{ scheduler.account }}
+{% endif %}
+
+# Job Information
+echo "Job ID: $SLURM_JOB_ID"
+echo "Job Name: {{ job.name }}"
+echo "Nodes: $SLURM_JOB_NODELIST"
+echo "Start Time: $(date)"
+
+# Load modules
+{% if environment is defined and environment.modules is defined %}
+{% for module in environment.modules %}
+module load {{ module }}
+{% endfor %}
+{% endif %}
+
+# Create output directory if it doesn't exist
+mkdir -p {{ job.output_dir }}
+
+# Run the application
+{{ application.executable }} {{ application.arguments }}
+
+echo "End Time: $(date)"
+echo "Job completed successfully" 

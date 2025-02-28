@@ -1,0 +1,36 @@
+#!/bin/bash
+#SBATCH --job-name={{ job.name }}
+#SBATCH --output={{ workspace.logs_dir }}/{{ job.name }}_%j.out
+#SBATCH --error={{ workspace.logs_dir }}/{{ job.name }}_%j.err
+#SBATCH --time={{ scheduler.time_limit }}
+#SBATCH --nodes={{ scheduler.nodes }}
+#SBATCH --ntasks-per-node={{ scheduler.tasks_per_node }}
+{% if scheduler.queue is defined %}
+#SBATCH --partition={{ scheduler.queue }}
+{% endif %}
+{% if scheduler.account is defined %}
+#SBATCH --account={{ scheduler.account }}
+{% endif %}
+
+# Job Information
+echo "Job ID: $SLURM_JOB_ID"
+echo "Job Name: {{ job.name }}"
+echo "Nodes: $SLURM_JOB_NODELIST"
+echo "Start Time: $(date)"
+
+# Load modules
+{% if environment is defined and environment.modules is defined %}
+{% for module in environment.modules %}
+module load {{ module }}
+{% endfor %}
+{% endif %}
+
+# Run the benchmark
+echo "Running benchmark: {{ benchmark.name }}"
+{{ workspace.build_dir }}/{{ benchmark.application }} {{ benchmark.input_params }}
+
+# Save output to results directory
+echo "Results saved to: {{ workspace.results_dir }}"
+
+echo "End Time: $(date)"
+echo "Benchmark run completed successfully" 

@@ -1,0 +1,76 @@
+# cursor_rules.yaml
+# This file provides guidance to the AI within the Cursor IDE.
+# It reflects the current architecture and development approach for BenchPRO 2.0.
+#
+# Overview:
+# - BenchPRO 2.0 is a task-based system for building applications and running benchmarks in HPC environments.
+# - The core architecture uses a Task hierarchy (Task → Application/Benchmark) with a TaskFactory pattern.
+# - Configuration is managed through YAML files with a layered approach (defaults → system → profile → CLI).
+# - Templates are specialized for different task types (application_build.j2, benchmark_run.j2).
+# - The CLI provides commands for building applications and running benchmarks.
+#
+# Instructions:
+version: "2.0"
+description: >
+  This Cursor rules file instructs the AI to focus on enhancing the BenchPRO 2.0 system.
+  The AI should produce code, tests, and documentation that are modular, well-structured, and adhere to the following guidelines:
+  
+  - **Directory Structure:**
+    - `/benchpro/cli/` - Command-line interface using Click
+    - `/benchpro/config/` - Configuration management and YAML files
+    - `/benchpro/executor/` - Task execution system (build_executor.py, scheduler.py, task.py)
+    - `/benchpro/templates/` - Template engine and Jinja2 templates
+    - `/benchpro/results/` - Result capture and analysis
+    - `/benchpro/tests/` - Test suite using Pytest
+    - `/benchpro/docs/` - Documentation
+    - `/examples/` - Example applications and benchmarks
+  
+  - **Task System:**
+    - The base `Task` class is in `/benchpro/executor/task.py`
+    - `Application` and `Benchmark` classes extend the base Task
+    - `TaskFactory` creates the appropriate task type based on configuration
+    - Tasks handle preparation, validation, script generation, and job submission
+  
+  - **Configuration Management:**
+    - Use YAML files for global defaults, system contextualization, and task profiles
+    - Profiles must include a `task_type` field ("application" or "benchmark")
+    - Applications require source_dir, build_script, and output_binary
+    - Benchmarks require application and input_params
+  
+  - **Templating System:**
+    - Use Jinja2 to render job scripts from templates
+    - `application_build.j2` for building applications
+    - `benchmark_run.j2` for running benchmarks
+  
+  - **CLI Interface:**
+    - Use Click to implement commands like `build-app`, `run-benchmark`, and `status`
+    - Include detailed help messages and consistent option naming
+  
+  - **Job Scheduler Abstraction:**
+    - Abstract interface for job submission, with support for Slurm
+    - Methods include `submit_job(script_path: str) -> job_id`, `check_status(job_id: str) -> str`
+  
+  - **Result Capture Module:**
+    - Functions to capture output and provenance data from executed jobs
+  
+  - **Testing:**
+    - Use Pytest for unit tests and integration tests
+    - Create realistic test environments with fixtures
+  
+  - **Documentation:**
+    - All modules and CLI commands must be documented
+    - Use Sphinx-compatible docstrings
+  
+rules:
+  - The AI must generate code in Python.
+  - Use YAML for configuration files.
+  - All templating should be done with Jinja2.
+  - CLI must be built using Click.
+  - Write tests using Pytest.
+  - Ensure each module exposes a clear and well-documented API.
+  - Prioritize simplicity and modularity.
+  - Maintain backward compatibility with existing profiles.
+  - Follow the Task hierarchy pattern for new functionality.
+  - Place new code in the appropriate directory based on its function.
+  - Update tests when modifying existing functionality.
+  - Provide comprehensive docstrings for all new classes and functions.

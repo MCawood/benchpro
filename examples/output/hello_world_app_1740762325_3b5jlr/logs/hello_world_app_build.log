@@ -1,0 +1,6 @@
+Job Name: hello_world_app
+Start Time: Fri Feb 28 11:05:25 CST 2025
+Building application: hello_world
+cp: examples/output/hello_world_app_1740762325_3b5jlr/build: No such file or directory
+End Time: Fri Feb 28 11:05:25 CST 2025
+Application build completed successfully

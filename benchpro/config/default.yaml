@@ -1,0 +1,36 @@
+# Default configuration for BenchPRO
+
+# Job configuration
+job:
+  name: "default_job"
+  description: "Default job configuration"
+  output_dir: "examples/output"
+  
+# Scheduler configuration
+scheduler:
+  type: "slurm"
+  queue: "default"
+  nodes: 1
+  tasks_per_node: 1
+  time_limit: "01:00:00"
+  
+# Execution configuration
+execution:
+  type: "local"
+  
+# Template configuration
+template:
+  base_template: "base.j2"
+  
+# Workspace configuration
+workspace:
+  base_input_dir: "examples/input"
+  base_output_dir: "examples/output"
+  keep_source_files: true
+  keep_build_files: true
+  keep_logs: true
+  
+# Logging configuration
+logging:
+  level: "INFO"
+  file: "benchpro.log" 

@@ -1,0 +1,7 @@
+Job Name: hello_world_bench
+Start Time: Fri Feb 28 11:25:36 CST 2025
+Running benchmark: hello_world
+examples/output/hello_world_bench_1740763536_cffnng/logs/hello_world_bench_run.sh: line 10: examples/output/hello_world_bench_1740763536_cffnng/build/hello_world: No such file or directory
+Results saved to: examples/output/hello_world_bench_1740763536_cffnng/results
+End Time: Fri Feb 28 11:25:36 CST 2025
+Benchmark run completed successfully
