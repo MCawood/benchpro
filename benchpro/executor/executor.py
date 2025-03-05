@@ -6,13 +6,13 @@ for handling different execution environments in BenchPRO.
 """
 
 import os
-import logging
 import subprocess
 import shlex
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, Tuple, List
 
 from benchpro.executor.scheduler import get_scheduler
+from benchpro.utils.logger import get_logger
 
 
 class Executor(ABC):
@@ -26,7 +26,8 @@ class Executor(ABC):
             config: Optional configuration dictionary.
         """
         self.config = config or {}
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__)
+        self.logger.debug(f"Initializing {self.__class__.__name__} with config: {self.config}")
     
     @abstractmethod
     def submit_job(self, script_path: str) -> Tuple[bool, Optional[str]]:
@@ -84,11 +85,17 @@ class Executor(ABC):
         Raises:
             ValueError: If the executor type is not supported.
         """
+        logger = get_logger(__name__)
+        logger.info(f"Creating executor of type: {executor_type}")
+        
         if executor_type.lower() == "local":
+            logger.debug("Using LocalExecutor")
             return LocalExecutor(config)
         elif executor_type.lower() == "scheduler":
+            logger.debug("Using SchedulerExecutor")
             return SchedulerExecutor(config)
         else:
+            logger.error(f"Unsupported executor type: {executor_type}")
             raise ValueError(f"Unsupported executor type: {executor_type}")
 
 
@@ -107,14 +114,18 @@ class LocalExecutor(Executor):
                 - Success flag (True if successful, False otherwise)
                 - Process ID as a string (if started, None otherwise)
         """
+        self.logger.info(f"Submitting local job: {script_path}")
+        
         try:
             # Make sure the script is executable
             os.chmod(script_path, 0o755)
+            self.logger.debug(f"Made script executable: {script_path}")
             
             # Create a log file path
             log_dir = os.path.dirname(script_path)
             script_name = os.path.basename(script_path)
             log_path = os.path.join(log_dir, f"{os.path.splitext(script_name)[0]}.log")
+            self.logger.debug(f"Job output will be logged to: {log_path}")
             
             # Start the process
             with open(log_path, 'w') as log_file:
@@ -147,9 +158,13 @@ class LocalExecutor(Executor):
         Returns:
             Status of the job as a string ("RUNNING", "COMPLETED", or "FAILED").
         """
+        self.logger.debug(f"Checking status of local job with PID: {job_id}")
+        
         try:
             # Try to get process info using ps
             cmd = f"ps -p {job_id} -o state="
+            self.logger.debug(f"Running command: {cmd}")
+            
             result = subprocess.run(
                 shlex.split(cmd),
                 stdout=subprocess.PIPE,
@@ -159,14 +174,18 @@ class LocalExecutor(Executor):
             
             # If the process exists, it's running
             if result.returncode == 0 and result.stdout.strip():
-                return "RUNNING"
-            
-            # If we can't find the process, check if it exited successfully
-            # This is a simplification - in reality, we'd need to store exit codes
-            return "COMPLETED"
+                status = "RUNNING"
+                self.logger.debug(f"Job {job_id} is still running")
+            else:
+                # If we can't find the process, check if it exited successfully
+                # This is a simplification - in reality, we'd need to store exit codes
+                status = "COMPLETED"
+                self.logger.debug(f"Job {job_id} has completed")
+                
+            return status
             
         except Exception as e:
-            self.logger.error(f"Status check failed: {str(e)}")
+            self.logger.error(f"Status check failed for job {job_id}: {str(e)}")
             return "UNKNOWN"
     
     def cancel_job(self, job_id: str) -> bool:
@@ -179,9 +198,13 @@ class LocalExecutor(Executor):
         Returns:
             True if the job was successfully cancelled, False otherwise.
         """
+        self.logger.info(f"Cancelling local job with PID: {job_id}")
+        
         try:
             # Kill the process
             cmd = f"kill {job_id}"
+            self.logger.debug(f"Running command: {cmd}")
+            
             result = subprocess.run(
                 shlex.split(cmd),
                 stdout=subprocess.PIPE,
@@ -191,14 +214,14 @@ class LocalExecutor(Executor):
             
             # Check if the command was successful
             if result.returncode == 0:
-                self.logger.info(f"Local job {job_id} cancelled")
+                self.logger.info(f"Local job {job_id} successfully cancelled")
                 return True
             else:
                 self.logger.error(f"Failed to cancel job {job_id}: {result.stderr}")
                 return False
                 
         except Exception as e:
-            self.logger.error(f"Job cancellation failed: {str(e)}")
+            self.logger.error(f"Job cancellation failed for job {job_id}: {str(e)}")
             return False
 
 
@@ -217,21 +240,25 @@ class SchedulerExecutor(Executor):
                 - Success flag (True if successful, False otherwise)
                 - Job ID (if submitted, None otherwise)
         """
+        self.logger.info(f"Submitting job to scheduler: {script_path}")
+        
         try:
             # Get scheduler type from config
             scheduler_type = self.config.get("type", "slurm")
+            self.logger.debug(f"Using scheduler type: {scheduler_type}")
             
             # Create scheduler instance
             scheduler = get_scheduler(scheduler_type, self.config)
+            self.logger.debug(f"Created scheduler instance: {scheduler.__class__.__name__}")
             
             # Submit the job
             job_id = scheduler.submit_job(script_path)
-            self.logger.info(f"Job submitted with ID: {job_id}")
+            self.logger.info(f"Job submitted successfully with ID: {job_id}")
             
             return True, job_id
             
         except Exception as e:
-            self.logger.error(f"Job submission failed: {str(e)}")
+            self.logger.error(f"Job submission to scheduler failed: {str(e)}")
             return False, None
     
     def check_status(self, job_id: str) -> str:
@@ -244,18 +271,24 @@ class SchedulerExecutor(Executor):
         Returns:
             Status of the job as a string (e.g., "RUNNING", "COMPLETED", "FAILED").
         """
+        self.logger.debug(f"Checking status of job with ID: {job_id}")
+        
         try:
             # Get scheduler type from config
             scheduler_type = self.config.get("type", "slurm")
+            self.logger.debug(f"Using scheduler type: {scheduler_type}")
             
             # Create scheduler instance
             scheduler = get_scheduler(scheduler_type, self.config)
             
             # Check job status
-            return scheduler.check_status(job_id)
+            status = scheduler.check_status(job_id)
+            self.logger.debug(f"Job {job_id} status: {status}")
+            
+            return status
             
         except Exception as e:
-            self.logger.error(f"Status check failed: {str(e)}")
+            self.logger.error(f"Status check failed for job {job_id}: {str(e)}")
             return "UNKNOWN"
     
     def cancel_job(self, job_id: str) -> bool:
@@ -268,16 +301,26 @@ class SchedulerExecutor(Executor):
         Returns:
             True if the job was successfully cancelled, False otherwise.
         """
+        self.logger.info(f"Cancelling job with ID: {job_id}")
+        
         try:
             # Get scheduler type from config
             scheduler_type = self.config.get("type", "slurm")
+            self.logger.debug(f"Using scheduler type: {scheduler_type}")
             
             # Create scheduler instance
             scheduler = get_scheduler(scheduler_type, self.config)
             
             # Cancel the job
-            return scheduler.cancel_job(job_id)
+            success = scheduler.cancel_job(job_id)
+            
+            if success:
+                self.logger.info(f"Job {job_id} successfully cancelled")
+            else:
+                self.logger.error(f"Failed to cancel job {job_id}")
+                
+            return success
             
         except Exception as e:
-            self.logger.error(f"Job cancellation failed: {str(e)}")
+            self.logger.error(f"Job cancellation failed for job {job_id}: {str(e)}")
             return False 

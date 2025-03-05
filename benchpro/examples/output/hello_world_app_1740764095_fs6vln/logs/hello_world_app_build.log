@@ -1,8 +1,0 @@
-Job Name: hello_world_app
-Start Time: Fri Feb 28 11:34:55 CST 2025
-Building application: hello_world
-clang: error: no such file or directory: 'hello_world.c'
-clang: error: no input files
-cp: directory examples/output does not exist
-End Time: Fri Feb 28 11:34:55 CST 2025
-Application build completed successfully
