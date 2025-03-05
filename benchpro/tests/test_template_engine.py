@@ -9,26 +9,29 @@ from benchpro.templates.template_engine import TemplateEngine
 
 
 @pytest.fixture
-def temp_template_dir():
-    """Create a temporary directory with test template files."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Create a simple template file
-        template_content = """#!/bin/bash
+def test_template_env(setup_test_env):
+    """Create a test template environment for testing the TemplateEngine."""
+    # Create a simple test template file if it doesn't exist
+    template_content = """#!/bin/bash
 #SBATCH --job-name={{ job.name }}
 #SBATCH --time={{ scheduler.time_limit }}
 
 echo "Running {{ job.name }}"
 {{ application.executable }} {{ application.arguments }}
 """
-        with open(os.path.join(temp_dir, "test_template.j2"), 'w') as f:
-            f.write(template_content)
-            
-        yield temp_dir
+    
+    # Add the test template to the application directory
+    test_template_path = os.path.join(setup_test_env["inputs_app_dir"], "test_template.j2")
+    with open(test_template_path, 'w') as f:
+        f.write(template_content)
+        
+    return setup_test_env
 
 
-def test_render_template(temp_template_dir):
+def test_render_template(test_template_env):
     """Test rendering a template with configuration data."""
-    template_engine = TemplateEngine(temp_template_dir)
+    # Initialize template engine with inputs directory
+    template_engine = TemplateEngine(test_template_env["inputs_app_dir"])
     
     config = {
         "job": {
@@ -53,9 +56,44 @@ def test_render_template(temp_template_dir):
     assert "/bin/echo Hello, World!" in rendered
 
 
-def test_write_rendered_template(temp_template_dir):
+def test_render_example_template(test_template_env):
+    """Test rendering an example template that comes from the examples directory."""
+    # Initialize template engine with inputs directory
+    template_engine = TemplateEngine(test_template_env["inputs_app_dir"])
+    
+    # Ensure hello_world.j2 exists from the examples directory
+    assert os.path.exists(os.path.join(test_template_env["inputs_app_dir"], "hello_world.j2")), \
+        "hello_world.j2 template should be copied from examples"
+    
+    config = {
+        "name": "test_app",
+        "version": "1.0",
+        "build": {
+            "compiler": "gcc",
+            "flags": "-O2",
+            "source": "hello_world.c",
+            "output": "test_app"
+        },
+        "workspace": {
+            "source_dir": "/tmp/source",
+            "output_dir": "/tmp/output"
+        },
+        "job": {
+            "name": "test_app_build"
+        }
+    }
+    
+    rendered = template_engine.render_template("hello_world.j2", config)
+    
+    # Check that the template was rendered correctly with some expected content
+    assert "gcc" in rendered
+    assert "hello_world.c" in rendered
+
+
+def test_write_rendered_template(test_template_env):
     """Test rendering a template and writing it to a file."""
-    template_engine = TemplateEngine(temp_template_dir)
+    # Initialize template engine with inputs directory
+    template_engine = TemplateEngine(test_template_env["inputs_app_dir"])
     
     config = {
         "job": {
@@ -78,7 +116,7 @@ def test_write_rendered_template(temp_template_dir):
         # Render and write the template
         template_engine.write_rendered_template("test_template.j2", config, output_path)
         
-        # Check that the file was written correctly
+        # Read the file and check its contents
         with open(output_path, 'r') as f:
             content = f.read()
             
@@ -87,23 +125,20 @@ def test_write_rendered_template(temp_template_dir):
         assert "#SBATCH --time=01:00:00" in content
         assert 'echo "Running test_job"' in content
         assert "/bin/echo Hello, World!" in content
-        
     finally:
-        # Clean up the temporary file
+        # Cleanup
         if os.path.exists(output_path):
             os.unlink(output_path)
 
 
-def test_template_not_found(temp_template_dir):
-    """Test that an exception is raised when a template is not found."""
-    template_engine = TemplateEngine(temp_template_dir)
+def test_template_not_found(test_template_env):
+    """Test handling of template not found errors."""
+    # Initialize template engine with inputs directory
+    template_engine = TemplateEngine(test_template_env["inputs_app_dir"])
     
-    config = {
-        "job": {
-            "name": "test_job"
-        }
-    }
+    # Import the correct exception type
+    from jinja2.exceptions import TemplateNotFound
     
-    # Attempt to render a non-existent template
-    with pytest.raises(Exception):
-        template_engine.render_template("non_existent_template.j2", config) 
+    # Try to render a non-existent template
+    with pytest.raises(TemplateNotFound):
+        template_engine.render_template("non_existent_template.j2", {}) 
