@@ -1,0 +1,40 @@
+# Hello World Application Configuration
+task_type: "application"
+name: "hello_world"
+version: "1.0"
+description: "Simple Hello World application"
+
+# Build configuration
+build:
+  source: "hello_world.c"
+  compiler: "gcc"
+  flags: "-O2"
+  output: "hello_world"
+  threads: 4
+
+# Environment configuration (minimal for local execution)
+environment:
+  modules: []
+  variables: {}
+
+# Job configuration
+job:
+  name: "hello_world_build"
+  nodes: 1
+  tasks_per_node: 1
+  time_limit: "00:10:00"
+
+# Workspace configuration
+workspace:
+  source_dir: "source"
+  build_dir: "build"
+  logs_dir: "logs"
+  keep_source: true
+  keep_build: true
+
+# Template specification
+template: "hello_world.j2"
+
+# Execution configuration
+execution:
+  type: "local" 

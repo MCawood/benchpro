@@ -1,0 +1,20 @@
+#!/bin/bash
+# Simple hello world application build script
+
+# Job Information
+echo "Job Name: {{ job.name }}"
+echo "Start Time: $(date)"
+
+# Change to source directory
+cd {{ workspace.source_dir }}
+
+# Build the application
+echo "Building application: {{ name }} {{ version }}"
+{{ build.compiler }} {{ build.flags }} -o {{ build.output }} {{ build.source }}
+
+# Copy the binary to the build directory
+mkdir -p {{ workspace.build_dir }}
+cp {{ build.output }} {{ workspace.build_dir }}/
+
+echo "End Time: $(date)"
+echo "Application build completed successfully" 

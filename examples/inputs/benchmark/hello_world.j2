@@ -1,0 +1,39 @@
+#!/bin/bash
+# Hello World benchmark run script
+
+# Job Information
+echo "Job Name: {{ job.name }}"
+echo "Start Time: $(date)"
+
+# Load any required modules
+{% if environment.modules %}
+echo "Loading modules..."
+{% for module in environment.modules %}
+module load {{ module }}
+{% endfor %}
+{% endif %}
+
+# Set any environment variables
+{% if environment.variables %}
+echo "Setting environment variables..."
+{% for key, value in environment.variables.items() %}
+export {{ key }}="{{ value }}"
+{% endfor %}
+{% endif %}
+
+# Create results directory
+mkdir -p {{ workspace.output_dir }}
+
+# Run the application
+echo "Running application: {{ run.application }}"
+
+# Run with timing
+echo "Starting benchmark run..."
+time {{ run.application }} {{ run.arguments }}
+
+# Copy results to results directory
+echo "Benchmark completed. Saving results..."
+
+# Record completion
+echo "End Time: $(date)"
+echo "Benchmark run completed successfully" 
