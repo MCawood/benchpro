@@ -16,7 +16,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "benchpro=benchpro.cli.cli:main",
+            "bp=benchpro.cli.cli:main",
         ],
     },
     classifiers=[

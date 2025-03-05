@@ -6,7 +6,7 @@
 # - BenchPRO 2.0 is a task-based system for building applications and running benchmarks in HPC environments.
 # - The core architecture uses a Task hierarchy (Task → Application/Benchmark) with a TaskFactory pattern.
 # - Configuration is managed through YAML files with a layered approach (defaults → system → profile → CLI).
-# - Templates are specialized for different task types (application_build.j2, benchmark_run.j2).
+# - Templates use a hierarchical approach with base templates and application/benchmark-specific extensions.
 # - The CLI provides commands for building applications and running benchmarks.
 #
 # Instructions:
@@ -17,9 +17,15 @@ description: >
   
   - **Directory Structure:**
     - `/benchpro/cli/` - Command-line interface using Click
-    - `/benchpro/config/` - Configuration management and YAML files
+    - `/benchpro/config/` - Configuration management, schemas, and validation
     - `/benchpro/executor/` - Task execution system (build_executor.py, scheduler.py, task.py)
-    - `/benchpro/templates/` - Template engine and Jinja2 templates
+    - `/benchpro/templates/` - Template engine and hierarchical Jinja2 templates
+      - `/benchpro/templates/base/` - Base templates with common structure
+      - `/benchpro/templates/applications/` - Application-specific templates
+      - `/benchpro/templates/benchmarks/` - Benchmark-specific templates
+    - `/benchpro/environment/` - Environment management and variable utilities
+    - `/benchpro/paths/` - Path resolution and workspace management
+    - `/benchpro/registry/` - Application registry system
     - `/benchpro/results/` - Result capture and analysis
     - `/benchpro/tests/` - Test suite using Pytest
     - `/benchpro/docs/` - Documentation
@@ -32,15 +38,16 @@ description: >
     - Tasks handle preparation, validation, script generation, and job submission
   
   - **Configuration Management:**
-    - Use YAML files for global defaults, system contextualization, and task profiles
+    - Use YAML files with logical sections (build, environment, job, etc.)
+    - Schema-based validation for configuration files
+    - Support for variable substitution and environment variables
     - Profiles must include a `task_type` field ("application" or "benchmark")
-    - Applications require source_dir, build_script, and output_binary
-    - Benchmarks require application and input_params
   
   - **Templating System:**
-    - Use Jinja2 to render job scripts from templates
-    - `application_build.j2` for building applications
-    - `benchmark_run.j2` for running benchmarks
+    - Use Jinja2 with template inheritance and block-based composition
+    - Base templates for common structure and application/benchmark-specific templates
+    - Support for conditional template sections
+    - Environment variable handling and path resolution
   
   - **CLI Interface:**
     - Use Click to implement commands like `build-app`, `run-benchmark`, and `status`
@@ -64,13 +71,15 @@ description: >
 rules:
   - The AI must generate code in Python.
   - Use YAML for configuration files.
-  - All templating should be done with Jinja2.
+  - All templating should be done with Jinja2 with template inheritance.
   - CLI must be built using Click.
   - Write tests using Pytest.
   - Ensure each module exposes a clear and well-documented API.
   - Prioritize simplicity and modularity.
-  - Maintain backward compatibility with existing profiles.
   - Follow the Task hierarchy pattern for new functionality.
   - Place new code in the appropriate directory based on its function.
   - Update tests when modifying existing functionality.
   - Provide comprehensive docstrings for all new classes and functions.
+  - Focus on clean implementation rather than backward compatibility.
+  - Use type hints for all function parameters and return values.
+  - Implement proper error handling with descriptive error messages.

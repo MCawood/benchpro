@@ -10,6 +10,7 @@ BenchPRO is a benchmark execution and profiling tool designed for high-performan
 - **Configuration Management**: Flexible YAML-based configuration system
 - **Template-Based Job Scripts**: Generate job scripts using Jinja2 templates
 - **Result Capture**: Collect and organize benchmark results
+- **Shell Completion**: Auto-completion for commands and options in Bash and Zsh shells
 
 ## Installation
 
@@ -30,14 +31,51 @@ pip install -e .
 ### Building an Application
 
 ```bash
-benchpro build-app --profile hello_world_app
+benchpro build hello_world_app
 ```
 
 ### Running a Benchmark
 
 ```bash
-benchpro run-benchmark --profile hello_world_bench
+benchpro bench hello_world_bench
 ```
+
+### Enabling Shell Completion
+
+BenchPRO supports auto-completion for commands and options in Bash and Zsh shells.
+
+#### Method 1: Direct Evaluation (Recommended)
+
+This method is cleaner and avoids log messages during completion:
+
+```bash
+# Add this line to your shell's initialization file (~/.bashrc or ~/.zshrc)
+eval "$(_BP_COMPLETE=bash_source bp)"  # For Bash
+eval "$(_BP_COMPLETE=zsh_source bp)"   # For Zsh
+
+# Or use the helper command to generate the appropriate line:
+bp completion generate-script
+```
+
+#### Method 2: Installation Script
+
+Alternatively, you can use the installation script:
+
+```bash
+# Install completion for your shell (bash or zsh)
+bp completion install bash
+
+# After installation, restart your shell or source your shell's rc file
+source ~/.bashrc  # for bash
+source ~/.zshrc   # for zsh
+```
+
+This will enable auto-completion for:
+- Commands (build, bench, registry, etc.)
+- Options (--system, --dry-run, etc.)
+- Dynamic values (profile names, system names, etc.)
+
+For example, you can type `bp build <TAB>` to see a list of available application profiles, or `bp bench <TAB>` to see a list of available benchmark profiles.
 
 ## Configuration
 
