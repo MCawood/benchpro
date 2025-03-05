@@ -2,7 +2,7 @@
 
 # Job configuration
 job:
-  name: "default_job"
+  # The job name will be set to the application/benchmark name by default
   description: "Default job configuration"
   output_dir: "examples/output"
   
