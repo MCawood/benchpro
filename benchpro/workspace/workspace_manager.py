@@ -13,6 +13,8 @@ import random
 import string
 from typing import Dict, List, Optional
 
+from benchpro.utils.user_dir import user_dir_manager
+
 
 class WorkspaceManager:
     """
@@ -25,22 +27,19 @@ class WorkspaceManager:
     - Clean up temporary files when needed
     """
     
-    def __init__(self, base_output_dir: str = "examples/output"):
+    def __init__(self):
         """
         Initialize the WorkspaceManager.
-        
-        Args:
-            base_output_dir: Base directory for all task outputs.
         """
-        self.base_output_dir = base_output_dir
         self.logger = logging.getLogger(__name__)
         
-    def create_workspace(self, task_name: str) -> Dict[str, str]:
+    def create_workspace(self, task_name: str, task_type: str = "benchmark") -> Dict[str, str]:
         """
         Create a unique workspace directory for a task.
         
         Args:
             task_name: Name of the task.
+            task_type: Type of task ("application" or "benchmark").
             
         Returns:
             Dictionary containing paths to different workspace directories.
@@ -48,8 +47,14 @@ class WorkspaceManager:
         # Generate a unique task ID (timestamp + random string)
         task_id = f"{task_name}_{int(time.time())}_{self._generate_random_string(6)}"
         
+        # Get the appropriate base directory based on task type
+        if task_type.lower() == "application":
+            base_output_dir = user_dir_manager.get_application_directory()
+        else:  # Default to benchmark
+            base_output_dir = user_dir_manager.get_benchmark_directory()
+        
         # Create the main workspace directory
-        workspace_dir = os.path.join(self.base_output_dir, task_id)
+        workspace_dir = os.path.join(base_output_dir, task_id)
         os.makedirs(workspace_dir, exist_ok=True)
         
         # Create subdirectories
