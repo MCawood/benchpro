@@ -67,11 +67,27 @@ class WorkspaceConfig(BaseModel):
         extra = "forbid"
 
 
+class ExtractionConfig(BaseModel):
+    """Configuration for result extraction."""
+    
+    method: str = Field(..., description="Method for extracting results (regex, command)")
+    pattern: Optional[str] = Field(None, description="Pattern for regex extraction")
+    metric: str = Field(..., description="Name of the metric to extract")
+    unit: Optional[str] = Field(None, description="Unit of measurement")
+    
+    class Config:
+        extra = "forbid"
+
+
 class ResultConfig(BaseModel):
     """Result configuration for benchmarks."""
     
+    # Legacy fields
     metrics: List[str] = Field(default_factory=list, description="Metrics to capture from the benchmark")
     parser: Optional[str] = Field(None, description="Parser to use for extracting metrics")
+    
+    # New extraction fields
+    extraction: Optional[ExtractionConfig] = Field(None, description="Configuration for result extraction")
     output_format: str = Field("json", description="Format for storing benchmark results")
     
     class Config:
@@ -141,8 +157,12 @@ class BenchmarkSchema(BaseModel):
                     "keep_output": True
                 },
                 "results": {
-                    "metrics": ["runtime", "memory"],
-                    "parser": "simple",
+                    "extraction": {
+                        "method": "regex",
+                        "pattern": "runtime",
+                        "metric": "runtime",
+                        "unit": "seconds"
+                    },
                     "output_format": "json"
                 },
                 "template": "hello_world_bench.j2"

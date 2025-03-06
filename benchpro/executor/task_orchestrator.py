@@ -103,7 +103,11 @@ class TaskOrchestrator:
             
             success, job_id, script_path = result
             if success:
-                self.logger.info(f"Task execution successful. Job ID: {job_id}, Script: {script_path}")
+                if job_id:
+                    self.logger.info(f"Task execution started. Job ID: {job_id}, Script: {script_path}")
+                    self.logger.info("To capture results after completion, use 'bp capture --job-id %s'", job_id)
+                else:
+                    self.logger.info(f"Task script generated: {script_path}")
             else:
                 self.logger.error(f"Task execution failed. Script: {script_path}")
                 

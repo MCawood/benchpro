@@ -1,66 +1,71 @@
 """
 Command Line Interface for BenchPRO.
 
-This module provides a user-friendly CLI using Click.
+This module provides a user-friendly CLI for interacting with BenchPRO,
+utilizing the Click library for command-line parsing and execution.
 """
 
+import logging
 import os
 import sys
-import click
-import logging
-import yaml
-import warnings
 import subprocess
-from typing import Dict, Any, Optional, List
+from typing import Optional, List, Dict, Any
 
-from benchpro import __version__
+import click
+import yaml
+
+from benchpro.cli.apps import get_app_command
+from benchpro.registry.registry_manager import RegistryManager
+from benchpro.registry.registry_formatter import RegistryFormatter
+from benchpro.utils.logger import get_log_file
+from benchpro.cli.completion import get_app_ids, get_profile_names, get_system_names, get_binary_paths
 from benchpro.config.config_manager import ConfigManager
-from benchpro.templates.template_engine import TemplateEngine
-from benchpro.executor.task_factory import TaskFactory
 from benchpro.executor.task_orchestrator import TaskOrchestrator
 from benchpro.executor.executor import Executor
 from benchpro.results.result_capture import ResultCapture
-from benchpro.registry.registry_manager import RegistryManager
 from benchpro.utils.user_dir import user_dir_manager
-from benchpro.utils.logger import get_logger, get_log_file, setup_logging
-from benchpro.cli.completion import (
-    get_profile_names,
-    get_system_names,
-    get_app_names,
-    get_app_versions,
-    get_app_ids,
-    get_binary_paths
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO if os.environ.get("BENCHPRO_DEBUG") != "1" else logging.DEBUG,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
+logger = logging.getLogger(__name__)
 
-# Only configure logging if we're not in completion mode
-if "_BP_COMPLETE" not in os.environ:
-    # Configure logging
-    setup_logging()
-    logger = get_logger(__name__)
-else:
-    # Disable logging and warnings in completion mode
-    import logging
-    logging.disable(logging.CRITICAL)
-    warnings.filterwarnings("ignore")
-    # Create a null logger
-    logger = logging.getLogger(__name__)
-    logger.addHandler(logging.NullHandler())
-    
-    # Suppress Pydantic warnings
-    import warnings
-    warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
-
-
+# Create CLI group
 @click.group()
-@click.version_option(version=__version__)
 @click.option("--debug", is_flag=True, help="Enable debug mode")
-@click.pass_context
-def cli(ctx, debug):
-    """BenchPro CLI."""
-    ctx.ensure_object(dict)
-    ctx.obj["debug"] = debug
+@click.option("--log-level", 
+              type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], case_sensitive=False),
+              help="Set the logging level for this command execution")
+@click.version_option(version="2.0.0", prog_name="BenchPRO")
+def cli(debug: bool, log_level: Optional[str] = None):
+    """BenchPRO: A tool for building and benchmarking HPC applications."""
+    if debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logger.debug("Debug mode enabled")
+    elif log_level:
+        # Import here to avoid circular imports
+        from benchpro.utils.logger import setup_logging
+        
+        # Convert string log level to int
+        level_map = {
+            "DEBUG": logging.DEBUG,
+            "INFO": logging.INFO,
+            "WARNING": logging.WARNING,
+            "ERROR": logging.ERROR,
+            "CRITICAL": logging.CRITICAL
+        }
+        numeric_level = level_map.get(log_level.upper(), logging.INFO)
+        
+        # Set up logging with this level
+        setup_logging(numeric_level)
+        logger.debug(f"Logging level set to {log_level}")
 
+# Add the apps command group
+cli.add_command(get_app_command)
 
+# Build command
 @cli.command()
 @click.argument("profile", shell_complete=get_profile_names)
 @click.option(
@@ -160,7 +165,7 @@ def build(profile: str, output_dir: Optional[str] = None,
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
-
+# Benchmark command
 @cli.command()
 @click.argument("profile", shell_complete=get_profile_names)
 @click.option(
@@ -241,8 +246,12 @@ def bench(profile: str, output_dir: Optional[str] = None,
             else:
                 if executor_type == "local":
                     click.echo(f"Benchmark started with PID: {job_id}")
+                    # Add information about the capture command
+                    click.echo(f"To capture results after completion, use: bp capture --job-id {job_id}")
                 else:
                     click.echo(f"Benchmark job submitted with ID: {job_id}")
+                    # Add information about the capture command
+                    click.echo(f"To capture results after completion, use: bp capture --job-id {job_id}")
         else:
             click.echo("Benchmark run failed. See logs for details.", err=True)
             sys.exit(1)
@@ -251,7 +260,7 @@ def bench(profile: str, output_dir: Optional[str] = None,
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
-
+# Status command
 @cli.command()
 @click.option(
     "--job-id", 
@@ -292,7 +301,7 @@ def status(job_id: str, executor: Optional[str] = None, scheduler_type: str = "s
         click.echo(f"Error checking job status: {e}", err=True)
         sys.exit(1)
 
-
+# Capture command
 @cli.command()
 @click.option(
     "--job-id", 
@@ -309,25 +318,43 @@ def status(job_id: str, executor: Optional[str] = None, scheduler_type: str = "s
     multiple=True,
     help="Path to output file to capture. Can be specified multiple times."
 )
-def capture(job_id: str, job_name: str, output_file: tuple):
-    """Capture results for a completed job."""
+@click.option(
+    "--profile",
+    help="Name of the benchmark profile to use for result extraction.",
+    shell_complete=get_profile_names
+)
+def capture(job_id: str, job_name: str, output_file: tuple, profile: Optional[str] = None):
+    """
+    Capture results for a completed job.
+    
+    If a profile name is provided, extracts metrics from the benchmark output
+    using the extraction configuration in the profile.
+    """
     try:
         # Initialize result capture
         result_capture = ResultCapture()
         
         # Capture results
-        results = result_capture.capture_results(job_id, job_name, list(output_file))
+        results = result_capture.capture_results(job_id, job_name, list(output_file), profile)
         
         click.echo(f"Results captured for job {job_id} ({job_name})")
+        
+        # Display extracted metrics if available
+        if "extracted_metrics" in results and results["extracted_metrics"]:
+            click.echo("\nExtracted Metrics:")
+            metric = results["extracted_metrics"]
+            click.echo(f"  {metric.get('name', 'value')}: {metric.get('value')} {metric.get('unit', '')}")
+        elif profile:
+            click.echo("\nNo metrics were extracted. Check the extraction configuration in the profile.")
         
     except Exception as e:
         click.echo(f"Error capturing results: {e}", err=True)
         sys.exit(1)
 
-
+# List results command
 @cli.command()
 def list_results():
-    """List all available results."""
+    """List all available results with extracted metrics."""
     try:
         # Initialize result capture
         result_capture = ResultCapture()
@@ -339,6 +366,11 @@ def list_results():
             click.echo("Available results:")
             for result in results_list:
                 click.echo(f"  - Job {result['job_id']} ({result['job_name']}): {result['capture_time']}")
+                
+                # Display metrics if available
+                if "extracted_metrics" in result and result["extracted_metrics"]:
+                    metric = result["extracted_metrics"]
+                    click.echo(f"    Metric: {metric.get('name', 'value')}: {metric.get('value')} {metric.get('unit', '')}")
         else:
             click.echo("No results available.")
         
@@ -346,307 +378,7 @@ def list_results():
         click.echo(f"Error listing results: {e}", err=True)
         sys.exit(1)
 
-
-def list_profiles(profile_type: Optional[str] = None):
-    """List available profiles."""
-    try:
-        # Initialize configuration manager
-        config_manager = ConfigManager()
-        # Implementation of list_profiles method
-    except Exception as e:
-        click.echo(f"Error listing profiles: {e}", err=True)
-        sys.exit(1)
-
-
-def show_profile(profile: str):
-    """Show the contents of a specific profile."""
-    try:
-        # Initialize configuration manager
-        config_manager = ConfigManager()
-        # Implementation of show_profile method
-    except Exception as e:
-        click.echo(f"Error showing profile: {e}", err=True)
-        sys.exit(1)
-
-
-@cli.group()
-def registry():
-    """Manage the application registry."""
-    pass
-
-
-@registry.command(name="list")
-@click.option(
-    "--name",
-    help="Filter applications by name.",
-    shell_complete=get_app_names
-)
-@click.option(
-    "--version",
-    help="Filter applications by version.",
-    shell_complete=get_app_versions
-)
-@click.option(
-    "--format",
-    type=click.Choice(["table", "yaml", "json"]),
-    default="table",
-    help="Output format."
-)
-def list_registry(name: Optional[str] = None, version: Optional[str] = None, format: str = "table"):
-    """List applications in the registry."""
-    registry_manager = RegistryManager()
-    registry_manager.load()
-    
-    # Apply filters
-    criteria = {}
-    if name:
-        criteria["name"] = name
-    if version:
-        criteria["version"] = version
-        
-    if criteria:
-        applications = registry_manager.find_applications(criteria)
-    else:
-        applications = registry_manager.list_applications()
-    
-    if not applications:
-        click.echo("No applications found in registry.")
-        return
-    
-    if format == "yaml":
-        click.echo(yaml.dump({"applications": applications}, default_flow_style=False))
-    elif format == "json":
-        import json
-        click.echo(json.dumps({"applications": applications}, indent=2))
-    else:  # table format
-        # Determine the maximum length of each field for better formatting
-        max_id_len = max([len(app.get("id", "")) for app in applications] + [2])
-        max_name_len = max([len(app.get("name", "")) for app in applications] + [4])
-        max_version_len = max([len(str(app.get("version", ""))) for app in applications] + [7])
-        
-        # Ensure minimum column widths
-        id_width = max(max_id_len, 25)
-        name_width = max(max_name_len, 15)
-        version_width = max(max_version_len, 10)
-        status_width = 10
-        binary_width = 50
-        
-        # Print header
-        header = f"{'ID':<{id_width}} {'Name':<{name_width}} {'Version':<{version_width}} {'Status':<{status_width}} {'Binary Path':<{binary_width}}"
-        click.echo(header)
-        click.echo("-" * (id_width + name_width + version_width + status_width + binary_width + 4))
-        
-        # Print each application
-        for app in applications:
-            app_id = app.get("id", "")
-            name = app.get("name", "")
-            version = str(app.get("version", ""))
-            status = app.get("status", "")
-            binary_path = app.get("binary_path", "")
-            
-            # Only truncate binary path if necessary
-            if len(binary_path) > binary_width:
-                binary_path = "..." + binary_path[-(binary_width-3):]
-                
-            row = f"{app_id:<{id_width}} {name:<{name_width}} {version:<{version_width}} {status:<{status_width}} {binary_path:<{binary_width}}"
-            click.echo(row)
-
-
-@registry.command()
-@click.argument("app_id", shell_complete=get_app_ids)
-def info(app_id: str):
-    """Show detailed information about an application."""
-    registry_manager = RegistryManager()
-    app = registry_manager.find_application(app_id)
-    
-    if not app:
-        click.echo(f"Application with ID {app_id} not found.")
-        return
-    
-    click.echo(yaml.dump(app, default_flow_style=False))
-
-
-@registry.command()
-@click.argument("app_id", shell_complete=get_app_ids)
-@click.option(
-    "--force",
-    is_flag=True,
-    help="Force removal even if binary exists."
-)
-def remove(app_id: str, force: bool = False):
-    """Remove an application from the registry."""
-    registry_manager = RegistryManager()
-    app = registry_manager.find_application(app_id)
-    
-    if not app:
-        click.echo(f"Application with ID {app_id} not found.")
-        return
-    
-    # Check if the binary exists
-    binary_path = app.get("binary_path", "")
-    if os.path.exists(binary_path) and not force:
-        click.echo(f"Binary still exists at {binary_path}. Use --force to remove anyway.")
-        return
-    
-    # Remove the application
-    if registry_manager.remove_application(app_id):
-        click.echo(f"Removed application {app.get('name', '')} with ID {app_id}.")
-    else:
-        click.echo(f"Failed to remove application with ID {app_id}.")
-
-
-@registry.command("clean")
-@click.option("--force", is_flag=True, help="Force cleanup without confirmation")
-def registry_clean(force):
-    """Clean the registry by removing entries with non-existent binary paths."""
-    try:
-        registry_manager = RegistryManager()
-        
-        # Get all applications
-        applications = registry_manager.list_applications()
-        
-        # Filter applications with non-existent binary paths
-        invalid_apps = []
-        for app in applications:
-            binary_path = app.get("binary_path", "")
-            if not os.path.exists(binary_path):
-                invalid_apps.append(app)
-        
-        if not invalid_apps:
-            click.echo("No invalid applications found in the registry.")
-            return
-        
-        # Display applications to be removed
-        click.echo(f"Found {len(invalid_apps)} applications with non-existent binary paths:")
-        for app in invalid_apps:
-            click.echo(f"  - {app.get('name')} {app.get('version')} (ID: {app.get('id')})")
-            click.echo(f"    Binary path: {app.get('binary_path')}")
-        
-        # Confirm removal
-        if not force and not click.confirm("Do you want to remove these applications from the registry?"):
-            click.echo("Cleanup cancelled.")
-            return
-        
-        # Remove applications
-        for app in invalid_apps:
-            registry_manager.remove_application(app.get("id"))
-        
-        # Save the registry
-        registry_manager.save()
-        
-        click.echo(f"Successfully removed {len(invalid_apps)} applications from the registry.")
-    except Exception as e:
-        click.echo(f"Error cleaning registry: {e}", err=True)
-        sys.exit(1)
-
-
-@registry.command()
-@click.argument("app_name", shell_complete=get_app_names)
-@click.argument("binary_path", shell_complete=get_binary_paths)
-@click.option(
-    "--version",
-    default="1.0",
-    help="Application version."
-)
-@click.option(
-    "--description",
-    help="Application description."
-)
-@click.option(
-    "--compiler",
-    help="Compiler used to build the application."
-)
-@click.option(
-    "--flags",
-    help="Compiler flags used to build the application."
-)
-def register(app_name: str, binary_path: str, version: str = "1.0", 
-             description: Optional[str] = None, compiler: Optional[str] = None,
-             flags: Optional[str] = None):
-    """Manually register an application in the registry."""
-    # Check if the binary exists
-    if not os.path.exists(binary_path):
-        click.echo(f"Binary not found at {binary_path}.")
-        return
-    
-    # Get absolute path to the binary
-    binary_path = os.path.abspath(binary_path)
-    
-    # Prepare application data
-    app_data = {
-        "name": app_name,
-        "version": version,
-        "workspace_dir": os.path.dirname(binary_path),
-        "binary_path": binary_path,
-        "build_parameters": {
-            "compiler": compiler or "unknown",
-            "flags": flags or ""
-        },
-        "metadata": {
-            "description": description or "",
-            "tags": []
-        }
-    }
-    
-    # Register the application
-    registry_manager = RegistryManager()
-    app_id = registry_manager.register_application(app_data)
-    
-    if app_id:
-        click.echo(f"Registered application {app_name} with ID: {app_id}")
-    else:
-        click.echo("Failed to register application.")
-
-
-@cli.group()
-def settings():
-    """Manage BenchPRO settings."""
-    pass
-
-
-@settings.command(name="show")
-def show_settings():
-    """Show current settings."""
-    settings = user_dir_manager.load_settings()
-    
-    click.echo("BenchPRO Settings:")
-    for key, value in settings.items():
-        click.echo(f"{key}: {value}")
-
-
-@settings.command(name="set")
-@click.option(
-    "--application-directory",
-    help="Directory for application outputs."
-)
-@click.option(
-    "--benchmark-directory",
-    help="Directory for benchmark outputs."
-)
-def set_settings(application_directory: Optional[str] = None, benchmark_directory: Optional[str] = None):
-    """Update BenchPRO settings."""
-    # Load current settings
-    settings = user_dir_manager.load_settings()
-    
-    # Update settings if provided
-    if application_directory:
-        settings["application_directory"] = application_directory
-        click.echo(f"Application directory set to: {application_directory}")
-        
-    if benchmark_directory:
-        settings["benchmark_directory"] = benchmark_directory
-        click.echo(f"Benchmark directory set to: {benchmark_directory}")
-        
-    # Save settings
-    if application_directory or benchmark_directory:
-        if user_dir_manager.save_settings(settings):
-            click.echo("Settings saved successfully.")
-        else:
-            click.echo("Failed to save settings.", err=True)
-    else:
-        click.echo("No settings provided. Use --application-directory or --benchmark-directory to update settings.")
-
-
+# Show paths command
 @cli.command()
 def show_paths():
     """Show the paths to user-specific directories."""
@@ -664,12 +396,68 @@ def show_paths():
     click.echo(f"Applications: {user_dir_manager.get_application_directory()}")
     click.echo(f"Benchmarks: {user_dir_manager.get_benchmark_directory()}")
 
+# Settings command group
+@cli.group()
+def settings():
+    """Manage BenchPRO settings."""
+    pass
 
+@settings.command(name="show")
+def show_settings():
+    """Show current settings."""
+    settings = user_dir_manager.load_settings()
+    
+    click.echo("BenchPRO Settings:")
+    for key, value in settings.items():
+        click.echo(f"{key}: {value}")
+
+@settings.command(name="set")
+@click.option(
+    "--application-directory",
+    help="Directory for application outputs."
+)
+@click.option(
+    "--benchmark-directory",
+    help="Directory for benchmark outputs."
+)
+@click.option(
+    "--logging-level",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], case_sensitive=False),
+    help="Set the logging level for BenchPRO (DEBUG, INFO, WARNING, ERROR, CRITICAL)."
+)
+def set_settings(application_directory: Optional[str] = None, benchmark_directory: Optional[str] = None, 
+                 logging_level: Optional[str] = None):
+    """Update BenchPRO settings."""
+    # Load current settings
+    settings = user_dir_manager.load_settings()
+    
+    # Update settings if provided
+    if application_directory:
+        settings["application_directory"] = application_directory
+        click.echo(f"Application directory set to: {application_directory}")
+        
+    if benchmark_directory:
+        settings["benchmark_directory"] = benchmark_directory
+        click.echo(f"Benchmark directory set to: {benchmark_directory}")
+        
+    if logging_level:
+        settings["logging_level"] = logging_level
+        click.echo(f"Logging level set to: {logging_level}")
+        
+    # Save settings
+    if application_directory or benchmark_directory or logging_level:
+        if user_dir_manager.save_settings(settings):
+            click.echo("Settings saved successfully.")
+        else:
+            click.echo("Failed to save settings.", err=True)
+    else:
+        click.echo("No settings provided. Use --application-directory, --benchmark-directory, or --logging-level to update settings.")
+
+# Shell completion command group
 @cli.group()
 def completion():
     """Shell completion utilities."""
     pass
-
 
 @completion.command()
 @click.argument("shell", type=click.Choice(["bash", "zsh"]))
@@ -685,7 +473,6 @@ def install(shell):
     except Exception as e:
         click.echo(f"Error installing completion for {shell}: {e}", err=True)
         sys.exit(1)
-
 
 def _install_bash_completion():
     """Install bash completion."""
@@ -744,7 +531,6 @@ complete -F _bp_completion -o nospace bp
     click.echo("Please restart your shell or run the following command to enable completion:")
     click.echo(f"source {script_path}")
 
-
 def _install_zsh_completion():
     """Install zsh completion."""
     # Get the user's home directory
@@ -799,23 +585,33 @@ def _install_zsh_completion():
     click.echo(f"{fpath_line}")
     click.echo(f"{compinit_line}")
 
-
+# Main entry point
 def main():
-    """Entry point for the CLI."""
-    # Check if we're running in completion mode
-    if "_BP_COMPLETE" in os.environ:
-        # We're in completion mode - just run the CLI
-        cli()
-    else:
-        # Only initialize user directory if not in completion mode
-        if not user_dir_manager.is_initialized():
-            user_dir_manager.ensure_file_directory(user_dir_manager.get_path("root"))
-            logger.info("Initializing user directory")
-        
-        logger.info("Starting CLI")
-        cli()
+    """Main entry point for the CLI."""
+    try:
+        # Check if we're running in completion mode
+        if "_BP_COMPLETE" in os.environ:
+            # We're in completion mode - just run the CLI without extra setup
+            cli()
+        else:
+            # Only perform additional setup when not in completion mode
+            # Here you could add any initialization that shouldn't happen during completion
+            logger.info("Starting CLI")
+            cli()
+    except Exception as e:
+        log_file = get_log_file()
+        error_message = f"Error: {str(e)}"
+        if log_file:
+            error_message += f"\nSee log file for details: {log_file}"
+        click.echo(error_message, err=True)
+        if os.environ.get("BP_DEBUG"):
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
 
+# Import the result capture command
+from benchpro.cli.commands.capture import capture_results
+cli.add_command(capture_results)
 
-# Add this block to ensure main() is called when the module is run directly
 if __name__ == "__main__":
-    main() 
+    cli() 

@@ -44,7 +44,7 @@ class ConfigManager:
         
         # Internal config files (default and system) should remain in benchpro/config
         if config_dir is None:
-            self.config_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+            self.config_dir = os.path.dirname(os.path.abspath(__file__))
         else:
             self.config_dir = config_dir
         
@@ -198,14 +198,13 @@ class ConfigManager:
         
         Args:
             profile_name: Name of the profile to load.
-                          Can be a path to a YAML file or a profile name.
-            task_type: Optional task type to determine which directory to look in.
-                          
+            task_type: Type of the task (application or benchmark). If None, will try both.
+            
         Returns:
-            Profile configuration dictionary.
+            Dictionary containing the profile configuration.
             
         Raises:
-            FileNotFoundError: If the profile file doesn't exist.
+            ValueError: If the profile cannot be loaded.
         """
         # Check if profile_name is a path to a YAML file
         if os.path.isfile(profile_name) and profile_name.endswith('.yaml'):
@@ -572,3 +571,151 @@ class ConfigManager:
                 errors.append(error_message)
                 
         return errors 
+
+    def _get_benchmark_profile_dir(self) -> str:
+        """
+        Get the benchmark profile directory.
+        
+        Returns:
+            The benchmark profile directory.
+        """
+        return os.path.join(self.config_dir, "benchmark")
+        
+    def load_yaml_file(self, file_path: str) -> Dict[str, Any]:
+        """
+        Load a YAML file directly.
+        
+        Args:
+            file_path: Path to the YAML file.
+            
+        Returns:
+            Dictionary containing the YAML file contents.
+            
+        Raises:
+            FileNotFoundError: If the file does not exist.
+            ValueError: If the file is not valid YAML.
+        """
+        if not os.path.isfile(file_path):
+            self.logger.error(f"YAML file not found: {file_path}")
+            raise FileNotFoundError(f"YAML file not found: {file_path}")
+            
+        try:
+            with open(file_path, 'r') as f:
+                yaml_data = yaml.safe_load(f)
+                
+            if not isinstance(yaml_data, dict):
+                self.logger.error(f"Invalid YAML file format: {file_path}")
+                raise ValueError(f"Invalid YAML file format: {file_path}")
+                
+            self.logger.debug(f"Loaded YAML file: {file_path}")
+            return yaml_data
+        except Exception as e:
+            self.logger.error(f"Error loading YAML file: {file_path}: {str(e)}")
+            raise ValueError(f"Error loading YAML file: {file_path}: {str(e)}")
+    
+    def load_profile_config(self, profile_name: str, task_type: str) -> Dict[str, Any]:
+        """
+        Load a profile configuration.
+        
+        Args:
+            profile_name: Name of the profile to load.
+            task_type: Type of the task (application or benchmark).
+            
+        Returns:
+            Dictionary containing the profile configuration.
+            
+        Raises:
+            ValueError: If the profile cannot be loaded.
+        """
+        # Check if profile_name is a path to a YAML file
+        if os.path.isfile(profile_name) and profile_name.endswith('.yaml'):
+            profile_path = profile_name
+            self.logger.info(f"Loading profile from file: {profile_path}")
+        else:
+            # Try to find the profile in various locations
+            profile_paths = []
+            
+            # If task_type is specified, look in the appropriate directory first
+            if task_type == "application":
+                # Try application directory first
+                app_profile_path = os.path.join(user_dir_manager.get_path("inputs_application"), f"{profile_name}")
+                if not app_profile_path.endswith('.yaml'):
+                    app_profile_path += '.yaml'
+                profile_paths.append(app_profile_path)
+                
+                # Then try benchmark directory
+                bench_profile_path = os.path.join(user_dir_manager.get_path("inputs_benchmark"), f"{profile_name}")
+                if not bench_profile_path.endswith('.yaml'):
+                    bench_profile_path += '.yaml'
+                profile_paths.append(bench_profile_path)
+            elif task_type == "benchmark":
+                # Try benchmark directory first
+                bench_profile_path = os.path.join(user_dir_manager.get_path("inputs_benchmark"), f"{profile_name}")
+                if not bench_profile_path.endswith('.yaml'):
+                    bench_profile_path += '.yaml'
+                profile_paths.append(bench_profile_path)
+                
+                # Then try application directory
+                app_profile_path = os.path.join(user_dir_manager.get_path("inputs_application"), f"{profile_name}")
+                if not app_profile_path.endswith('.yaml'):
+                    app_profile_path += '.yaml'
+                profile_paths.append(app_profile_path)
+            else:
+                # No task_type specified, try both directories
+                # Try application directory
+                app_profile_path = os.path.join(user_dir_manager.get_path("inputs_application"), f"{profile_name}")
+                if not app_profile_path.endswith('.yaml'):
+                    app_profile_path += '.yaml'
+                profile_paths.append(app_profile_path)
+                
+                # Try benchmark directory
+                bench_profile_path = os.path.join(user_dir_manager.get_path("inputs_benchmark"), f"{profile_name}")
+                if not bench_profile_path.endswith('.yaml'):
+                    bench_profile_path += '.yaml'
+                profile_paths.append(bench_profile_path)
+            
+            # Add the profile_dir paths if specified
+            if self.profile_dir is not None:
+                # Handle application and benchmark subdirectories in profile_dir
+                if os.path.exists(os.path.join(self.profile_dir, "application")):
+                    app_dir_path = os.path.join(self.profile_dir, "application", f"{profile_name}")
+                    if not app_dir_path.endswith('.yaml'):
+                        app_dir_path += '.yaml'
+                    profile_paths.append(app_dir_path)
+                
+                if os.path.exists(os.path.join(self.profile_dir, "benchmark")):
+                    bench_dir_path = os.path.join(self.profile_dir, "benchmark", f"{profile_name}")
+                    if not bench_dir_path.endswith('.yaml'):
+                        bench_dir_path += '.yaml'
+                    profile_paths.append(bench_dir_path)
+                
+                # Also check for a flat structure in profile_dir
+                flat_path = os.path.join(self.profile_dir, f"{profile_name}")
+                if not flat_path.endswith('.yaml'):
+                    flat_path += '.yaml'
+                profile_paths.append(flat_path)
+            
+            # Try each path in order
+            profile_path = None
+            for path in profile_paths:
+                self.logger.debug(f"Checking for profile at: {path}")
+                if os.path.exists(path):
+                    profile_path = path
+                    self.logger.info(f"Loading profile {profile_name} from {profile_path}")
+                    break
+            
+            # If no profile found, raise an error
+            if profile_path is None:
+                paths_str = "\n  - ".join(profile_paths)
+                self.logger.error(f"Profile file not found in any of these locations:\n  - {paths_str}")
+                raise FileNotFoundError(f"Profile file not found: {profile_name}")
+            
+        try:
+            with open(profile_path, 'r') as f:
+                profile_config = yaml.safe_load(f)
+                
+            self.logger.debug("Profile configuration loaded successfully")
+            return profile_config or {}
+        except Exception as e:
+            self.logger.error(f"Error loading profile configuration: {str(e)}")
+            raise 

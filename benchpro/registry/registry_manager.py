@@ -353,7 +353,15 @@ class RegistryManager:
         # Load the latest registry
         self.load()
         
-        return self.registry["applications"]
+        # Filter out non-dictionary entries to prevent errors
+        valid_applications = []
+        for app in self.registry.get("applications", []):
+            if isinstance(app, dict):
+                valid_applications.append(app)
+            else:
+                self.logger.warning(f"Skipping invalid registry entry: {app}")
+        
+        return valid_applications
             
     def clean_registry(self, verify_paths: bool = True) -> int:
         """

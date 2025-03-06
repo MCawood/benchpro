@@ -5,7 +5,7 @@ This module handles rendering job scripts from Jinja2 templates using configurat
 """
 
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from benchpro.utils.user_dir import user_dir_manager
@@ -140,6 +140,32 @@ class TemplateEngine:
             self.logger.error(f"Error rendering template {template_name}: {str(e)}")
             raise
     
+    def get_template_dirs(self) -> List[str]:
+        """
+        Get a list of template directories.
+        
+        Returns:
+            List of template directories.
+        """
+        template_dirs = []
+        
+        # Add application templates directory
+        app_dir = user_dir_manager.get_path("inputs_application")
+        if os.path.exists(app_dir):
+            template_dirs.append(app_dir)
+            
+        # Add benchmark templates directory
+        bench_dir = user_dir_manager.get_path("inputs_benchmark")
+        if os.path.exists(bench_dir):
+            template_dirs.append(bench_dir)
+            
+        # Add the default template directory
+        if self.template_dir and os.path.exists(self.template_dir):
+            template_dirs.append(self.template_dir)
+            
+        self.logger.debug(f"Template directories: {template_dirs}")
+        return template_dirs
+        
     def write_rendered_template(self, template_name: str, config: Dict[str, Any], 
                                output_path: str) -> str:
         """

@@ -50,7 +50,8 @@ class UserDirectoryManager:
         "application_directory": "~/.benchpro/outputs/application",
         "benchmark_directory": "~/.benchpro/outputs/benchmark",
         "inputs_directory": "~/.benchpro/inputs",
-        "source_directory": "~/.benchpro/inputs/source"
+        "source_directory": "~/.benchpro/inputs/source",
+        "logging_level": "INFO"
     }
     
     def __init__(self, base_dir: Optional[str] = None):

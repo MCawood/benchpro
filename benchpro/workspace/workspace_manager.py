@@ -62,11 +62,13 @@ class WorkspaceManager:
         build_dir = os.path.join(workspace_dir, "build")
         logs_dir = os.path.join(workspace_dir, "logs")
         results_dir = os.path.join(workspace_dir, "results")
+        inputs_dir = os.path.join(workspace_dir, "inputs")
         
         os.makedirs(source_dir, exist_ok=True)
         os.makedirs(build_dir, exist_ok=True)
         os.makedirs(logs_dir, exist_ok=True)
         os.makedirs(results_dir, exist_ok=True)
+        os.makedirs(inputs_dir, exist_ok=True)
         
         self.logger.info(f"Created workspace directory: {workspace_dir}")
         
@@ -77,6 +79,7 @@ class WorkspaceManager:
             "build_dir": build_dir,
             "logs_dir": logs_dir,
             "results_dir": results_dir,
+            "inputs_dir": inputs_dir,
             "task_id": task_id
         }
         
@@ -111,6 +114,31 @@ class WorkspaceManager:
                     self.logger.info(f"Copied {file_path} to {dest_path}")
                     
         return copied_files
+
+    def copy_profile_file(self, profile_path: str, workspace: Dict[str, str]) -> str:
+        """
+        Copy a profile file to the inputs directory in the workspace.
+        
+        Args:
+            profile_path: Path to the profile file.
+            workspace: Workspace dictionary from create_workspace().
+            
+        Returns:
+            Path to the copied profile file.
+        """
+        if not os.path.exists(profile_path):
+            self.logger.error(f"Profile file not found: {profile_path}")
+            return ""
+            
+        # Get the destination path in the inputs directory
+        inputs_dir = workspace["inputs_dir"]
+        dest_path = os.path.join(inputs_dir, os.path.basename(profile_path))
+        
+        # Copy the file
+        shutil.copy2(profile_path, dest_path)
+        self.logger.info(f"Copied profile file {profile_path} to {dest_path}")
+        
+        return dest_path
         
     def get_log_file_path(self, workspace: Dict[str, str], log_name: str) -> str:
         """
@@ -150,37 +178,58 @@ class WorkspaceManager:
             Path to the result file.
         """
         return os.path.join(workspace["results_dir"], result_name)
-        
-    def clean_workspace(self, workspace: Dict[str, str], keep_logs: bool = True) -> None:
+    
+    def get_profile_file_path(self, workspace: Dict[str, str], profile_name: str) -> str:
         """
-        Clean up temporary files in the workspace.
+        Get the path to a profile file in the workspace.
         
         Args:
             workspace: Workspace dictionary from create_workspace().
-            keep_logs: If True, keep log files.
+            profile_name: Name of the profile file.
+            
+        Returns:
+            Path to the profile file.
         """
-        # Clean up source files
-        for file_path in glob.glob(os.path.join(workspace["source_dir"], "*")):
-            if os.path.isfile(file_path):
-                os.remove(file_path)
-                self.logger.info(f"Removed temporary file: {file_path}")
-                
-        # Clean up build files if needed
-        # (This could be conditional based on configuration)
+        # If profile_name doesn't end with .yaml, add it
+        if not profile_name.endswith('.yaml'):
+            profile_name += '.yaml'
+            
+        return os.path.join(workspace["inputs_dir"], profile_name)
         
-        # Keep logs if requested
-        if not keep_logs:
-            for file_path in glob.glob(os.path.join(workspace["logs_dir"], "*")):
-                if os.path.isfile(file_path):
-                    os.remove(file_path)
-                    self.logger.info(f"Removed log file: {file_path}")
-                    
-    def _generate_random_string(self, length: int = 6) -> str:
+    def clean_workspace(self, workspace: Dict[str, str], keep_logs: bool = True) -> None:
         """
-        Generate a random string of specified length.
+        Clean up a workspace.
         
         Args:
-            length: Length of the random string.
+            workspace: Workspace dictionary from create_workspace().
+            keep_logs: If True, don't delete log files.
+        """
+        # Check if workspace directory exists
+        if not os.path.exists(workspace["workspace_dir"]):
+            self.logger.warning(f"Workspace directory doesn't exist: {workspace['workspace_dir']}")
+            return
+            
+        # Delete source directory
+        if os.path.exists(workspace["source_dir"]):
+            shutil.rmtree(workspace["source_dir"])
+            self.logger.info(f"Deleted source directory: {workspace['source_dir']}")
+            
+        # Delete build directory
+        if os.path.exists(workspace["build_dir"]):
+            shutil.rmtree(workspace["build_dir"])
+            self.logger.info(f"Deleted build directory: {workspace['build_dir']}")
+            
+        # Delete logs directory if keep_logs is False
+        if not keep_logs and os.path.exists(workspace["logs_dir"]):
+            shutil.rmtree(workspace["logs_dir"])
+            self.logger.info(f"Deleted logs directory: {workspace['logs_dir']}")
+            
+    def _generate_random_string(self, length: int = 6) -> str:
+        """
+        Generate a random string.
+        
+        Args:
+            length: Length of the string.
             
         Returns:
             Random string.

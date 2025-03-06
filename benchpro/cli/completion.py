@@ -89,11 +89,12 @@ def get_app_names(ctx, param, incomplete: str) -> List[str]:
     # Get all applications
     applications = registry_manager.list_applications()
     
-    # Extract unique application names
+    # Extract application names
     app_names = set()
     for app in applications:
-        if app["name"].startswith(incomplete):
-            app_names.add(app["name"])
+        name = app.get("name", "")
+        if name and name.startswith(incomplete):
+            app_names.add(name)
     
     return sorted(list(app_names))
 
@@ -116,11 +117,12 @@ def get_app_versions(ctx, param, incomplete: str) -> List[str]:
     # Get all applications
     applications = registry_manager.list_applications()
     
-    # Extract unique application versions
+    # Extract application versions
     app_versions = set()
     for app in applications:
-        if app["version"].startswith(incomplete):
-            app_versions.add(app["version"])
+        version = app.get("version", "")
+        if version and str(version).startswith(incomplete):
+            app_versions.add(str(version))
     
     return sorted(list(app_versions))
 
@@ -146,8 +148,9 @@ def get_app_ids(ctx, param, incomplete: str) -> List[str]:
     # Extract application IDs
     app_ids = []
     for app in applications:
-        if app["id"].startswith(incomplete):
-            app_ids.append(app["id"])
+        app_id = app.get("id", "")
+        if app_id and app_id.startswith(incomplete):
+            app_ids.append(app_id)
     
     return sorted(app_ids)
 

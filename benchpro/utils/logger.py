@@ -56,7 +56,11 @@ class BenchProLogger:
             return
             
         self.initialized = False
+        
+        # Default log level
         self.log_level = logging.INFO
+        
+        # We'll check for user settings when setup_logging is called to avoid circular imports
         self.log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         self.timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         self.log_file = None
@@ -66,6 +70,19 @@ class BenchProLogger:
         
         # Store the instance
         BenchProLogger._instance = self
+    
+    def _get_log_level(self, level_str: str) -> int:
+        """Convert a string log level to its numeric value."""
+        level_map = {
+            "DEBUG": logging.DEBUG,
+            "INFO": logging.INFO,
+            "WARNING": logging.WARNING,
+            "WARN": logging.WARNING,
+            "ERROR": logging.ERROR,
+            "CRITICAL": logging.CRITICAL
+        }
+        
+        return level_map.get(level_str.upper(), logging.INFO)
     
     def setup_logging(self, log_level: Optional[int] = None):
         """
@@ -80,6 +97,15 @@ class BenchProLogger:
         # Set log level if provided
         if log_level is not None:
             self.log_level = log_level
+        else:
+            # Check if we should use the user's configured log level
+            try:
+                settings = user_dir_manager.load_settings()
+                logging_level_str = settings.get("logging_level", "INFO")
+                self.log_level = self._get_log_level(logging_level_str)
+            except Exception:
+                # Keep the existing log level
+                pass
             
         # Create timestamped log file
         self.log_file = user_dir_manager.get_path("logs", f"benchpro_{self.timestamp}.log")
