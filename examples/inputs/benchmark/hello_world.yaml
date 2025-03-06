@@ -40,8 +40,11 @@ workspace:
 
 # Results configuration
 results:
-  metrics: []
-  parser: null
+  extraction:
+    method: "regex"
+    pattern: "Result: ([0-9.]+) seconds"
+    metric: "execution_time"
+    unit: "seconds"
   output_format: "json"
 
 # Template specification
