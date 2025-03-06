@@ -131,7 +131,7 @@ def test_load_profile_config(temp_dirs):
         yaml.dump(test_profile, f)
     
     # Test loading the profile
-    profile_config = config_manager.load_profile_config("test_profile")
+    profile_config = config_manager.load_profile_config("test_profile", task_type="application")
     
     assert profile_config["task_type"] == "application"
     assert profile_config["name"] == "test_app"
