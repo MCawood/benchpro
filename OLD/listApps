@@ -1,0 +1,17 @@
+> bp --listApps
+┌────────────┬───────────┬─────────────┬───────────┬──────────────────┬──────────────────────────────┬──────────┐
+│ APP_ID     │ TASK_ID   │ CODE        │ VERSION   │ SUBMIT_TIME      │ BUILD_LABEL                  │ STATUS   │
+├────────────┼───────────┼─────────────┼───────────┼──────────────────┼──────────────────────────────┼──────────┤
+│ c56057a340 │ 45620     │ changa      │ a423605   │ 2024-10-01 13:28 │ nvhpc24_7.ompi5              │ SUCCESS  │
+│ 6cf50a89e9 │ 45622     │ changa_cuda │ a423605   │ 2024-10-01 13:41 │ nvhpc24_7.ompi5_cuda12_5     │ SUCCESS  │
+│ 1d20f78eb4 │ 51862     │ athena      │ z4c       │ 2024-10-15 15:54 │ nvhpc24_7.ompi5_cuda12_6_z4c │ SUCCESS  │
+│ c1f627429e │ 52554     │ athena      │ 524ca26   │ 2024-10-17 13:34 │ nvhpc247_ompi5_cuda125       │ SUCCESS  │
+│ c5eba21e43 │ 52556     │ athena      │ 524ca26   │ 2024-10-17 13:35 │ nvhpc249_ompi5_cuda126       │ SUCCESS  │
+│ bcf62f40c3 │ 10044     │ athena      │ 524ca26   │ 2024-10-22 15:56 │ lineinfo                     │ SUCCESS  │
+│ 7d5516c07b │ 1406892   │ athena      │ 524ca26   │ 2024-10-24 13:32 │ nvhpc249_ompi5_cuda126       │ SUCCESS  │
+│ 8aed85da37 │ 59033     │ athena      │ 524ca26   │ 2024-10-31 12:27 │ nvhpc249_ompi5               │ SUCCESS  │
+│ 6712563537 │ 63956     │ athena      │ 524ca26   │ 2024-11-19 22:50 │ nvhpc249_grtorus             │ SUCCESS  │
+│ a8f3f7a2e7 │ dry_0     │ stream      │ 1.8       │ 2024-12-09 13:58 │ default                      │ DRY RUN  │
+│ dc8b893b02 │ 77462     │ changa      │ kernelfix │ 2025-01-06 11:57 │ nvhpc24_9.ompi5_cuda12_6     │ SUCCESS  │
+│ 67fec51654 │ 91417     │ hello_world │ 1.0       │ 2025-01-29 11:13 │ default                      │ SUCCESS  │
+└────────────┴───────────┴─────────────┴───────────┴──────────────────┴──────────────────────────────┴──────────┘
