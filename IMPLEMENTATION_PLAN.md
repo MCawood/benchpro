@@ -79,6 +79,88 @@ We have successfully implemented the core architecture for BenchPRO 2.0, which i
 - [ ] Web-based dashboard for monitoring jobs
 - [ ] Configuration validation with helpful error messages
 
+## Immediate Development Focus
+
+### 1. Enhanced Registry UI (Phase 1)
+- [x] Redesign application registry output format 
+  - [x] Implement tabular display with proper formatting
+  - [x] Show critical information prominently (ID, name, version, build date, status)
+  - [x] Add color-coding for status and errors
+  - [x] Implement pagination for large registries
+  - [x] Add support for sorting and filtering
+- [x] Add verify command to check binary integrity
+  - [x] Verify binary existence and executable status
+  - [x] Report binary size and last modification time
+  - [x] Add summary statistics (total apps, states, etc.)
+
+### 2. Result Extraction System (Phase 2)
+- [ ] **Result Extraction Framework**
+  - [ ] Create `ResultExtractor` class with multiple extraction strategies
+  - [ ] Implement extraction methods:
+    - [ ] Simple pattern matching (regex)
+    - [ ] Command-line tools (grep, awk, sed)
+    - [ ] Custom Python scripts
+    - [ ] JSON/YAML parsing for structured outputs
+  - [ ] Add result validation and error handling
+  - [ ] Support extraction of multiple metrics from a single run
+
+- [ ] **Benchmark Profile Updates**
+  - [ ] Extend benchmark YAML schema to include result extraction section:
+  ```yaml
+  # Example result extraction configuration
+  results:
+    extraction:
+      method: "regex"           # Method: regex, command, script, or json
+      pattern: "Time: (\\d+\\.\\d+) seconds"  # For regex method
+      command: "grep 'Time:' | awk '{print $2}'"  # For command method
+      script: "extract_results.py"  # For script method
+      field_path: "benchmarks.timing.total"  # For json method
+    metric:
+      name: "execution_time"    # Name of the extracted metric
+      unit: "seconds"           # Unit of measurement
+      comparison: "lower_better"  # How to compare results (lower_better, higher_better)
+      format: "%.3f"            # Format string for display
+  ```
+
+- [ ] **Result Storage**
+  - [ ] Create a dedicated directory structure for benchmark results
+  - [ ] Store extraction scripts alongside benchmark profiles
+  - [ ] Implement versioning for extraction methods
+  - [ ] Add support for result caching
+
+### 3. Results Registry (Phase 2)
+- [ ] **Core Results Registry Implementation**
+  - [ ] Create `ResultsManager` class for managing benchmark results
+  - [ ] Define YAML-based results storage schema
+  - [ ] Implement CRUD operations for benchmark results
+  - [ ] Add query interface for finding results by criteria
+
+- [ ] **Benchmark Integration**
+  - [ ] Update `Benchmark` class to register results upon completion
+  - [ ] Add automatic result extraction after successful benchmark runs
+  - [ ] Implement result organization by application, date, and configuration
+
+- [ ] **CLI Interface for Results**
+  - [ ] Add `results` command group for managing benchmark results
+  - [ ] Implement subcommands: list, info, compare, export
+  - [ ] Create formatted tabular output similar to BenchPro 1.0
+  - [ ] Add reporting features (averages, min/max, trends)
+
+### 4. Comparative Analysis (Phase 2)
+- [ ] Create comparison utilities for multiple benchmark results
+- [ ] Generate simple performance visualizations in terminal
+- [ ] Implement export to CSV/JSON for external analysis
+- [ ] Add support for baseline comparisons
+
+### Result Analysis
+- [ ] Create `ResultExtractor` for pattern-based result extraction from log files
+- [ ] Add support for extracting metrics using regex, awk/grep, or custom scripts
+- [ ] Implement YAML-based result specification in benchmark profiles
+- [ ] Create `ResultsManager` for storing and retrieving benchmark results
+- [ ] Implement results comparison and basic visualization in CLI
+- [ ] Add export capabilities for external analysis tools
+- [ ] Implement benchmarking status tracking (SUCCESS/FAILURE/RUNNING)
+
 ## Phase 3 Roadmap (Future Development)
 
 ### Revised Templating System
@@ -227,11 +309,77 @@ RegistryManager
 2. **Advanced Querying**: Complex queries with multiple criteria
 3. **Performance Tracking**: Track benchmark performance with specific applications
 
+## Results Registry Implementation Details
+
+### Results Data Structure
+```yaml
+# Example results_registry.yaml structure
+version: "1.0"
+last_updated: "2025-03-05T12:53:42Z"
+results:
+  - id: "hello_world_bench_1741200728_cvw6ny"
+    benchmark_name: "hello_world"
+    application_id: "hello_world_10_bpn1nh"
+    submit_time: "2025-03-05T12:52:08Z"
+    completion_time: "2025-03-05T12:52:08Z"
+    status: "SUCCESS"
+    dataset: "Hello World!"
+    nodes: 1
+    extracted_metrics:
+      - name: "execution_time"
+        value: 0.123
+        unit: "seconds"
+        comparison: "lower_better"
+    workspace_dir: "/Users/mcawood/.benchpro/outputs/benchmark/hello_world_benchmark_1741200728_cvw6ny"
+    log_file: "/Users/mcawood/.benchpro/outputs/benchmark/hello_world_benchmark_1741200728_cvw6ny/hello_world_benchmark_run.log"
+    job_id: "72246"
+    extraction:
+      method: "regex"
+      pattern: "real\\s+(\\d+m\\d+\\.\\d+s)"
+```
+
+### ResultsManager Class Structure
+```
+ResultsManager
+├── __init__(results_registry_path=None)
+├── load()
+├── save()
+├── register_result(result_data)
+├── update_result(result_id, result_data)
+├── remove_result(result_id)
+├── find_result(result_id)
+├── find_results(criteria)
+├── get_result_metrics(result_id)
+├── list_results()
+├── compare_results(result_ids)
+├── export_results(result_ids, format)
+└── clean_registry()
+```
+
+### Integration Points
+1. **Benchmark Execution Process**: Register results after successful benchmark runs
+2. **Result Extraction**: Extract metrics from benchmark output using configurable methods
+3. **CLI Interface**: Add commands to manage and query the results registry
+4. **Comparative Analysis**: Provide tools for comparing benchmark results
+
+### Configuration Updates
+- **Benchmark Profile Updates**: Add result extraction configuration section
+- **New Extraction Script Templates**: Create templates for common result extraction patterns
+
+### Implementation Phases
+1. **Phase 1**: Enhanced Registry UI Implementation
+2. **Phase 2**: Core Result Extraction Framework
+3. **Phase 3**: Results Registry Implementation
+4. **Phase 4**: Comparative Analysis Tools
+
 ## Directory Structure
 
 ```
 benchpro/
 ├── cli/                # Command-line interface
+│   ├── apps.py        # Enhanced app registry interface
+│   ├── results.py     # New results registry interface
+│   └── compare.py     # Results comparison interface
 ├── config/             # Configuration management
 ├── docs/               # Documentation
 ├── executor/           # Task execution system
@@ -242,13 +390,28 @@ benchpro/
 │   ├── task_factory.py  # Task factory
 │   ├── scheduler.py    # Job scheduler abstraction
 │   └── executor.py     # Execution engine
-├── registry/           # Application registry system
-│   └── registry_manager.py  # Registry management
+├── registry/           # Registry systems
+│   ├── registry_manager.py  # Application registry management
+│   ├── results_manager.py   # NEW: Benchmark results registry
+│   └── registry_formatter.py # NEW: Improved display formatting
+├── results/            # Result capture and analysis
+│   ├── extractors/     # NEW: Result extraction strategies
+│   │   ├── base.py     # Base extractor class
+│   │   ├── regex.py    # Regex-based extraction
+│   │   ├── command.py  # Command-line tool extraction
+│   │   ├── script.py   # Custom script extraction
+│   │   └── json.py     # JSON parsing extraction
+│   ├── result_extractor.py # NEW: Main extraction controller
+│   ├── result_validator.py # NEW: Result validation
+│   └── formatters/     # NEW: Output formatting for results
 ├── workspace/          # Workspace management
 │   └── workspace_manager.py  # Workspace management
-├── results/            # Result capture and analysis
 ├── templates/          # Template engine and templates
+│   ├── extractors/     # NEW: Extraction script templates
+│   └── result_reports/ # NEW: Result report templates
 └── tests/              # Test suite
+    ├── results/        # NEW: Tests for result extraction
+    └── registry/       # Tests for registry systems
 ```
 
 ## Development Guidelines
