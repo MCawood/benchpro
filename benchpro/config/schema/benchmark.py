@@ -5,7 +5,9 @@ This module defines the schema for validating benchmark configuration files.
 """
 
 from typing import Dict, Any, List, Optional, Union
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+
+from benchpro.config.schema.base import BaseTaskSchema
 
 
 class RunConfig(BaseModel):
@@ -17,8 +19,7 @@ class RunConfig(BaseModel):
     output_files: List[str] = Field(default_factory=list, description="Output files to capture")
     threads: int = Field(1, description="Number of threads to use for the benchmark")
     
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="allow")
 
 
 class EnvironmentConfig(BaseModel):
@@ -27,8 +28,7 @@ class EnvironmentConfig(BaseModel):
     modules: List[str] = Field(default_factory=list, description="List of modules to load")
     variables: Dict[str, str] = Field(default_factory=dict, description="Environment variables to set")
     
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="allow")
 
 
 class ExecutionConfig(BaseModel):
@@ -36,8 +36,7 @@ class ExecutionConfig(BaseModel):
     
     type: str = Field("slurm", description="Execution type (slurm, local, etc.)")
     
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="allow")
 
 
 class JobConfig(BaseModel):
@@ -50,8 +49,7 @@ class JobConfig(BaseModel):
     tasks_per_node: int = Field(1, description="Number of tasks per node")
     time_limit: str = Field("01:00:00", description="Time limit for the job")
     
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class WorkspaceConfig(BaseModel):
@@ -63,8 +61,7 @@ class WorkspaceConfig(BaseModel):
     keep_input: bool = Field(True, description="Whether to keep input files after running")
     keep_output: bool = Field(True, description="Whether to keep output files after running")
     
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="allow")
 
 
 class ExtractionConfig(BaseModel):
@@ -76,8 +73,7 @@ class ExtractionConfig(BaseModel):
     metric: str = Field(..., description="Name of the metric to extract")
     unit: Optional[str] = Field(None, description="Unit of measurement")
     
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="allow")
 
 
 class ResultConfig(BaseModel):
@@ -91,17 +87,11 @@ class ResultConfig(BaseModel):
     extraction: Optional[ExtractionConfig] = Field(None, description="Configuration for result extraction")
     output_format: str = Field("json", description="Format for storing benchmark results")
     
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="allow")
 
 
-class BenchmarkSchema(BaseModel):
+class BenchmarkSchema(BaseTaskSchema):
     """Schema for benchmark configuration."""
-    
-    task_type: str = Field("benchmark", description="Type of task")
-    name: str = Field(..., description="Name of the benchmark")
-    version: str = Field("1.0", description="Version of the benchmark")
-    description: Optional[str] = Field(None, description="Description of the benchmark")
     
     run: RunConfig = Field(..., description="Run configuration")
     environment: EnvironmentConfig = Field(default_factory=EnvironmentConfig, description="Environment configuration")
@@ -111,16 +101,17 @@ class BenchmarkSchema(BaseModel):
     results: ResultConfig = Field(default_factory=ResultConfig, description="Result configuration")
     template: str = Field(..., description="Template to use for running the benchmark")
     
-    @validator("task_type")
+    @field_validator("task_type")
+    @classmethod
     def validate_task_type(cls, v):
         """Validate that task_type is 'benchmark'."""
         if v != "benchmark":
             raise ValueError("task_type must be 'benchmark'")
         return v
     
-    class Config:
-        extra = "forbid"
-        json_schema_extra = {
+    model_config = ConfigDict(
+        extra="allow",
+        json_schema_extra={
             "example": {
                 "task_type": "benchmark",
                 "name": "hello_world_bench",
@@ -168,4 +159,5 @@ class BenchmarkSchema(BaseModel):
                 },
                 "template": "hello_world_bench.j2"
             }
-        } 
+        }
+    ) 

@@ -5,7 +5,9 @@ This module defines the schema for validating application configuration files.
 """
 
 from typing import Dict, Any, List, Optional, Union
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+
+from benchpro.config.schema.base import BaseTaskSchema
 
 
 class BuildConfig(BaseModel):
@@ -17,8 +19,7 @@ class BuildConfig(BaseModel):
     output: str = Field(..., description="Output binary name")
     threads: int = Field(1, description="Number of threads to use for building")
     
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="allow")
 
 
 class EnvironmentVariable(BaseModel):
@@ -27,8 +28,7 @@ class EnvironmentVariable(BaseModel):
     name: str = Field(..., description="Name of the environment variable")
     value: str = Field(..., description="Value of the environment variable")
     
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="allow")
 
 
 class EnvironmentConfig(BaseModel):
@@ -37,8 +37,7 @@ class EnvironmentConfig(BaseModel):
     modules: List[str] = Field(default_factory=list, description="List of modules to load")
     variables: Dict[str, str] = Field(default_factory=dict, description="Environment variables to set")
     
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="allow")
 
 
 class ExecutionConfig(BaseModel):
@@ -46,8 +45,7 @@ class ExecutionConfig(BaseModel):
     
     type: str = Field("slurm", description="Execution type (slurm, local, etc.)")
     
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="allow")
 
 
 class JobConfig(BaseModel):
@@ -60,8 +58,7 @@ class JobConfig(BaseModel):
     tasks_per_node: int = Field(1, description="Number of tasks per node")
     time_limit: str = Field("01:00:00", description="Time limit for the job")
     
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class WorkspaceConfig(BaseModel):
@@ -73,17 +70,11 @@ class WorkspaceConfig(BaseModel):
     keep_source: bool = Field(True, description="Whether to keep source files after building")
     keep_build: bool = Field(True, description="Whether to keep build files after building")
     
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="allow")
 
 
-class ApplicationSchema(BaseModel):
+class ApplicationSchema(BaseTaskSchema):
     """Schema for application configuration."""
-    
-    task_type: str = Field("application", description="Type of task")
-    name: str = Field(..., description="Name of the application")
-    version: str = Field("1.0", description="Version of the application")
-    description: Optional[str] = Field(None, description="Description of the application")
     
     build: BuildConfig = Field(..., description="Build configuration")
     environment: EnvironmentConfig = Field(default_factory=EnvironmentConfig, description="Environment configuration")
@@ -92,16 +83,17 @@ class ApplicationSchema(BaseModel):
     workspace: WorkspaceConfig = Field(..., description="Workspace configuration")
     template: str = Field(..., description="Template to use for building the application")
     
-    @validator("task_type")
+    @field_validator("task_type")
+    @classmethod
     def validate_task_type(cls, v):
         """Validate that task_type is 'application'."""
         if v != "application":
             raise ValueError("task_type must be 'application'")
         return v
     
-    class Config:
-        extra = "forbid"
-        json_schema_extra = {
+    model_config = ConfigDict(
+        extra="allow",
+        json_schema_extra={
             "example": {
                 "task_type": "application",
                 "name": "hello_world",
@@ -140,4 +132,5 @@ class ApplicationSchema(BaseModel):
                 },
                 "template": "hello_world.j2"
             }
-        } 
+        }
+    ) 

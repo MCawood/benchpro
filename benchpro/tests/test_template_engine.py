@@ -14,7 +14,7 @@ def test_template_env(setup_test_env):
     # Create a simple test template file if it doesn't exist
     template_content = """#!/bin/bash
 #SBATCH --job-name={{ job.name }}
-#SBATCH --time={{ scheduler.time_limit }}
+#SBATCH --time={{ job.time_limit }}
 
 echo "Running {{ job.name }}"
 {{ application.executable }} {{ application.arguments }}
@@ -35,9 +35,7 @@ def test_render_template(test_template_env):
     
     config = {
         "job": {
-            "name": "test_job"
-        },
-        "scheduler": {
+            "name": "test_job",
             "time_limit": "01:00:00"
         },
         "application": {
@@ -97,9 +95,7 @@ def test_write_rendered_template(test_template_env):
     
     config = {
         "job": {
-            "name": "test_job"
-        },
-        "scheduler": {
+            "name": "test_job",
             "time_limit": "01:00:00"
         },
         "application": {

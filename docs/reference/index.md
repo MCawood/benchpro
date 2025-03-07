@@ -5,6 +5,7 @@ Welcome to the BenchPRO reference documentation. This section provides detailed 
 ## Contents
 
 - [Utility Modules](utils/index.md): Common utility modules used throughout BenchPRO.
+- [Configuration System](config/index.md): Schema-based configuration management and validation.
 
 ## How to Use This Documentation
 

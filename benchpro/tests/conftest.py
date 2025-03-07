@@ -123,10 +123,8 @@ def setup_test_env():
     # Create a default config
     default_config = {
         "job": {
-            "name": "default_job"
-        },
-        "scheduler": {
-            "type": "slurm",
+            "name": "default_job",
+            "scheduler": "slurm",
             "queue": "default",
             "nodes": 1,
             "tasks_per_node": 1,
@@ -142,8 +140,8 @@ def setup_test_env():
     system_config = {
         "system": {
             "name": "test_system",
-            "scheduler": {
-                "type": "slurm"
+            "job": {
+                "scheduler": "slurm"
             }
         }
     }

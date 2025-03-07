@@ -148,8 +148,8 @@ class TestApplicationSchema:
         with pytest.raises(ValidationError):
             ApplicationSchema(**config)
     
-    def test_extra_fields_forbidden(self):
-        """Test that extra fields raise validation errors."""
+    def test_extra_fields_allowed(self):
+        """Test that extra fields are allowed and included in the validated model."""
         config = {
             "task_type": "application",
             "name": "test_app",
@@ -167,8 +167,12 @@ class TestApplicationSchema:
             "extra_field": "value"  # Extra field at top level
         }
         
-        with pytest.raises(ValidationError):
-            ApplicationSchema(**config)
+        # Validate the config - should not raise an error
+        validated = ApplicationSchema(**config)
+        
+        # Check that extra fields are included in the model
+        assert validated.extra_field == "value"
+        assert validated.build.extra_field == "value"
 
 
 class TestBenchmarkSchema:
@@ -309,8 +313,8 @@ class TestBenchmarkSchema:
         with pytest.raises(ValidationError):
             BenchmarkSchema(**config)
     
-    def test_extra_fields_forbidden(self):
-        """Test that extra fields raise validation errors."""
+    def test_extra_fields_allowed(self):
+        """Test that extra fields are allowed and included in the validated model."""
         config = {
             "task_type": "benchmark",
             "name": "test_bench",
@@ -326,5 +330,9 @@ class TestBenchmarkSchema:
             "extra_field": "value"  # Extra field at top level
         }
         
-        with pytest.raises(ValidationError):
-            BenchmarkSchema(**config) 
+        # Validate the config - should not raise an error
+        validated = BenchmarkSchema(**config)
+        
+        # Check that extra fields are included in the model
+        assert validated.extra_field == "value"
+        assert validated.run.extra_field == "value" 
