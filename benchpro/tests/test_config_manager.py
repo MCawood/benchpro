@@ -9,7 +9,7 @@ import yaml
 import shutil
 
 from benchpro.config.config_manager import ConfigManager
-from benchpro.utils.filesystem import TestFileSystem
+from benchpro.utils.filesystem import TempFileSystem, InMemoryFileSystem, create_temp_fs, create_in_memory_fs
 
 
 @pytest.fixture
@@ -86,10 +86,10 @@ def temp_dirs():
 
 def test_load_default_config(temp_dirs):
     """Test loading the default configuration."""
-    # Create a TestFileSystem that points to our test directories
-    test_fs = TestFileSystem(base_temp_dir=temp_dirs["temp_dir"])
+    # Create a TempFileSystem that points to our test directories
+    test_fs = create_temp_fs(temp_dir=temp_dirs["temp_dir"])
     
-    # Initialize ConfigManager with the TestFileSystem
+    # Initialize ConfigManager with the TempFileSystem
     config_manager = ConfigManager(
         config_dir=temp_dirs["config_dir"], 
         file_system=test_fs
@@ -105,10 +105,10 @@ def test_load_default_config(temp_dirs):
 
 def test_load_system_config(temp_dirs):
     """Test loading the system configuration."""
-    # Create a TestFileSystem that points to our test directories
-    test_fs = TestFileSystem(base_temp_dir=temp_dirs["temp_dir"])
+    # Create a TempFileSystem that points to our test directories
+    test_fs = create_temp_fs(temp_dir=temp_dirs["temp_dir"])
     
-    # Initialize ConfigManager with the TestFileSystem
+    # Initialize ConfigManager with the TempFileSystem
     config_manager = ConfigManager(
         config_dir=temp_dirs["config_dir"], 
         file_system=test_fs
@@ -128,8 +128,8 @@ def test_load_system_config(temp_dirs):
 
 def test_load_profile_config(temp_dirs):
     """Test loading a profile configuration."""
-    # Create a TestFileSystem that points to our test directories
-    test_fs = TestFileSystem(base_temp_dir=temp_dirs["temp_dir"])
+    # Create a TempFileSystem that points to our test directories
+    test_fs = create_temp_fs(temp_dir=temp_dirs["temp_dir"])
     
     # Create required input directories
     inputs_app_dir = test_fs.join_paths(temp_dirs["temp_dir"], "inputs", "application")
@@ -170,7 +170,7 @@ def test_load_profile_config(temp_dirs):
         "template": "test_app.j2"
     }
     
-    # Save the profile to a file using the TestFileSystem
+    # Save the profile to a file using the TempFileSystem
     profile_path = test_fs.join_paths(inputs_app_dir, "test_profile.yaml")
     test_fs.write_yaml(profile_path, test_profile)
     
@@ -179,7 +179,7 @@ def test_load_profile_config(temp_dirs):
     print(f"Directory exists: {test_fs.exists(inputs_app_dir)}")
     print(f"Profile exists: {test_fs.exists(profile_path)}")
     
-    # Initialize ConfigManager with the TestFileSystem
+    # Initialize ConfigManager with the TempFileSystem
     config_manager = ConfigManager(
         config_dir=temp_dirs["config_dir"],
         profile_dir=temp_dirs["temp_dir"],
@@ -195,10 +195,10 @@ def test_load_profile_config(temp_dirs):
 
 def test_merge_configs(temp_dirs):
     """Test merging configurations with proper precedence."""
-    # Create a TestFileSystem that points to our test directories
-    test_fs = TestFileSystem(base_temp_dir=temp_dirs["temp_dir"])
+    # Create a TempFileSystem that points to our test directories
+    test_fs = create_temp_fs(temp_dir=temp_dirs["temp_dir"])
     
-    # Initialize ConfigManager with the TestFileSystem
+    # Initialize ConfigManager with the TempFileSystem
     config_manager = ConfigManager(
         config_dir=temp_dirs["config_dir"],
         profile_dir=temp_dirs["temp_dir"],
@@ -243,7 +243,7 @@ def test_merge_configs(temp_dirs):
         "template": "test_app.j2"
     }
     
-    # Save the profile using the TestFileSystem
+    # Save the profile using the TempFileSystem
     profile_path = test_fs.join_paths(inputs_app_dir, "merge_test.yaml")
     test_fs.write_yaml(profile_path, test_profile)
     
@@ -263,10 +263,10 @@ def test_merge_configs(temp_dirs):
 
 def test_merge_configs_with_cli_overrides(temp_dirs):
     """Test merging configurations with CLI overrides."""
-    # Create a TestFileSystem that points to our test directories
-    test_fs = TestFileSystem(base_temp_dir=temp_dirs["temp_dir"])
+    # Create a TempFileSystem that points to our test directories
+    test_fs = create_temp_fs(temp_dir=temp_dirs["temp_dir"])
     
-    # Initialize ConfigManager with the TestFileSystem
+    # Initialize ConfigManager with the TempFileSystem
     config_manager = ConfigManager(
         config_dir=temp_dirs["config_dir"],
         profile_dir=temp_dirs["temp_dir"],
@@ -311,7 +311,7 @@ def test_merge_configs_with_cli_overrides(temp_dirs):
         "template": "test_app.j2"
     }
     
-    # Save the profile using the TestFileSystem
+    # Save the profile using the TempFileSystem
     profile_path = test_fs.join_paths(inputs_app_dir, "cli_test.yaml")
     test_fs.write_yaml(profile_path, test_profile)
     
@@ -347,8 +347,7 @@ def test_merge_configs_with_cli_overrides(temp_dirs):
 
 def test_validate_config_valid():
     """Test validating a valid configuration."""
-    # Create mock files
-    mock_fs = TestFileSystem()
+    mock_fs = create_in_memory_fs()
     
     # Initialize config manager with mock file system
     config_manager = ConfigManager(file_system=mock_fs)
@@ -396,8 +395,7 @@ def test_validate_config_valid():
 
 def test_validate_config_missing_required():
     """Test validating a configuration with missing required fields."""
-    # Create mock files
-    mock_fs = TestFileSystem()
+    mock_fs = create_in_memory_fs()
     
     # Initialize config manager with mock file system
     config_manager = ConfigManager(file_system=mock_fs)
@@ -432,8 +430,7 @@ def test_validate_config_missing_required():
 
 def test_validate_config_invalid_types():
     """Test validating a configuration with invalid field types."""
-    # Create mock files
-    mock_fs = TestFileSystem()
+    mock_fs = create_in_memory_fs()
     
     # Initialize config manager with mock file system
     config_manager = ConfigManager(file_system=mock_fs)

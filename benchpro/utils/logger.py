@@ -9,7 +9,7 @@ import logging
 import datetime
 from typing import Optional
 
-from benchpro.utils.user_dir import user_dir_manager
+from benchpro.utils.user_dir import user_dir_manager, UserDirectoryManagerInterface, get_user_dir_manager
 
 class BenchProLogger:
     """
@@ -25,8 +25,13 @@ class BenchProLogger:
     _instance = None
     
     @classmethod
-    def get_instance(cls):
-        """Get the singleton instance of BenchProLogger."""
+    def get_instance(cls, user_dir_manager: Optional[UserDirectoryManagerInterface] = None):
+        """
+        Get the singleton instance of BenchProLogger.
+        
+        Args:
+            user_dir_manager: UserDirectoryManager instance. If None, uses the default instance.
+        """
         # Check if we're in completion mode
         if "_BP_COMPLETE" in os.environ:
             # In completion mode, don't create a real instance
@@ -35,7 +40,7 @@ class BenchProLogger:
         else:
             # Normal mode, create a real instance
             if cls._instance is None:
-                cls._instance = BenchProLogger()
+                cls._instance = BenchProLogger(user_dir_manager)
         return cls._instance
     
     @classmethod
@@ -49,13 +54,21 @@ class BenchProLogger:
         instance.log_file = "/dev/null"
         return instance
     
-    def __init__(self):
-        """Initialize the BenchProLogger."""
+    def __init__(self, user_dir_manager: Optional[UserDirectoryManagerInterface] = None):
+        """
+        Initialize the BenchProLogger.
+        
+        Args:
+            user_dir_manager: UserDirectoryManager instance. If None, uses the default instance.
+        """
         # Only initialize once
         if BenchProLogger._instance is not None:
             return
             
         self.initialized = False
+        
+        # Use the provided user_dir_manager or get the default one
+        self.user_dir_manager = user_dir_manager or get_user_dir_manager()
         
         # Default log level
         self.log_level = logging.INFO
@@ -100,7 +113,7 @@ class BenchProLogger:
         else:
             # Check if we should use the user's configured log level
             try:
-                settings = user_dir_manager.load_settings()
+                settings = self.user_dir_manager.load_settings()
                 logging_level_str = settings.get("logging_level", "INFO")
                 self.log_level = self._get_log_level(logging_level_str)
             except Exception:
@@ -108,8 +121,8 @@ class BenchProLogger:
                 pass
             
         # Create timestamped log file
-        self.log_file = user_dir_manager.get_path("logs", f"benchpro_{self.timestamp}.log")
-        user_dir_manager.ensure_file_directory(self.log_file)
+        self.log_file = self.user_dir_manager.get_path("logs", f"benchpro_{self.timestamp}.log")
+        self.user_dir_manager.ensure_file_directory(self.log_file)
         
         # Configure root logger
         logging.basicConfig(
@@ -122,7 +135,7 @@ class BenchProLogger:
         )
         
         # Create a link to the latest log file
-        latest_log = user_dir_manager.get_path("logs", "benchpro_latest.log")
+        latest_log = self.user_dir_manager.get_path("logs", "benchpro_latest.log")
         try:
             if os.path.exists(latest_log):
                 os.remove(latest_log)
@@ -165,53 +178,57 @@ class BenchProLogger:
 # Create a singleton instance
 logger_instance = BenchProLogger.get_instance()
 
-def get_logger(name: str) -> logging.Logger:
+def get_logger(name: str, user_dir_manager: Optional[UserDirectoryManagerInterface] = None) -> logging.Logger:
     """
     Get a logger for the specified name.
     
     Args:
-        name: Name of the logger
+        name: Name of the logger.
+        user_dir_manager: UserDirectoryManager instance. If None, uses the default instance.
         
     Returns:
-        Logger instance
+        A configured logger.
     """
-    # Check if we're in completion mode
-    if "_BP_COMPLETE" in os.environ:
-        # In completion mode, return a null logger
-        logger = logging.getLogger(name)
-        logger.addHandler(logging.NullHandler())
-        return logger
+    # Get the singleton instance
+    logger_instance = BenchProLogger.get_instance(user_dir_manager)
     
-    # Normal mode, use the BenchProLogger
-    return BenchProLogger.get_instance().get_logger(name)
+    # Set up logging if not already done
+    if not logger_instance.initialized:
+        logger_instance.setup_logging()
+        
+    # Return the logger
+    return logger_instance.get_logger(name)
 
-def get_log_file() -> str:
+def get_log_file(user_dir_manager: Optional[UserDirectoryManagerInterface] = None) -> str:
     """
     Get the path to the current log file.
     
+    Args:
+        user_dir_manager: UserDirectoryManager instance. If None, uses the default instance.
+        
     Returns:
-        Path to the current log file
+        Path to the current log file.
     """
-    # Check if we're in completion mode
-    if "_BP_COMPLETE" in os.environ:
-        # In completion mode, return a dummy path
-        return "/dev/null"
+    # Get the singleton instance
+    logger_instance = BenchProLogger.get_instance(user_dir_manager)
     
-    # Normal mode, use the BenchProLogger
-    return BenchProLogger.get_instance().get_log_file()
+    # Set up logging if not already done
+    if not logger_instance.initialized:
+        logger_instance.setup_logging()
+        
+    # Return the log file path
+    return logger_instance.get_log_file()
 
-def setup_logging(log_level: Optional[int] = None):
+def setup_logging(log_level: Optional[int] = None, user_dir_manager: Optional[UserDirectoryManagerInterface] = None):
     """
     Set up logging with the specified log level.
     
     Args:
         log_level: Log level to use. If None, uses the default log level.
+        user_dir_manager: UserDirectoryManager instance. If None, uses the default instance.
     """
-    # Check if we're in completion mode
-    if "_BP_COMPLETE" in os.environ:
-        # In completion mode, disable logging
-        logging.disable(logging.CRITICAL)
-        return
+    # Get the singleton instance
+    logger_instance = BenchProLogger.get_instance(user_dir_manager)
     
-    # Normal mode, use the BenchProLogger
-    BenchProLogger.get_instance().setup_logging(log_level) 
+    # Set up logging
+    logger_instance.setup_logging(log_level) 

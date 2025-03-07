@@ -16,7 +16,7 @@ from benchpro.results.result_extractor import ResultExtractor
 from benchpro.results.result_capture import ResultCapture
 from benchpro.executor.task_base import Task
 from benchpro.utils.logger import get_logger
-from benchpro.utils.user_dir import user_dir_manager
+from benchpro.utils.user_dir import user_dir_manager, UserDirectoryManagerInterface, get_user_dir_manager
 
 
 class Benchmark(Task):
@@ -27,7 +27,8 @@ class Benchmark(Task):
                  workspace_manager: Optional[WorkspaceManager] = None,
                  registry_manager: Optional[RegistryManager] = None,
                  result_extractor: Optional[ResultExtractor] = None,
-                 result_capture: Optional[ResultCapture] = None):
+                 result_capture: Optional[ResultCapture] = None,
+                 user_dir_manager: Optional[UserDirectoryManagerInterface] = None):
         """
         Initialize the Benchmark task.
         
@@ -38,9 +39,23 @@ class Benchmark(Task):
             registry_manager: Optional RegistryManager instance. If None, a new one is created.
             result_extractor: Optional ResultExtractor instance. If None, a new one is created.
             result_capture: Optional ResultCapture instance. If None, a new one is created.
+            user_dir_manager: Optional UserDirectoryManager instance. If None, uses the default instance.
         """
+        # Use the provided user_dir_manager or get the default one
+        self.user_dir_manager = user_dir_manager or get_user_dir_manager()
+        
+        # Create dependencies with the user_dir_manager if not provided
+        if config_manager is None:
+            config_manager = ConfigManager(user_dir_manager=self.user_dir_manager)
+        if template_engine is None:
+            template_engine = TemplateEngine(user_dir_manager=self.user_dir_manager)
+        if workspace_manager is None:
+            workspace_manager = WorkspaceManager(user_dir_manager=self.user_dir_manager)
+        if registry_manager is None:
+            registry_manager = RegistryManager(user_dir_manager=self.user_dir_manager)
+            
         super().__init__(config_manager, template_engine, workspace_manager)
-        self.registry_manager = registry_manager or RegistryManager()
+        self.registry_manager = registry_manager
         self.result_extractor = result_extractor or ResultExtractor()
         self.result_capture = result_capture or ResultCapture()
         self.logger.debug(f"Benchmark task initialized with RegistryManager: {self.registry_manager.__class__.__name__}")
@@ -177,7 +192,7 @@ class Benchmark(Task):
             return profile_name
             
         # Try benchmark directory first
-        benchmark_dir = user_dir_manager.get_path("inputs_benchmark")
+        benchmark_dir = self.user_dir_manager.get_path("inputs_benchmark")
         profile_path = os.path.join(benchmark_dir, f"{profile_name}")
         if not profile_path.endswith('.yaml'):
             profile_path += '.yaml'

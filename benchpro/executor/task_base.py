@@ -13,6 +13,7 @@ from benchpro.executor.executor import Executor
 from benchpro.workspace.workspace_manager import WorkspaceManager
 from benchpro.utils.logger import get_logger
 from benchpro.config.validator import ConfigValidator
+from benchpro.utils.user_dir import UserDirectoryManagerInterface, get_user_dir_manager
 
 
 class Task:
@@ -20,7 +21,8 @@ class Task:
     
     def __init__(self, config_manager: Optional[ConfigManager] = None, 
                  template_engine: Optional[TemplateEngine] = None,
-                 workspace_manager: Optional[WorkspaceManager] = None):
+                 workspace_manager: Optional[WorkspaceManager] = None,
+                 user_dir_manager: Optional[UserDirectoryManagerInterface] = None):
         """
         Initialize the Task.
         
@@ -28,13 +30,25 @@ class Task:
             config_manager: Optional ConfigManager instance. If None, a new one is created.
             template_engine: Optional TemplateEngine instance. If None, a new one is created.
             workspace_manager: Optional WorkspaceManager instance. If None, a new one is created.
+            user_dir_manager: Optional UserDirectoryManager instance. If None, uses the default instance.
         """
         self.logger = get_logger(__name__)
         self.logger.info(f"Initializing {self.__class__.__name__}")
         
-        self.config_manager = config_manager or ConfigManager()
-        self.template_engine = template_engine or TemplateEngine()
-        self.workspace_manager = workspace_manager or WorkspaceManager()
+        # Use the provided user_dir_manager or get the default one
+        self.user_dir_manager = user_dir_manager or get_user_dir_manager()
+        
+        # Create dependencies with the user_dir_manager if not provided
+        if config_manager is None:
+            config_manager = ConfigManager(user_dir_manager=self.user_dir_manager)
+        if template_engine is None:
+            template_engine = TemplateEngine(user_dir_manager=self.user_dir_manager)
+        if workspace_manager is None:
+            workspace_manager = WorkspaceManager(user_dir_manager=self.user_dir_manager)
+            
+        self.config_manager = config_manager
+        self.template_engine = template_engine
+        self.workspace_manager = workspace_manager
         
         self.logger.debug(f"{self.__class__.__name__} initialized with components:")
         self.logger.debug(f"  - ConfigManager: {self.config_manager.__class__.__name__}")

@@ -13,7 +13,7 @@ import random
 import string
 from typing import Dict, List, Optional
 
-from benchpro.utils.user_dir import user_dir_manager
+from benchpro.utils.user_dir import user_dir_manager, UserDirectoryManagerInterface, get_user_dir_manager
 
 
 class WorkspaceManager:
@@ -27,11 +27,16 @@ class WorkspaceManager:
     - Clean up temporary files when needed
     """
     
-    def __init__(self):
+    def __init__(self, user_dir_manager: Optional[UserDirectoryManagerInterface] = None):
         """
         Initialize the WorkspaceManager.
+        
+        Args:
+            user_dir_manager: UserDirectoryManager instance. If None, uses the default instance.
         """
         self.logger = logging.getLogger(__name__)
+        # Use the provided user_dir_manager or get the default one
+        self.user_dir_manager = user_dir_manager or get_user_dir_manager()
         
     def create_workspace(self, task_name: str, task_type: str = "benchmark") -> Dict[str, str]:
         """
@@ -49,9 +54,9 @@ class WorkspaceManager:
         
         # Get the appropriate base directory based on task type
         if task_type.lower() == "application":
-            base_output_dir = user_dir_manager.get_application_directory()
+            base_output_dir = self.user_dir_manager.get_application_directory()
         else:  # Default to benchmark
-            base_output_dir = user_dir_manager.get_benchmark_directory()
+            base_output_dir = self.user_dir_manager.get_benchmark_directory()
         
         # Create the main workspace directory
         workspace_dir = os.path.join(base_output_dir, task_id)

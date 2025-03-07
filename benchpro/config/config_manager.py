@@ -10,10 +10,10 @@ from typing import Dict, Any, List, Optional
 import yaml
 import logging
 
-from benchpro.utils.user_dir import user_dir_manager
+from benchpro.utils.user_dir import user_dir_manager, UserDirectoryManagerInterface, get_user_dir_manager
 from benchpro.utils.logger import get_logger
 from benchpro.config.validator import ConfigValidator
-from benchpro.utils.filesystem import FileSystem, RealFileSystem, TestFileSystem
+from benchpro.utils.filesystem import FileSystem, RealFileSystem, InMemoryFileSystem, TempFileSystem
 
 
 class ConfigManager:
@@ -28,7 +28,9 @@ class ConfigManager:
     - Validating configuration against schemas
     """
     
-    def __init__(self, config_dir: Optional[str] = None, profile_dir: Optional[str] = None, file_system: Optional[FileSystem] = None):
+    def __init__(self, config_dir: Optional[str] = None, profile_dir: Optional[str] = None, 
+                 file_system: Optional[FileSystem] = None, 
+                 user_dir_manager: Optional[UserDirectoryManagerInterface] = None):
         """
         Initialize the ConfigManager.
         
@@ -36,12 +38,16 @@ class ConfigManager:
             config_dir: Directory containing internal configuration files (default and system).
             profile_dir: Directory containing user-editable profile configuration files.
             file_system: FileSystem implementation to use. If None, RealFileSystem is used.
+            user_dir_manager: UserDirectoryManager instance. If None, uses the default instance.
         """
         self.logger = get_logger(__name__)
         self.logger.info("Initializing ConfigManager")
         
         # Set file system implementation
         self.file_system = file_system or RealFileSystem()
+        
+        # Use the provided user_dir_manager or get the default one
+        self.user_dir_manager = user_dir_manager or get_user_dir_manager()
         
         # Set internal config directory for default configurations
         if config_dir is None:
@@ -87,7 +93,7 @@ class ConfigManager:
             ]
             
             # Create the application profiles directory if it doesn't exist
-            user_app_profiles_dir = user_dir_manager.get_path("inputs_application")
+            user_app_profiles_dir = self.user_dir_manager.get_path("inputs_application")
             self.file_system.create_directory(user_app_profiles_dir)
             
             # Copy each profile to the user directory if it doesn't exist
@@ -108,7 +114,7 @@ class ConfigManager:
             ]
             
             # Create the benchmark profiles directory if it doesn't exist
-            user_bench_profiles_dir = user_dir_manager.get_path("inputs_benchmark")
+            user_bench_profiles_dir = self.user_dir_manager.get_path("inputs_benchmark")
             self.file_system.create_directory(user_bench_profiles_dir)
             
             # Copy each profile to the user directory if it doesn't exist
@@ -186,10 +192,10 @@ class ConfigManager:
         self.logger.debug(f"Loading profile {profile_name} for task type {task_type}")
 
         # For tests, first check if the profile name is test_profile or ends with test.yaml
-        # as these are often created in-memory with TestFileSystem
+        # as these are often created in-memory with InMemoryFileSystem
         if profile_name == "test_profile" or profile_name.endswith("_test"):
             # In tests, profiles could be directly in the test directory
-            if isinstance(self.file_system, TestFileSystem) and self.profile_dir:
+            if isinstance(self.file_system, (InMemoryFileSystem, TempFileSystem)) and self.profile_dir:
                 # Check first in inputs/application or inputs/benchmark
                 app_dir = self.file_system.join_paths(self.profile_dir, "inputs", "application")
                 bench_dir = self.file_system.join_paths(self.profile_dir, "inputs", "benchmark")
@@ -248,11 +254,11 @@ class ConfigManager:
         # If no profile directory provided, use the user directory manager
         else:
             if task_type is None or task_type == "application":
-                app_path = user_dir_manager.get_path("inputs_application")
+                app_path = self.user_dir_manager.get_path("inputs_application")
                 potential_paths.append(self.file_system.join_paths(app_path, f"{profile_name}.yaml"))
 
             if task_type is None or task_type == "benchmark":
-                bench_path = user_dir_manager.get_path("inputs_benchmark")
+                bench_path = self.user_dir_manager.get_path("inputs_benchmark")
                 potential_paths.append(self.file_system.join_paths(bench_path, f"{profile_name}.yaml"))
 
         self.logger.debug(f"Potential profile paths: {potential_paths}")
@@ -269,8 +275,9 @@ class ConfigManager:
                     raise ValueError(f"Error parsing profile configuration file: {e}")
 
         # For test environments, if the profile wasn't found, check for files in the test_fs in-memory storage
-        if isinstance(self.file_system, TestFileSystem):
-            test_paths = [path for path in self.file_system.files.keys() if path.endswith(f"{profile_name}.yaml")]
+        if isinstance(self.file_system, InMemoryFileSystem):
+            # For InMemoryFileSystem, check all files that match the profile name
+            test_paths = [path for path in self.file_system._files.keys() if path.endswith(f"{profile_name}.yaml")]
             if test_paths:
                 self.logger.info(f"Loading test profile from in-memory storage: {test_paths[0]}")
                 profile_config = self.file_system.read_yaml(test_paths[0])
@@ -583,6 +590,9 @@ class ConfigManager:
         Get the benchmark profile directory.
         
         Returns:
-            The benchmark profile directory.
+            Path to the benchmark profile directory.
         """
-        return os.path.join(self.config_dir, "benchmark") 
+        if self.profile_dir:
+            return self.profile_dir
+        else:
+            return self.user_dir_manager.get_path("inputs_benchmark") 

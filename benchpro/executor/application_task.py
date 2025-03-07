@@ -14,7 +14,7 @@ from benchpro.workspace.workspace_manager import WorkspaceManager
 from benchpro.registry.registry_manager import RegistryManager
 from benchpro.executor.task_base import Task
 from benchpro.utils.logger import get_logger
-from benchpro.utils.user_dir import user_dir_manager
+from benchpro.utils.user_dir import user_dir_manager, UserDirectoryManagerInterface, get_user_dir_manager
 
 
 class Application(Task):
@@ -23,7 +23,8 @@ class Application(Task):
     def __init__(self, config_manager: Optional[ConfigManager] = None, 
                  template_engine: Optional[TemplateEngine] = None,
                  workspace_manager: Optional[WorkspaceManager] = None,
-                 registry_manager: Optional[RegistryManager] = None):
+                 registry_manager: Optional[RegistryManager] = None,
+                 user_dir_manager: Optional[UserDirectoryManagerInterface] = None):
         """
         Initialize the Application task.
         
@@ -32,9 +33,23 @@ class Application(Task):
             template_engine: Optional TemplateEngine instance. If None, a new one is created.
             workspace_manager: Optional WorkspaceManager instance. If None, a new one is created.
             registry_manager: Optional RegistryManager instance. If None, a new one is created.
+            user_dir_manager: Optional UserDirectoryManager instance. If None, uses the default instance.
         """
+        # Use the provided user_dir_manager or get the default one
+        self.user_dir_manager = user_dir_manager or get_user_dir_manager()
+        
+        # Create dependencies with the user_dir_manager if not provided
+        if config_manager is None:
+            config_manager = ConfigManager(user_dir_manager=self.user_dir_manager)
+        if template_engine is None:
+            template_engine = TemplateEngine(user_dir_manager=self.user_dir_manager)
+        if workspace_manager is None:
+            workspace_manager = WorkspaceManager(user_dir_manager=self.user_dir_manager)
+        if registry_manager is None:
+            registry_manager = RegistryManager(user_dir_manager=self.user_dir_manager)
+            
         super().__init__(config_manager, template_engine, workspace_manager)
-        self.registry_manager = registry_manager or RegistryManager()
+        self.registry_manager = registry_manager
         self.logger.debug(f"Application task initialized with RegistryManager: {self.registry_manager.__class__.__name__}")
     
     def validate_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
@@ -152,7 +167,7 @@ class Application(Task):
         source_file = build_config.get("source")
         if source_file:
             # Look for source file in the source directory
-            source_dir = user_dir_manager.get_source_directory()
+            source_dir = self.user_dir_manager.get_source_directory()
             source_path = os.path.join(source_dir, source_file)
             
             if os.path.exists(source_path):

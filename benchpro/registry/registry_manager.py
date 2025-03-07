@@ -11,7 +11,7 @@ import json
 import fcntl
 from typing import Dict, Any, List, Optional, Union
 
-from benchpro.utils.user_dir import user_dir_manager
+from benchpro.utils.user_dir import user_dir_manager, UserDirectoryManagerInterface, get_user_dir_manager
 from benchpro.utils.logger import get_logger
 
 
@@ -26,12 +26,13 @@ class RegistryManager:
     - Registry persistence with concurrency handling
     """
     
-    def __init__(self, registry_path: Optional[str] = None):
+    def __init__(self, registry_path: Optional[str] = None, user_dir_manager: Optional[UserDirectoryManagerInterface] = None):
         """
         Initialize the RegistryManager.
         
         Args:
             registry_path: Path to the registry file. If None, uses the default path.
+            user_dir_manager: UserDirectoryManager instance. If None, uses the default instance.
         """
         # Check if we're in completion mode
         if "_BP_COMPLETE" in os.environ:
@@ -44,9 +45,12 @@ class RegistryManager:
             self.logger = get_logger(__name__)
             self.logger.info("Initializing RegistryManager")
         
+        # Use the provided user_dir_manager or get the default one
+        self.user_dir_manager = user_dir_manager or get_user_dir_manager()
+        
         if registry_path is None:
             # Use the user directory manager to get the registry path
-            self.registry_path = user_dir_manager.get_path("registry", "registry.yaml")
+            self.registry_path = self.user_dir_manager.get_path("registry", "registry.yaml")
         else:
             self.registry_path = registry_path
             
@@ -408,7 +412,7 @@ class RegistryManager:
             True if successful, False otherwise.
         """
         # Ensure the directory exists
-        user_dir_manager.ensure_file_directory(self.registry_path)
+        self.user_dir_manager.ensure_file_directory(self.registry_path)
         
         try:
             with open(self.registry_path, 'w') as f:

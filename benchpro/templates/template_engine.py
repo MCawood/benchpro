@@ -8,7 +8,7 @@ import os
 from typing import Dict, Any, Optional, List
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from benchpro.utils.user_dir import user_dir_manager
+from benchpro.utils.user_dir import user_dir_manager, UserDirectoryManagerInterface, get_user_dir_manager
 from benchpro.utils.logger import get_logger
 
 
@@ -17,19 +17,23 @@ class TemplateEngine:
     Renders job scripts from Jinja2 templates using configuration data.
     """
     
-    def __init__(self, template_dir: Optional[str] = None):
+    def __init__(self, template_dir: Optional[str] = None, user_dir_manager: Optional[UserDirectoryManagerInterface] = None):
         """
         Initialize the template engine.
 
         Args:
             template_dir: Directory containing template files.
+            user_dir_manager: UserDirectoryManager instance. If None, uses the default instance.
         """
         self.logger = get_logger(__name__)
         self.logger.info("Initializing TemplateEngine")
         
+        # Use the provided user_dir_manager or get the default one
+        self.user_dir_manager = user_dir_manager or get_user_dir_manager()
+        
         if template_dir is None:
             # Look for templates in ~/.benchpro/inputs
-            self.template_dir = user_dir_manager.get_path("inputs")
+            self.template_dir = self.user_dir_manager.get_path("inputs")
             self.logger.debug(f"Using default template directory: {self.template_dir}")
             
             # Copy default templates if they don't exist
@@ -72,7 +76,7 @@ class TemplateEngine:
             if app_template_files:
                 self.logger.info(f"Copying {len(app_template_files)} application templates to user directory")
                 self.logger.debug(f"Application templates: {app_template_files}")
-                user_dir_manager.copy_default_files(example_app_templates_dir, "inputs_application", app_template_files)
+                self.user_dir_manager.copy_default_files(example_app_templates_dir, "inputs_application", app_template_files)
             else:
                 self.logger.debug("No application templates found to copy")
         else:
@@ -86,7 +90,7 @@ class TemplateEngine:
             if bench_template_files:
                 self.logger.info(f"Copying {len(bench_template_files)} benchmark templates to user directory")
                 self.logger.debug(f"Benchmark templates: {bench_template_files}")
-                user_dir_manager.copy_default_files(example_bench_templates_dir, "inputs_benchmark", bench_template_files)
+                self.user_dir_manager.copy_default_files(example_bench_templates_dir, "inputs_benchmark", bench_template_files)
             else:
                 self.logger.debug("No benchmark templates found to copy")
         else:
@@ -111,12 +115,12 @@ class TemplateEngine:
         # Determine the template directory based on task type
         task_type = config.get('task_type')
         if task_type == 'application':
-            template_dir = user_dir_manager.get_path("inputs_application")
+            template_dir = self.user_dir_manager.get_path("inputs_application")
         elif task_type == 'benchmark':
-            template_dir = user_dir_manager.get_path("inputs_benchmark")
+            template_dir = self.user_dir_manager.get_path("inputs_benchmark")
         else:
             # If task_type is not specified, default to application
-            template_dir = user_dir_manager.get_path("inputs_application")
+            template_dir = self.user_dir_manager.get_path("inputs_application")
         
         self.logger.debug(f"Looking for template in: {template_dir}")
         
@@ -150,12 +154,12 @@ class TemplateEngine:
         template_dirs = []
         
         # Add application templates directory
-        app_dir = user_dir_manager.get_path("inputs_application")
+        app_dir = self.user_dir_manager.get_path("inputs_application")
         if os.path.exists(app_dir):
             template_dirs.append(app_dir)
             
         # Add benchmark templates directory
-        bench_dir = user_dir_manager.get_path("inputs_benchmark")
+        bench_dir = self.user_dir_manager.get_path("inputs_benchmark")
         if os.path.exists(bench_dir):
             template_dirs.append(bench_dir)
             
@@ -189,7 +193,7 @@ class TemplateEngine:
         
         # Ensure the directory exists
         self.logger.debug(f"Ensuring directory exists for output: {output_path}")
-        user_dir_manager.ensure_file_directory(output_path)
+        self.user_dir_manager.ensure_file_directory(output_path)
         
         # Write the rendered content to the output file
         try:
