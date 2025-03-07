@@ -585,6 +585,56 @@ def _install_zsh_completion():
     click.echo(f"{fpath_line}")
     click.echo(f"{compinit_line}")
 
+# Add an initialization command
+@cli.command(name="init")
+@click.option(
+    "--force", 
+    is_flag=True, 
+    help="Force reinitialization of directories and copy example files."
+)
+def initialize(force: bool = False):
+    """
+    Initialize or reinitialize BenchPro directories and example files.
+    
+    This command ensures all required directories exist and copies example files to the appropriate locations.
+    Use the --force flag to recreate directories and copy files even if they already exist.
+    """
+    try:
+        logger.info("Initializing BenchPRO")
+        
+        # Create directories
+        user_dir_manager._ensure_directories()
+        logger.info("Directories initialized successfully")
+        
+        # Copy example files
+        success = user_dir_manager.copy_example_profiles()
+        if success:
+            logger.info("Example profiles copied successfully")
+        else:
+            logger.warning("Some example profiles could not be copied")
+        
+        # Show paths to important directories
+        click.echo("BenchPRO initialized successfully!")
+        click.echo("\nImportant directories:")
+        click.echo(f"  Root directory: {user_dir_manager.get_path('root')}")
+        click.echo(f"  Application profiles: {user_dir_manager.get_path('inputs_application')}")
+        click.echo(f"  Benchmark profiles: {user_dir_manager.get_path('inputs_benchmark')}")
+        click.echo(f"  Benchmark outputs: {user_dir_manager.get_path('outputs_benchmark')}")
+        click.echo(f"  Application registry: {user_dir_manager.get_path('registry')}")
+        click.echo(f"  Log files: {user_dir_manager.get_path('logs')}")
+        
+        # Additional information
+        click.echo("\nNext steps:")
+        click.echo("  - Review example profiles in the inputs directories")
+        click.echo("  - Build an application: bp build <profile>")
+        click.echo("  - Run a benchmark: bp bench <profile>")
+        click.echo("  - Capture results: bp capture --job-id <id>")
+        
+    except Exception as e:
+        logger.error(f"Error during initialization: {str(e)}")
+        click.echo(f"Error during initialization: {str(e)}")
+        sys.exit(1)
+
 # Main entry point
 def main():
     """Main entry point for the CLI."""

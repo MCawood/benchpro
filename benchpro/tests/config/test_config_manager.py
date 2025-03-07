@@ -361,4 +361,49 @@ class TestConfigManager:
         assert merged_config["name"] == "test_app"
         assert merged_config["job"]["nodes"] == 4  # From CLI overrides
         assert merged_config["job"]["tasks_per_node"] == 32  # From CLI overrides
-        assert merged_config["job"]["account"] == "system_account"  # From system config 
+        assert merged_config["job"]["account"] == "test_account"  # From profile config (profile overrides system)
+        
+        # Test with a profile that doesn't specify an account
+        # Create a profile configuration without account
+        profile_no_account = {
+            "task_type": "application",
+            "name": "test_app_no_account",
+            "version": "1.0",
+            "description": "Test application without account",
+            "build": {
+                "source": "test.c",
+                "compiler": "gcc",
+                "flags": "-O2",
+                "output": "test_app",
+                "threads": 1
+            },
+            "environment": {
+                "modules": [],
+                "variables": {}
+            },
+            "job": {
+                "scheduler": "slurm",
+                "queue": "compute",
+                "nodes": 1,
+                "tasks_per_node": 1,
+                "time_limit": "01:00:00"
+                # No account specified here, should fall back to system account
+            },
+            "workspace": {
+                "source_dir": "source",
+                "build_dir": "build",
+                "logs_dir": "logs",
+                "keep_source": True,
+                "keep_build": True
+            },
+            "template": "test.j2"
+        }
+        
+        with open(os.path.join(self.profile_dir, "test_app_no_account.yaml"), 'w') as f:
+            yaml.dump(profile_no_account, f)
+        
+        # Merge configurations for the profile without account
+        merged_config_no_account = self.config_manager.merge_configs("test_app_no_account", {})
+        
+        # Now the system account should be used since the profile doesn't specify one
+        assert merged_config_no_account["job"]["account"] == "system_account"  # From system config 

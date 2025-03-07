@@ -1,0 +1,51 @@
+# Hello World Command Extractor Benchmark Configuration
+task_type: "benchmark"
+name: "hello_world_cmd_benchmark"
+version: "1.0"
+description: "Simple Hello World benchmark using command extractor"
+
+# Run configuration
+run:
+  application: "hello_world"
+  arguments: ""
+  input_files: []
+  output_files: []
+  threads: 1
+
+# Environment configuration
+environment:
+  modules: []
+  variables: {}
+
+# Execution configuration
+execution:
+  type: "local"
+
+# Job configuration
+job:
+  scheduler: "slurm"
+  queue: null
+  account: null
+  nodes: 1
+  tasks_per_node: 1
+  time_limit: "00:10:00"
+
+# Workspace configuration
+workspace:
+  input_dir: "examples/input/hello_world"
+  output_dir: "output"
+  logs_dir: "logs"
+  keep_input: true
+  keep_output: true
+
+# Results configuration
+results:
+  extraction:
+    method: "command"
+    command: "grep 'Result:' {log_file} | awk '{print $2}'"
+    metric: "execution_time"
+    unit: "seconds"
+  output_format: "json"
+
+# Template specification
+template: "hello_world.j2" 

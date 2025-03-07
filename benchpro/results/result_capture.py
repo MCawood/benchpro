@@ -153,12 +153,13 @@ class ResultCapture:
         """
         try:
             # Load the benchmark profile
-            config = self.config_manager.load_profile(profile_name, "benchmark")
+            config = self.config_manager.load_profile_config(profile_name, task_type="benchmark")
             
             # Check if extraction configuration exists
             extraction_config = config.get("results", {}).get("extraction")
             if not extraction_config:
                 self.logger.warning(f"No extraction configuration found in profile {profile_name}")
+                results["error"] = f"No extraction configuration found in profile {profile_name}"
                 return
             
             self.logger.info(f"Extracting results using method: {extraction_config.get('method', 'unknown')}")
@@ -169,12 +170,23 @@ class ResultCapture:
             # Add extracted metrics to results
             if extraction_results.get("success", False):
                 self.logger.info(f"Result extraction successful: {extraction_results.get('metric')}")
-                results["extracted_metrics"] = extraction_results.get("metric", {})
+                
+                # Update the results with extracted data
+                metric_data = extraction_results.get("metric", {})
+                results["metric"] = metric_data.get("name", "value")
+                results["value"] = metric_data.get("value")
+                results["unit"] = metric_data.get("unit", "")
+                results["success"] = True
+                
+                # Also keep the raw extraction results
+                results["extracted_metrics"] = extraction_results
             else:
                 self.logger.warning(f"Result extraction failed: {extraction_results.get('error', 'Unknown error')}")
+                results["error"] = extraction_results.get("error", "Unknown extraction error")
         
         except Exception as e:
             self.logger.error(f"Error during result extraction: {str(e)}")
+            results["error"] = f"Error during result extraction: {str(e)}"
     
     def get_results(self, job_id: str) -> Optional[Dict[str, Any]]:
         """

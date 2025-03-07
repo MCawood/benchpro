@@ -72,6 +72,7 @@ class ExtractionConfig(BaseModel):
     
     method: str = Field(..., description="Method for extracting results (regex, command)")
     pattern: Optional[str] = Field(None, description="Pattern for regex extraction")
+    command: Optional[str] = Field(None, description="Command for command-based extraction")
     metric: str = Field(..., description="Name of the metric to extract")
     unit: Optional[str] = Field(None, description="Unit of measurement")
     

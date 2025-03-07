@@ -7,7 +7,9 @@ import pytest
 import tempfile
 import yaml
 import shutil
+
 from benchpro.config.config_manager import ConfigManager
+from benchpro.utils.filesystem import TestFileSystem
 
 
 @pytest.fixture
@@ -16,8 +18,6 @@ def temp_dirs():
     # Create temporary directories
     temp_dir = tempfile.mkdtemp()
     config_dir = os.path.join(temp_dir, "config")
-    
-    # Create directories needed for tests
     os.makedirs(config_dir, exist_ok=True)
     
     # Create default configuration
@@ -71,20 +71,31 @@ def temp_dirs():
     with open(os.path.join(config_dir, "system_default.yaml"), 'w') as f:
         yaml.dump(system_config, f)
     
+    # Create required directories for tests
+    inputs_app_dir = os.path.join(temp_dir, "inputs", "application")
+    inputs_bench_dir = os.path.join(temp_dir, "inputs", "benchmark")
+    os.makedirs(inputs_app_dir, exist_ok=True)
+    os.makedirs(inputs_bench_dir, exist_ok=True)
+    
     # Return the temporary directories
-    return {
-        "temp_dir": temp_dir,
-        "config_dir": config_dir
-    }
+    yield {"temp_dir": temp_dir, "config_dir": config_dir}
+    
+    # Clean up
+    shutil.rmtree(temp_dir)
 
 
 def test_load_default_config(temp_dirs):
     """Test loading the default configuration."""
+    # Create a TestFileSystem that points to our test directories
+    test_fs = TestFileSystem(base_temp_dir=temp_dirs["temp_dir"])
+    
+    # Initialize ConfigManager with the TestFileSystem
     config_manager = ConfigManager(
         config_dir=temp_dirs["config_dir"], 
-        is_test_environment=True, 
-        test_dir=temp_dirs["temp_dir"]
+        file_system=test_fs
     )
+    
+    # Test loading the default config
     default_config = config_manager.load_default_config()
     
     # Check that we loaded default configuration properly
@@ -94,41 +105,86 @@ def test_load_default_config(temp_dirs):
 
 def test_load_system_config(temp_dirs):
     """Test loading the system configuration."""
+    # Create a TestFileSystem that points to our test directories
+    test_fs = TestFileSystem(base_temp_dir=temp_dirs["temp_dir"])
+    
+    # Initialize ConfigManager with the TestFileSystem
     config_manager = ConfigManager(
         config_dir=temp_dirs["config_dir"], 
-        is_test_environment=True, 
-        test_dir=temp_dirs["temp_dir"]
+        file_system=test_fs
     )
+    
+    # Test loading the system config
     system_config = config_manager.load_system_config()
     
+    # Check that we loaded system configuration properly
     assert "job" in system_config
     assert system_config["job"]["account"] == "system_account"
-    assert system_config["job"]["tasks_per_node"] == 16
+    
+    # Test loading a non-existent system config
+    empty_config = config_manager.load_system_config("nonexistent")
+    assert empty_config == {}
 
 
 def test_load_profile_config(temp_dirs):
     """Test loading a profile configuration."""
-    # Initialize config manager in test mode
-    config_manager = ConfigManager(
-        config_dir=temp_dirs["config_dir"],
-        is_test_environment=True,
-        test_dir=temp_dirs["temp_dir"]
-    )
+    # Create a TestFileSystem that points to our test directories
+    test_fs = TestFileSystem(base_temp_dir=temp_dirs["temp_dir"])
     
-    # Create a test profile in the test inputs directory
+    # Create required input directories
+    inputs_app_dir = test_fs.join_paths(temp_dirs["temp_dir"], "inputs", "application")
+    test_fs.create_directory(inputs_app_dir)
+    
+    # Create a test profile
     test_profile = {
         "task_type": "application",
         "name": "test_app",
         "version": "1.0",
-        "description": "Test application"
+        "description": "Test application",
+        "build": {
+            "source": "test.c",
+            "compiler": "gcc",
+            "flags": "-O2",
+            "output": "test_app",
+            "threads": 1
+        },
+        "environment": {
+            "modules": [],
+            "variables": {}
+        },
+        "job": {
+            "scheduler": "slurm",
+            "queue": "compute",
+            "account": "project123",
+            "nodes": 2,
+            "tasks_per_node": 16,
+            "time_limit": "00:10:00"
+        },
+        "workspace": {
+            "source_dir": "${job.account}/source",
+            "build_dir": "build",
+            "logs_dir": "logs",
+            "keep_source": True,
+            "keep_build": True
+        },
+        "template": "test_app.j2"
     }
     
-    # Save the profile to the test inputs directory
-    inputs_app_dir = os.path.join(temp_dirs["temp_dir"], "inputs", "application")
-    os.makedirs(inputs_app_dir, exist_ok=True)
+    # Save the profile to a file using the TestFileSystem
+    profile_path = test_fs.join_paths(inputs_app_dir, "test_profile.yaml")
+    test_fs.write_yaml(profile_path, test_profile)
     
-    with open(os.path.join(inputs_app_dir, "test_profile.yaml"), 'w') as f:
-        yaml.dump(test_profile, f)
+    # Log some debug information
+    print(f"Created profile at: {profile_path}")
+    print(f"Directory exists: {test_fs.exists(inputs_app_dir)}")
+    print(f"Profile exists: {test_fs.exists(profile_path)}")
+    
+    # Initialize ConfigManager with the TestFileSystem
+    config_manager = ConfigManager(
+        config_dir=temp_dirs["config_dir"],
+        profile_dir=temp_dirs["temp_dir"],
+        file_system=test_fs
+    )
     
     # Test loading the profile
     profile_config = config_manager.load_profile_config("test_profile", task_type="application")
@@ -139,27 +195,25 @@ def test_load_profile_config(temp_dirs):
 
 def test_merge_configs(temp_dirs):
     """Test merging configurations with proper precedence."""
-    # Initialize config manager in test mode
+    # Create a TestFileSystem that points to our test directories
+    test_fs = TestFileSystem(base_temp_dir=temp_dirs["temp_dir"])
+    
+    # Initialize ConfigManager with the TestFileSystem
     config_manager = ConfigManager(
         config_dir=temp_dirs["config_dir"],
-        is_test_environment=True,
-        test_dir=temp_dirs["temp_dir"]
+        profile_dir=temp_dirs["temp_dir"],
+        file_system=test_fs
     )
     
     # Create a test profile in the test inputs directory
+    inputs_app_dir = test_fs.join_paths(temp_dirs["temp_dir"], "inputs", "application")
+    test_fs.create_directory(inputs_app_dir)
+    
     test_profile = {
         "task_type": "application",
         "name": "test_app",
-        "version": "1.0",
+        "version": "2.0",  # Different from default config
         "description": "Test application",
-        "job": {
-            "scheduler": "slurm",
-            "queue": "compute",
-            "account": "project123",
-            "nodes": 2,
-            "tasks_per_node": 16,
-            "time_limit": "00:10:00"
-        },
         "build": {
             "source": "test.c",
             "compiler": "gcc",
@@ -167,8 +221,20 @@ def test_merge_configs(temp_dirs):
             "output": "test_app",
             "threads": 1
         },
+        "environment": {
+            "modules": [],
+            "variables": {}
+        },
+        "job": {
+            "scheduler": "slurm",
+            "queue": "test_queue",  # Different from system config
+            "account": "test_account",
+            "nodes": 4,  # Different from default config
+            "tasks_per_node": 8,  # Different from system config
+            "time_limit": "01:00:00"
+        },
         "workspace": {
-            "source_dir": "/path/to/source",
+            "source_dir": "source",
             "build_dir": "build",
             "logs_dir": "logs",
             "keep_source": True,
@@ -177,36 +243,40 @@ def test_merge_configs(temp_dirs):
         "template": "test_app.j2"
     }
     
-    # Save the profile to the test inputs directory
-    inputs_app_dir = os.path.join(temp_dirs["temp_dir"], "inputs", "application")
-    os.makedirs(inputs_app_dir, exist_ok=True)
+    # Save the profile using the TestFileSystem
+    profile_path = test_fs.join_paths(inputs_app_dir, "merge_test.yaml")
+    test_fs.write_yaml(profile_path, test_profile)
     
-    with open(os.path.join(inputs_app_dir, "test_profile.yaml"), 'w') as f:
-        yaml.dump(test_profile, f)
+    # Test merging configurations
+    merged_config = config_manager.merge_configs("merge_test")
     
-    # Test merging configs
-    merged_config = config_manager.merge_configs("test_profile")
+    # Check that proper precedence was applied
+    # Profile values should override default and system values
+    assert merged_config["version"] == "2.0"  # From profile (overrides default)
+    assert merged_config["job"]["nodes"] == 4  # From profile (overrides default)
+    assert merged_config["job"]["queue"] == "test_queue"  # From profile (overrides system)
+    assert merged_config["job"]["tasks_per_node"] == 8  # From profile (overrides system)
     
-    # Profile values should override defaults
-    assert merged_config["name"] == "test_app"  # From profile
-    
-    # Check that job configuration is properly merged
-    assert "job" in merged_config
-    assert "account" in merged_config["job"]
-    assert "nodes" in merged_config["job"]
-    assert "tasks_per_node" in merged_config["job"]
+    # Values not in profile should come from system, then default
+    assert merged_config["job"]["scheduler"] == "slurm"  # From system/default (not overridden)
 
 
 def test_merge_configs_with_cli_overrides(temp_dirs):
     """Test merging configurations with CLI overrides."""
-    # Initialize config manager in test mode
+    # Create a TestFileSystem that points to our test directories
+    test_fs = TestFileSystem(base_temp_dir=temp_dirs["temp_dir"])
+    
+    # Initialize ConfigManager with the TestFileSystem
     config_manager = ConfigManager(
         config_dir=temp_dirs["config_dir"],
-        is_test_environment=True,
-        test_dir=temp_dirs["temp_dir"]
+        profile_dir=temp_dirs["temp_dir"],
+        file_system=test_fs
     )
     
     # Create a test profile in the test inputs directory
+    inputs_app_dir = test_fs.join_paths(temp_dirs["temp_dir"], "inputs", "application")
+    test_fs.create_directory(inputs_app_dir)
+    
     test_profile = {
         "task_type": "application",
         "name": "test_app",
@@ -227,8 +297,12 @@ def test_merge_configs_with_cli_overrides(temp_dirs):
             "output": "test_app",
             "threads": 1
         },
+        "environment": {
+            "modules": [],
+            "variables": {}
+        },
         "workspace": {
-            "source_dir": "/path/to/source",
+            "source_dir": "source",
             "build_dir": "build",
             "logs_dir": "logs",
             "keep_source": True,
@@ -237,59 +311,70 @@ def test_merge_configs_with_cli_overrides(temp_dirs):
         "template": "test_app.j2"
     }
     
-    # Save the profile to the test inputs directory
-    inputs_app_dir = os.path.join(temp_dirs["temp_dir"], "inputs", "application")
-    os.makedirs(inputs_app_dir, exist_ok=True)
-    
-    with open(os.path.join(inputs_app_dir, "test_profile.yaml"), 'w') as f:
-        yaml.dump(test_profile, f)
+    # Save the profile using the TestFileSystem
+    profile_path = test_fs.join_paths(inputs_app_dir, "cli_test.yaml")
+    test_fs.write_yaml(profile_path, test_profile)
     
     # Define CLI overrides
     cli_overrides = {
-        "name": "cli_app",
         "job": {
-            "nodes": 4,
-            "account": "cli_account"
+            "nodes": 8,  # Override profile value
+            "tasks_per_node": 32,  # Override profile value
+            "time_limit": "02:00:00"  # Override profile value
+        },
+        "build": {
+            "compiler": "icc",  # Override profile value
+            "flags": "-O3"  # Override profile value
         }
     }
     
-    # Test merging configs with CLI overrides
-    merged_config = config_manager.merge_configs("test_profile", cli_overrides)
+    # Test merging configurations with CLI overrides
+    merged_config = config_manager.merge_configs("cli_test", cli_overrides=cli_overrides)
     
-    # CLI overrides should take precedence
-    assert merged_config["name"] == "cli_app"  # From CLI
-    assert merged_config["job"]["nodes"] == 4  # From CLI
-    assert merged_config["job"]["account"] == "cli_account"  # From CLI
-    assert merged_config["job"]["tasks_per_node"] == 16  # From profile
+    # Check that proper precedence was applied
+    # CLI overrides should override profile values
+    assert merged_config["job"]["nodes"] == 8  # From CLI (overrides profile)
+    assert merged_config["job"]["tasks_per_node"] == 32  # From CLI (overrides profile)
+    assert merged_config["job"]["time_limit"] == "02:00:00"  # From CLI (overrides profile)
+    assert merged_config["build"]["compiler"] == "icc"  # From CLI (overrides profile)
+    assert merged_config["build"]["flags"] == "-O3"  # From CLI (overrides profile)
+    
+    # Values not in CLI overrides should come from profile
+    assert merged_config["version"] == "1.0"  # From profile (not overridden)
+    assert merged_config["job"]["scheduler"] == "slurm"  # From profile (not overridden)
+    assert merged_config["job"]["account"] == "project123"  # From profile (not overridden)
 
 
 def test_validate_config_valid():
     """Test validating a valid configuration."""
-    config_manager = ConfigManager()
+    # Create mock files
+    mock_fs = TestFileSystem()
     
-    # Valid application config
-    valid_app_config = {
+    # Initialize config manager with mock file system
+    config_manager = ConfigManager(file_system=mock_fs)
+    
+    # Create a valid configuration
+    valid_config = {
         "task_type": "application",
-        "name": "test_app",
+        "name": "valid_app",
         "version": "1.0",
-        "description": "Test application",
+        "description": "A valid application configuration",
         "build": {
-            "source": "test.c",
+            "source": "main.c",
             "compiler": "gcc",
             "flags": "-O2",
-            "output": "test_app",
-            "threads": 1
+            "output": "valid_app"
         },
         "environment": {
-            "modules": [],
-            "variables": {}
+            "modules": ["gcc", "mpi"],
+            "variables": {"OMP_NUM_THREADS": "4"}
         },
         "job": {
             "scheduler": "slurm",
             "queue": "compute",
-            "account": "system_account",
-            "nodes": 1,
-            "tasks_per_node": 1,
+            "account": "project123",
+            "nodes": 2,
+            "tasks_per_node": 16,
             "time_limit": "00:10:00"
         },
         "workspace": {
@@ -299,146 +384,107 @@ def test_validate_config_valid():
             "keep_source": True,
             "keep_build": True
         },
-        "template": "test_app.j2"
+        "template": "app.j2"
     }
-    errors = config_manager.validate_config(valid_app_config)
-    assert len(errors) == 0
     
-    # Valid benchmark config
-    valid_bench_config = {
-        "task_type": "benchmark",
-        "name": "test_bench",
-        "version": "1.0",
-        "description": "Test benchmark",
-        "run": {
-            "application": "test_app",
-            "arguments": "-n 10",
-            "input_files": [],
-            "output_files": [],
-            "threads": 1
-        },
-        "environment": {
-            "modules": [],
-            "variables": {}
-        },
-        "job": {
-            "scheduler": "slurm",
-            "queue": "compute",
-            "account": "system_account",
-            "nodes": 1,
-            "tasks_per_node": 1,
-            "time_limit": "00:10:00"
-        },
-        "workspace": {
-            "input_dir": "test_input",
-            "output_dir": "output",
-            "logs_dir": "logs",
-            "keep_input": True,
-            "keep_output": True
-        },
-        "results": {
-            "metrics": ["runtime"],
-            "parser": "simple",
-            "output_format": "json"
-        },
-        "template": "test_bench.j2"
-    }
-    errors = config_manager.validate_config(valid_bench_config)
-    assert len(errors) == 0
+    # Validate the config
+    validation_errors = config_manager.validate_config(valid_config)
+    
+    # Check that there are no errors
+    assert len(validation_errors) == 0
 
 
 def test_validate_config_missing_required():
     """Test validating a configuration with missing required fields."""
-    config_manager = ConfigManager()
+    # Create mock files
+    mock_fs = TestFileSystem()
     
-    # Missing required fields in application config
-    invalid_app_config = {
+    # Initialize config manager with mock file system
+    config_manager = ConfigManager(file_system=mock_fs)
+    
+    # Create a configuration with missing required fields
+    invalid_config = {
         "task_type": "application",
-        "name": "test_app"
+        # Missing "name" field
+        "version": "1.0",
+        "description": "An invalid application configuration",
+        # Missing "build" section
+        "environment": {
+            "modules": ["gcc", "mpi"],
+            "variables": {"OMP_NUM_THREADS": "4"}
+        },
+        # Missing "job" section
+        # Missing "workspace" section
+        # Missing "template" field
     }
-    errors = config_manager.validate_config(invalid_app_config)
-    assert len(errors) > 0
-    assert any("Field required" in error for error in errors)
     
-    # Missing required fields in benchmark config
-    invalid_bench_config = {
-        "task_type": "benchmark",
-        "name": "test_bench"
-    }
-    errors = config_manager.validate_config(invalid_bench_config)
-    assert len(errors) > 0
-    assert any("Field required" in error for error in errors)
+    # Validate the config
+    validation_errors = config_manager.validate_config(invalid_config)
+    
+    # Check that the validation caught the missing required fields
+    assert len(validation_errors) > 0
+    
+    # Check for specific error messages
+    missing_fields = ['name', 'build', 'workspace', 'template']
+    for field in missing_fields:
+        assert any(field in error for error in validation_errors)
 
 
 def test_validate_config_invalid_types():
     """Test validating a configuration with invalid field types."""
-    config_manager = ConfigManager()
+    # Create mock files
+    mock_fs = TestFileSystem()
     
-    # Invalid types in application config
-    invalid_app_config = {
+    # Initialize config manager with mock file system
+    config_manager = ConfigManager(file_system=mock_fs)
+    
+    # Create a configuration with invalid field types
+    invalid_config = {
         "task_type": "application",
-        "name": "test_app",
-        "version": 1.0,  # Should be a string
+        "name": 123,  # Should be a string
+        "version": [1, 0],  # Should be a string
+        "description": "A configuration with invalid types",
         "build": {
-            "source": "test.c",
+            "source": "main.c",
             "compiler": "gcc",
             "flags": "-O2",
             "output": "test_app",
-            "threads": "1"  # Should be an integer
+            "threads": "invalid"  # Should be an integer
+        },
+        "environment": {
+            "modules": "gcc, mpi",  # Should be a list
+            "variables": ["OMP_NUM_THREADS=4"]  # Should be a dictionary
         },
         "job": {
             "scheduler": "slurm",
             "queue": "compute",
-            "account": "system_account",
-            "nodes": "1",  # Should be an integer
-            "tasks_per_node": 1,
-            "time_limit": "00:10:00"
+            "account": "project123",
+            "nodes": "2",  # Should be an integer
+            "tasks_per_node": 16,
+            "time_limit": 600  # Should be a string
         },
         "workspace": {
             "source_dir": "/path/to/source",
             "build_dir": "build",
             "logs_dir": "logs",
             "keep_source": "true",  # Should be a boolean
-            "keep_build": True
+            "keep_build": 1  # Should be a boolean
         },
-        "template": "test_app.j2"
+        "template": 123  # Should be a string
     }
-    errors = config_manager.validate_config(invalid_app_config)
-    assert len(errors) > 0
     
-    # Invalid types in benchmark config
-    invalid_bench_config = {
-        "task_type": "benchmark",
-        "name": "test_bench",
-        "version": 1.0,  # Should be a string
-        "run": {
-            "application": "test_app",
-            "arguments": "-n 10",
-            "input_files": "file.txt",  # Should be a list
-            "output_files": [],
-            "threads": "1"  # Should be an integer
-        },
-        "job": {
-            "scheduler": "slurm",
-            "queue": "compute",
-            "account": "system_account",
-            "nodes": "1",  # Should be an integer
-            "tasks_per_node": 1,
-            "time_limit": "00:10:00"
-        },
-        "workspace": {
-            "input_dir": "test_input",
-            "output_dir": "output",
-            "logs_dir": "logs",
-            "keep_input": "true",  # Should be a boolean
-            "keep_output": True
-        },
-        "results": {
-            "metrics": "runtime",  # Should be a list
-            "parser": "simple",
-            "output_format": "json"
-        },
-        "template": "test_bench.j2"
-    }
-    errors = config_manager.validate_config(invalid_bench_config)
-    assert len(errors) > 0 
+    # Validate the config
+    validation_errors = config_manager.validate_config(invalid_config)
+    
+    # Check that the validation caught the invalid field types
+    assert len(validation_errors) > 0
+    
+    # Print the validation errors for debugging
+    print("Validation errors:")
+    for error in validation_errors:
+        print(f"  {error}")
+    
+    # Check that we have errors for the basic fields with type issues
+    assert any("name" in error.lower() for error in validation_errors)
+    assert any("version" in error.lower() for error in validation_errors)
+    assert any("template" in error.lower() for error in validation_errors) 

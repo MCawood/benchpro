@@ -78,17 +78,49 @@ def capture_results(job_id: str, job_name: Optional[str] = None, output_file: Op
     if results.get("success", False):
         # Get the metric information
         metric = results.get("metric", {})
-        metric_name = metric.get("name", "value")
-        metric_value = metric.get("value", "unknown")
-        metric_unit = metric.get("unit", "")
+        metric_name = results.get("metric", "value")
+        metric_value = results.get("value", "unknown")
+        metric_unit = results.get("unit", "")
+        
+        # Format and display the results
+        click.echo("Results captured successfully:")
+        click.echo(f"  Job ID: {job_id}")
+        click.echo(f"  Job Name: {job_name}")
         
         if metric_unit:
-            click.echo(f"Results captured successfully: {metric_name} = {metric_value} {metric_unit}")
+            click.echo(f"  {metric_name}: {metric_value} {metric_unit}")
         else:
-            click.echo(f"Results captured successfully: {metric_name} = {metric_value}")
+            click.echo(f"  {metric_name}: {metric_value}")
+            
+        # Show where results were saved
+        results_file = os.path.join(os.path.dirname(output_file), f"{job_name}_results.json")
+        if os.path.exists(results_file):
+            click.echo(f"\nResults saved to: {results_file}")
     else:
-        click.echo(f"Failed to capture results: {results.get('error', 'Unknown error')}")
+        error_msg = results.get('error', 'Unknown error')
+        click.echo(f"Failed to capture results: {error_msg}")
         
+        # Suggest potential solutions based on the error
+        if error_msg and isinstance(error_msg, str):
+            if "No extraction configuration found" in error_msg:
+                click.echo("\nSuggestion: Check that your benchmark profile includes a 'results.extraction' section.")
+                click.echo("Example configuration:")
+                click.echo("""
+    results:
+      extraction:
+        method: regex
+        pattern: "Result: (\\d+\\.?\\d*)"
+        metric: "execution_time"
+        unit: "seconds"
+                """)
+            elif "No profile configuration found" in error_msg:
+                click.echo("\nSuggestion: Make sure to specify the correct profile name with --profile option.")
+            elif "Output file not found" in error_msg:
+                click.echo("\nSuggestion: Check that the output file path is correct and the file exists.")
+            elif "Extraction returned no result" in error_msg:
+                click.echo("\nSuggestion: Check that the benchmark output contains the expected pattern to extract.")
+                click.echo("You may need to modify the extraction configuration in your benchmark profile.")
+
 
 def find_job_info(job_id: str, workspace_dir: Optional[str] = None) -> Optional[dict]:
     """

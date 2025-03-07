@@ -7,6 +7,7 @@ This module implements a command-line tool based strategy for extracting results
 import os
 import subprocess
 from typing import Dict, Any, Optional, Union
+import re
 
 from benchpro.results.extractors.base import BaseExtractor
 from benchpro.utils.logger import get_logger
@@ -66,12 +67,21 @@ class CommandExtractor(BaseExtractor):
             return None
         
         try:
-            # Create the full command with log file as input
-            full_command = f"cat '{log_file}' | {self.command}"
+            # Get the command from the configuration
+            command = self.command
+            
+            # Replace {log_file} with the actual log file path
+            if "{log_file}" in command:
+                command = command.replace("{log_file}", log_file)
+            else:
+                # Use cat to pipe the log file to the command if {log_file} is not in the command
+                command = f"cat '{log_file}' | {command}"
+            
+            self.logger.debug(f"Running command: {command}")
             
             # Run the command
             process = subprocess.run(
-                full_command,
+                command,
                 shell=True,
                 check=False,
                 stdout=subprocess.PIPE,
@@ -90,7 +100,31 @@ class CommandExtractor(BaseExtractor):
             if not result:
                 self.logger.warning("Command returned empty result")
                 return None
-                
+            
+            # Try to extract a numeric value if the result contains non-numeric characters
+            # First check if the result is already a clean numeric value
+            if re.match(r'^\d+\.?\d*$', result):
+                self.logger.info(f"Result is already a clean numeric value: {result}")
+                return result
+            
+            # Otherwise, try to extract a numeric value with a more permissive pattern
+            # This can handle formats like "Result: 123.45 seconds" or "Time: 123.45"
+            numeric_match = re.search(r'(?:^|[^\d])(\d+\.?\d*)\s*(?:$|[^\d])', result)
+            if numeric_match:
+                numeric_result = numeric_match.group(1)
+                self.logger.info(f"Extracted numeric result: {numeric_result} from {result}")
+                return numeric_result
+            
+            # If there are multiple numbers, find the most likely one
+            # Often this would be the largest number or one that appears in a specific context
+            all_numbers = re.findall(r'(\d+\.?\d*)', result)
+            if all_numbers:
+                # Default to the first number found
+                numeric_result = all_numbers[0]
+                self.logger.info(f"Found multiple numeric values, using first one: {numeric_result} from {result}")
+                return numeric_result
+            
+            self.logger.info(f"No numeric value found, returning full result: {result}")
             return result
             
         except Exception as e:

@@ -94,6 +94,11 @@ class UserDirectoryManager:
         # Copy default source files
         self.copy_default_source_files()
         
+        # Copy example profiles (benchmark and application)
+        # Only do this if this is not a test environment
+        if not self._is_test_environment:
+            self.copy_example_profiles()
+        
         # Load settings
         self.settings = self.load_settings()
     
@@ -507,63 +512,59 @@ class UserDirectoryManager:
 
     def is_initialized(self) -> bool:
         """
-        Check if the user directory is initialized.
+        Check if BenchPRO user directories are initialized.
         
         Returns:
-            True if the user directory exists and has the required subdirectories,
-            False otherwise.
+            True if initialized, False otherwise.
         """
-        # Check if the base directory exists
-        if not os.path.exists(self.base_dir):
-            return False
+        # Check for required directories
+        return os.path.isdir(self.get_path("root"))
             
-        # Check if all required subdirectories exist
-        for dir_name, dir_path in self.dirs.items():
-            if dir_name != "root" and not os.path.exists(dir_path):
-                return False
-                
-        return True
-
     def copy_default_source_files(self):
         """
-        Copy default source files from examples/inputs/source to ~/.benchpro/inputs/source.
+        Copy default source files to the source directory.
         """
-        import shutil
-        import logging
+        source_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "examples", "sources")
+        target_dir_type = "inputs_source"
         
-        logger = logging.getLogger(__name__)
-        
-        # Get the project root directory
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        example_source_dir = os.path.join(project_root, "examples", "inputs", "source")
-        
-        # Get the target directory
-        target_dir = self.get_path("inputs_source")
-        
-        logger.debug(f"Example source directory: {example_source_dir}")
-        logger.debug(f"Target source directory: {target_dir}")
-        
-        # Check if the example source directory exists
-        if os.path.exists(example_source_dir):
-            # Get all files in the example source directory
-            source_files = os.listdir(example_source_dir)
+        # Look for source files
+        if os.path.isdir(source_dir):
+            files = [f for f in os.listdir(source_dir) if os.path.isfile(os.path.join(source_dir, f))]
+            self.copy_default_files(source_dir, target_dir_type, files)
             
-            if source_files:
-                logger.info(f"Copying {len(source_files)} source files to user directory")
-                logger.debug(f"Source files: {source_files}")
-                
-                # Copy each file if it doesn't exist in the target directory
-                for filename in source_files:
-                    source_path = os.path.join(example_source_dir, filename)
-                    target_path = os.path.join(target_dir, filename)
-                    
-                    if not os.path.exists(target_path) and os.path.exists(source_path):
-                        shutil.copy2(source_path, target_path)
-                        logger.info(f"Copied source file: {filename} to {target_dir}")
-            else:
-                logger.debug("No source files found to copy")
-        else:
-            logger.debug(f"Example source directory not found: {example_source_dir}")
+    def copy_example_profiles(self):
+        """
+        Copy example profile files to the user's inputs directories.
+        This ensures that example profiles are available for users immediately after installation.
+        """
+        # Define paths relative to the package
+        examples_dir = self._get_examples_directory()
+        if not examples_dir:
+            logger.warning("Could not locate examples directory for initialization")
+            return False
+            
+        # Copy application profiles
+        app_examples_dir = os.path.join(examples_dir, "inputs", "application")
+        if os.path.isdir(app_examples_dir):
+            files = [f for f in os.listdir(app_examples_dir) if os.path.isfile(os.path.join(app_examples_dir, f))]
+            self.copy_default_files(app_examples_dir, "inputs_application", files)
+            logger.info(f"Copied {len(files)} application profiles to user directory")
+            
+        # Copy benchmark profiles
+        bench_examples_dir = os.path.join(examples_dir, "inputs", "benchmark")
+        if os.path.isdir(bench_examples_dir):
+            files = [f for f in os.listdir(bench_examples_dir) if os.path.isfile(os.path.join(bench_examples_dir, f))]
+            self.copy_default_files(bench_examples_dir, "inputs_benchmark", files)
+            logger.info(f"Copied {len(files)} benchmark profiles to user directory")
+            
+        # Copy templates
+        templates_dir = os.path.join(examples_dir, "templates")
+        if os.path.isdir(templates_dir):
+            files = [f for f in os.listdir(templates_dir) if os.path.isfile(os.path.join(templates_dir, f))]
+            self.copy_default_files(templates_dir, "templates", files)
+            logger.info(f"Copied {len(files)} templates to user directory")
+            
+        return True
 
 # Create a singleton instance
 user_dir_manager = UserDirectoryManager() 
