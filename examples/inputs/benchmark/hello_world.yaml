@@ -1,6 +1,6 @@
 # Hello World Benchmark Configuration
 task_type: "benchmark"
-name: "hello_world_benchmark"
+name: "hello_world"
 version: "1.0"
 description: "Simple Hello World benchmark"
 
