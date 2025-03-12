@@ -21,7 +21,6 @@ from benchpro.utils.logger import get_log_file
 from benchpro.cli.completion import get_app_ids, get_profile_names, get_system_names, get_binary_paths
 from benchpro.config.config_manager import ConfigManager
 from benchpro.executor.task_orchestrator import TaskOrchestrator
-from benchpro.executor.executor import Executor
 from benchpro.results.result_capture import ResultCapture
 from benchpro.utils.user_dir import user_dir_manager
 
@@ -48,19 +47,14 @@ def cli(debug: bool, log_level: Optional[str] = None):
         # Import here to avoid circular imports
         from benchpro.utils.logger import setup_logging
         
-        # Convert string log level to int
-        level_map = {
-            "DEBUG": logging.DEBUG,
-            "INFO": logging.INFO,
-            "WARNING": logging.WARNING,
-            "ERROR": logging.ERROR,
-            "CRITICAL": logging.CRITICAL
-        }
-        numeric_level = level_map.get(log_level.upper(), logging.INFO)
-        
-        # Set up logging with this level
-        setup_logging(numeric_level)
-        logger.debug(f"Logging level set to {log_level}")
+        numeric_level = getattr(logging, log_level.upper(), None)
+        if isinstance(numeric_level, int):
+            setup_logging(numeric_level)
+        else:
+            logger.warning(f"Invalid log level: {log_level}")
+    
+    if os.environ.get("BENCHPRO_DEBUG") == "1":
+        logger.debug("Debug mode enabled via environment variable")
 
 # Add the apps command group
 cli.add_command(get_app_command)
@@ -88,6 +82,11 @@ cli.add_command(get_app_command)
     help="Executor to use for running the build. If not specified, uses the default from configuration."
 )
 @click.option(
+    "--execution-type",
+    type=click.Choice(["local", "slurm"]),
+    help="Execution type to use for running the build. If not specified, uses executor or the default from configuration."
+)
+@click.option(
     "--force",
     is_flag=True,
     help="Force build even if an application with the same name, version, and build parameters already exists."
@@ -98,71 +97,57 @@ cli.add_command(get_app_command)
 )
 def build(profile: str, output_dir: Optional[str] = None, 
           system: Optional[str] = None, dry_run: bool = False,
-          executor: Optional[str] = None, force: bool = False,
-          version: Optional[str] = None):
-    """Build an application based on the specified profile."""
+          executor: Optional[str] = None, execution_type: Optional[str] = None,
+          force: bool = False, version: Optional[str] = None):
+    """Build an application from a profile."""
+    
+    # Create CLI overrides dictionary
+    cli_overrides = {
+        "task_type": "application"  # Force task type to application
+    }
+    
+    # Add other CLI options to overrides if specified
+    if output_dir:
+        cli_overrides["workspace"] = cli_overrides.get("workspace", {})
+        cli_overrides["workspace"]["output_dir"] = output_dir
+        
+    if system:
+        cli_overrides["system"] = system
+    
+    # Handle execution type or executor
+    if execution_type or executor:
+        cli_overrides["execution"] = cli_overrides.get("execution", {})
+        
+    if execution_type:
+        cli_overrides["execution"]["type"] = execution_type
+    elif executor:
+        # Map legacy executor types to execution types
+        cli_overrides["execution"]["type"] = "slurm" if executor == "scheduler" else executor
+        
+    if force:
+        cli_overrides["force"] = True
+        
+    if version:
+        cli_overrides["version"] = version
+    
     try:
-        # Initialize configuration manager
-        config_manager = ConfigManager()
+        # Always use the composition-based orchestrator
+        orchestrator = TaskOrchestrator()
+        result = orchestrator.execute(profile, cli_overrides, dry_run)
         
-        # Load default configuration to get default executor
-        default_config = config_manager.load_default_config()
-        default_executor = default_config.get("execution", {}).get("type", "scheduler")
-        
-        # Load system configuration if specified
-        if system:
-            config_manager.load_system_config(system)
-        
-        # Prepare CLI overrides
-        cli_overrides = {}
-        if output_dir:
-            cli_overrides["job"] = {"output_dir": output_dir}
-            
-        # Force task type to application
-        cli_overrides["task_type"] = "application"
-        
-        # Add force flag to CLI overrides - properly nested to avoid validation errors
-        if force:
-            cli_overrides["build_parameters"] = {"force": force}
-        
-        # Add version override if specified
-        if version:
-            cli_overrides["version"] = version
-        
-        # Add executor type to CLI overrides if specified, otherwise use default
-        if executor:
-            cli_overrides["execution"] = {"type": executor}
-            # Use the specified executor for output messages
-            executor_type = executor
-        else:
-            # Use the default executor for output messages
-            executor_type = default_executor
-            
-        # Initialize build executor
-        task_orchestrator = TaskOrchestrator(config_manager)
-        
-        # Execute the build
-        success, job_id, script_path = task_orchestrator.execute(profile, cli_overrides, dry_run)
-        
-        if success:
-            click.echo(f"Application build script generated: {script_path}")
-            
-            if dry_run:
-                click.echo("Dry run: Job not submitted.")
-            else:
-                if executor_type == "local":
-                    click.echo(f"Application build started with PID: {job_id}")
-                else:
-                    click.echo(f"Application build job submitted with ID: {job_id}")
-        else:
-            click.echo("Application build failed. See logs for details.", err=True)
+        success, job_id, script_path = result
+        if not success:
+            logger.error("Build failed")
             sys.exit(1)
             
+    except FileNotFoundError as e:
+        logger.error(f"Profile not found: {str(e)}")
+        sys.exit(1)
     except ValueError as e:
-        click.echo(f"Error: {e}", err=True)
+        logger.error(f"Configuration error: {str(e)}")
         sys.exit(1)
     except Exception as e:
-        click.echo(f"Error: {e}", err=True)
+        logger.error(f"Build failed: {str(e)}")
         sys.exit(1)
 
 # Benchmark command
@@ -188,76 +173,64 @@ def build(profile: str, output_dir: Optional[str] = None,
     help="Executor to use for running the benchmark. If not specified, uses the default from configuration."
 )
 @click.option(
+    "--execution-type",
+    type=click.Choice(["local", "slurm"]),
+    help="Execution type to use for running the benchmark. If not specified, uses executor or the default from configuration."
+)
+@click.option(
     "--version",
     help="Override the application version requirement specified in the benchmark profile."
 )
 def bench(profile: str, output_dir: Optional[str] = None, 
           system: Optional[str] = None, dry_run: bool = False,
-          executor: Optional[str] = None, version: Optional[str] = None):
-    """Run a benchmark based on the specified profile."""
+          executor: Optional[str] = None, execution_type: Optional[str] = None,
+          version: Optional[str] = None):
+    """Run a benchmark from a profile."""
+    
+    # Create CLI overrides dictionary
+    cli_overrides = {
+        "task_type": "benchmark"  # Force task type to benchmark
+    }
+    
+    # Add other CLI options to overrides if specified
+    if output_dir:
+        cli_overrides["workspace"] = cli_overrides.get("workspace", {})
+        cli_overrides["workspace"]["output_dir"] = output_dir
+        
+    if system:
+        cli_overrides["system"] = system
+    
+    # Handle execution type or executor
+    if execution_type or executor:
+        cli_overrides["execution"] = cli_overrides.get("execution", {})
+        
+    if execution_type:
+        cli_overrides["execution"]["type"] = execution_type
+    elif executor:
+        # Map legacy executor types to execution types
+        cli_overrides["execution"]["type"] = "slurm" if executor == "scheduler" else executor
+        
+    if version:
+        cli_overrides["version"] = version
+    
     try:
-        # Initialize configuration manager
-        config_manager = ConfigManager()
+        # Always use the composition-based orchestrator
+        orchestrator = TaskOrchestrator()
+        result = orchestrator.execute(profile, cli_overrides, dry_run)
         
-        # Load default configuration to get default executor
-        default_config = config_manager.load_default_config()
-        default_executor = default_config.get("execution", {}).get("type", "scheduler")
-        
-        # Load system configuration if specified
-        if system:
-            config_manager.load_system_config(system)
-        
-        # Prepare CLI overrides
-        cli_overrides = {}
-        if output_dir:
-            cli_overrides["job"] = {"output_dir": output_dir}
-            
-        # Force task type to benchmark
-        cli_overrides["task_type"] = "benchmark"
-        
-        # Add version override if specified
-        if version:
-            if "benchmark" not in cli_overrides:
-                cli_overrides["benchmark"] = {}
-            if "app_criteria" not in cli_overrides["benchmark"]:
-                cli_overrides["benchmark"]["app_criteria"] = {}
-            cli_overrides["benchmark"]["app_criteria"]["version"] = version
-        
-        # Add executor type to CLI overrides if specified, otherwise use default
-        if executor:
-            cli_overrides["execution"] = {"type": executor}
-            # Use the specified executor for output messages
-            executor_type = executor
-        else:
-            # Use the default executor for output messages
-            executor_type = default_executor
-            
-        # Initialize build executor
-        task_orchestrator = TaskOrchestrator(config_manager)
-        
-        # Execute the benchmark
-        success, job_id, script_path = task_orchestrator.execute(profile, cli_overrides, dry_run)
-        
-        if success:
-            click.echo(f"Benchmark run script generated: {script_path}")
-            
-            if dry_run:
-                click.echo("Dry run: Job not submitted.")
-            else:
-                if executor_type == "local":
-                    click.echo(f"Benchmark started with PID: {job_id}")
-                    # Add information about the capture command
-                    click.echo(f"To capture results after completion, use: bp capture --job-id {job_id}")
-                else:
-                    click.echo(f"Benchmark job submitted with ID: {job_id}")
-                    # Add information about the capture command
-                    click.echo(f"To capture results after completion, use: bp capture --job-id {job_id}")
-        else:
-            click.echo("Benchmark run failed. See logs for details.", err=True)
+        success, job_id, script_path = result
+        if not success:
+            logger.error("Benchmark failed")
             sys.exit(1)
             
+    except FileNotFoundError as e:
+        logger.error(f"Profile not found: {str(e)}")
+        sys.exit(1)
+    except ValueError as e:
+        logger.error(f"Configuration error: {str(e)}")
+        sys.exit(1)
     except Exception as e:
-        click.echo(f"Error: {e}", err=True)
+        logger.error(f"Benchmark failed: {str(e)}")
         sys.exit(1)
 
 # Status command
@@ -273,32 +246,48 @@ def bench(profile: str, output_dir: Optional[str] = None,
     help="Executor used to run the job. If not specified, uses the default from configuration."
 )
 @click.option(
+    "--execution-type",
+    type=click.Choice(["local", "slurm"]),
+    help="Execution type used to run the job. If not specified, uses executor or the default from configuration."
+)
+@click.option(
     "--scheduler-type", 
     default="slurm",
     help="Type of scheduler to use for status check (only for scheduler executor)."
 )
-def status(job_id: str, executor: Optional[str] = None, scheduler_type: str = "slurm"):
-    """Check the status of a submitted job."""
+def status(job_id: str, executor: Optional[str] = None, execution_type: Optional[str] = None, 
+           scheduler_type: str = "slurm"):
+    """Check the status of a running job."""
+    from benchpro.executor.components.execution import SlurmExecutionComponent, LocalExecutionComponent
+    
     try:
-        # Initialize configuration manager to get default executor
+        # Determine execution type
         config_manager = ConfigManager()
         default_config = config_manager.load_default_config()
-        default_executor = default_config.get("execution", {}).get("type", "scheduler")
         
-        # Use specified executor or default
-        executor_type = executor if executor else default_executor
-        
-        # Create executor instance
-        config = {"type": scheduler_type} if executor_type == "scheduler" else {}
-        executor_instance = Executor.get_executor(executor_type, config)
-        
+        if not execution_type and executor:
+            execution_type = "slurm" if executor == "scheduler" else executor
+            
+        if not execution_type:
+            # Get default from config
+            default_execution = default_config.get("execution", {}).get("type", "local")
+            execution_type = default_execution
+            
+        # Create the appropriate execution component
+        if execution_type == "slurm":
+            execution_component = SlurmExecutionComponent()
+        else:
+            execution_component = LocalExecutionComponent()
+            
         # Check job status
-        status = executor_instance.check_status(job_id)
+        status = execution_component.get_status(job_id)
         
-        click.echo(f"Job {job_id} status: {status}")
+        # Print status information
+        click.echo(f"Job ID: {job_id}")
+        click.echo(f"Status: {status}")
         
     except Exception as e:
-        click.echo(f"Error checking job status: {e}", err=True)
+        logger.error(f"Error checking job status: {str(e)}")
         sys.exit(1)
 
 # Capture command
@@ -607,7 +596,7 @@ def initialize(force: bool = False):
         logger.info("Directories initialized successfully")
         
         # Copy example files
-        success = user_dir_manager.copy_example_profiles()
+        success = user_dir_manager.copy_example_profiles(force=force)
         if success:
             logger.info("Example profiles copied successfully")
         else:

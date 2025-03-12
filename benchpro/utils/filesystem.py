@@ -457,6 +457,21 @@ class FileSystem:
             A list of paths matching the pattern.
         """
         raise NotImplementedError("Subclasses must implement this method")
+    
+    def get_mtime(self, path: str) -> float:
+        """
+        Get the modification time of a file.
+        
+        Args:
+            path: The path to the file.
+            
+        Returns:
+            The modification time of the file as a floating point number (Unix timestamp).
+            
+        Raises:
+            FileNotFoundError: If the file does not exist.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
 
 
 class RealFileSystem(FileSystem):
@@ -642,6 +657,24 @@ class RealFileSystem(FileSystem):
     def glob(self, pattern: str) -> List[str]:
         import glob
         return glob.glob(pattern)
+    
+    def get_mtime(self, path: str) -> float:
+        """
+        Get the modification time of a file.
+        
+        Args:
+            path: The path to the file.
+            
+        Returns:
+            The modification time of the file as a floating point number (Unix timestamp).
+            
+        Raises:
+            FileNotFoundError: If the file does not exist.
+        """
+        path = self.expand_path(path)
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"File or directory not found: {path}")
+        return os.path.getmtime(path)
 
 
 class InMemoryFileSystem(FileSystem):
@@ -969,6 +1002,31 @@ class InMemoryFileSystem(FileSystem):
                 matches.append(path)
                 
         return matches
+
+    def get_mtime(self, path: str) -> float:
+        """
+        Get the modification time of a file.
+        
+        Args:
+            path: The path to the file.
+            
+        Returns:
+            The modification time of the file as a floating point number (Unix timestamp).
+            
+        Raises:
+            FileNotFoundError: If the file does not exist.
+        """
+        path = self._normalize_path(path)
+        if not self.exists(path):
+            raise FileNotFoundError(f"File or directory not found: {path}")
+        
+        # Return the stored timestamp or current time as fallback
+        if path in self._mtimes:
+            return self._mtimes[path]
+        else:
+            # Set current time if missing
+            self._mtimes[path] = time.time()
+            return self._mtimes[path]
 
 
 class TempFileSystem(RealFileSystem):

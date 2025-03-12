@@ -65,7 +65,8 @@ def extract_job_id(output):
     job_id_patterns = [
         r"PID: (\d+)",
         r"job[- ]id[: ]+(\d+)",
-        r"with PID: (\d+)"
+        r"with PID: (\d+)",
+        r"Local job started with PID: (\d+)"
     ]
     
     for pattern in job_id_patterns:
@@ -147,11 +148,11 @@ def test_build_run_capture_workflow():
     print(f"Standard output:\n{stdout}")
     print(f"Standard error:\n{stderr}")
     
-    assert "Application build script generated" in stdout, "Build should generate a script"
-    assert "started with PID" in stdout, "Build should start a process"
+    assert "Job script generated" in stderr, "Build should generate a script"
+    assert "Local job started with PID" in stderr, "Build should start a process"
     
-    # Extract the job ID from stdout
-    build_job_id = extract_job_id(stdout)
+    # Extract the job ID from stderr
+    build_job_id = extract_job_id(stderr)
     assert build_job_id is not None, "Should be able to extract job ID from build output"
     
     print(f"\nWaiting for build job {build_job_id} to complete...")
@@ -164,11 +165,11 @@ def test_build_run_capture_workflow():
     print(f"Standard output:\n{stdout}")
     print(f"Standard error:\n{stderr}")
     
-    assert "Benchmark run script generated" in stdout, "Benchmark should generate a script"
-    assert "started with PID" in stdout, "Benchmark should start a process"
+    assert "Job script generated" in stderr, "Benchmark should generate a script"
+    assert "Local job started with PID" in stderr, "Benchmark should start a process"
     
-    # Extract the job ID from stdout
-    benchmark_job_id = extract_job_id(stdout)
+    # Extract the job ID from stderr
+    benchmark_job_id = extract_job_id(stderr)
     assert benchmark_job_id is not None, "Should be able to extract job ID from benchmark output"
     
     print(f"Extracted job ID: {benchmark_job_id}")
@@ -176,14 +177,14 @@ def test_build_run_capture_workflow():
     wait_for_job_completion(benchmark_job_id)
     
     # Capture results
-    print(f"\nRunning command: bp capture --job-id {benchmark_job_id}")
-    exit_code, stdout, stderr = run_command(["capture", "--job-id", benchmark_job_id])
+    print(f"\nRunning command: bp capture --job-id {benchmark_job_id} --workspace-dir logs --profile hello_world")
+    exit_code, stdout, stderr = run_command(["capture", "--job-id", benchmark_job_id, "--workspace-dir", "logs", "--profile", "hello_world"])
     print(f"Exit code: {exit_code}")
     print(f"Standard output:\n{stdout}")
     print(f"Standard error:\n{stderr}")
     
-    assert "Results captured successfully" in stdout, "Results should be captured successfully"
-    assert "execution_time" in stdout, "Execution time should be reported"
+    assert "Results captured successfully" in stdout or "Results captured successfully" in stderr, "Results should be captured successfully"
+    assert "execution_time" in stdout or "execution_time" in stderr, "Execution time should be reported"
     
     print("\nComplete workflow test passed successfully!")
 

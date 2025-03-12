@@ -88,14 +88,13 @@ class ResultCapture:
         
         # Try to find profile configuration from the workspace
         workspace_dir = os.path.dirname(output_files[0])
-        inputs_dir = os.path.join(workspace_dir, "inputs")
-        self.logger.debug(f"Looking for profile in workspace inputs directory: {inputs_dir}")
+        self.logger.debug(f"Looking for profile in workspace directory: {workspace_dir}")
         
-        # Try to find profile file in the workspace inputs directory
-        if os.path.isdir(inputs_dir):
-            for filename in os.listdir(inputs_dir):
+        # Try to find profile file in the workspace directory
+        if os.path.isdir(workspace_dir):
+            for filename in os.listdir(workspace_dir):
                 if filename.endswith(".yaml") and (profile_name in filename or not profile_name):
-                    workspace_profile_path = os.path.join(inputs_dir, filename)
+                    workspace_profile_path = os.path.join(workspace_dir, filename)
                     self.logger.info(f"Found profile in workspace: {workspace_profile_path}")
                     try:
                         profile_config = self.config_loader.load_file(workspace_profile_path)

@@ -67,13 +67,11 @@ class WorkspaceManager:
         build_dir = os.path.join(workspace_dir, "build")
         logs_dir = os.path.join(workspace_dir, "logs")
         results_dir = os.path.join(workspace_dir, "results")
-        inputs_dir = os.path.join(workspace_dir, "inputs")
         
         os.makedirs(source_dir, exist_ok=True)
         os.makedirs(build_dir, exist_ok=True)
         os.makedirs(logs_dir, exist_ok=True)
         os.makedirs(results_dir, exist_ok=True)
-        os.makedirs(inputs_dir, exist_ok=True)
         
         self.logger.info(f"Created workspace directory: {workspace_dir}")
         
@@ -84,7 +82,6 @@ class WorkspaceManager:
             "build_dir": build_dir,
             "logs_dir": logs_dir,
             "results_dir": results_dir,
-            "inputs_dir": inputs_dir,
             "task_id": task_id
         }
         
@@ -102,7 +99,8 @@ class WorkspaceManager:
         Returns:
             List of copied file paths.
         """
-        source_dir = workspace["source_dir"]
+        # Use the workspace root directory instead of source directory
+        workspace_dir = workspace["workspace_dir"]
         copied_files = []
         
         # If no patterns specified, copy all files
@@ -113,7 +111,7 @@ class WorkspaceManager:
         for pattern in file_patterns:
             for file_path in glob.glob(os.path.join(input_dir, pattern)):
                 if os.path.isfile(file_path):
-                    dest_path = os.path.join(source_dir, os.path.basename(file_path))
+                    dest_path = os.path.join(workspace_dir, os.path.basename(file_path))
                     shutil.copy2(file_path, dest_path)
                     copied_files.append(dest_path)
                     self.logger.info(f"Copied {file_path} to {dest_path}")
@@ -122,7 +120,7 @@ class WorkspaceManager:
 
     def copy_profile_file(self, profile_path: str, workspace: Dict[str, str]) -> str:
         """
-        Copy a profile file to the inputs directory in the workspace.
+        Copy a profile file to the workspace root directory.
         
         Args:
             profile_path: Path to the profile file.
@@ -135,9 +133,9 @@ class WorkspaceManager:
             self.logger.error(f"Profile file not found: {profile_path}")
             return ""
             
-        # Get the destination path in the inputs directory
-        inputs_dir = workspace["inputs_dir"]
-        dest_path = os.path.join(inputs_dir, os.path.basename(profile_path))
+        # Get the destination path in the workspace root directory
+        workspace_dir = workspace["workspace_dir"]
+        dest_path = os.path.join(workspace_dir, os.path.basename(profile_path))
         
         # Copy the file
         shutil.copy2(profile_path, dest_path)
@@ -199,7 +197,7 @@ class WorkspaceManager:
         if not profile_name.endswith('.yaml'):
             profile_name += '.yaml'
             
-        return os.path.join(workspace["inputs_dir"], profile_name)
+        return os.path.join(workspace["workspace_dir"], profile_name)
         
     def clean_workspace(self, workspace: Dict[str, str], keep_logs: bool = True) -> None:
         """

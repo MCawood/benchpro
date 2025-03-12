@@ -12,23 +12,39 @@ from benchpro.templates.template_engine import TemplateEngine
 from benchpro.executor.task_factory import TaskFactory
 from benchpro.executor.task_orchestrator import TaskOrchestrator
 from benchpro.registry.registry_manager import RegistryManager
+from benchpro.executor.components.execution import LocalExecutionComponent
+from benchpro.utils.user_dir import get_user_dir_manager
 
 
 def test_application_build(setup_test_env, monkeypatch):
     """Test application build workflow."""
     # Mock the executor submit_job method to avoid actual job submission
-    def mock_submit_job(self, script_path):
+    def mock_execute(self, script_path):
         """Mock job submission."""
         return True, "test_job_id"
     
     # Apply the mock
-    monkeypatch.setattr("benchpro.executor.executor.LocalExecutor.submit_job", mock_submit_job)
+    monkeypatch.setattr("benchpro.executor.components.execution.LocalExecutionComponent.execute", mock_execute)
     
-    # Create ConfigManager
-    config_manager = ConfigManager(
-        config_dir=setup_test_env["config_dir"],
-        profile_dir=setup_test_env["config_dir"]
-    )
+    # Create ConfigManager with the correct paths
+    config_manager = ConfigManager()
+    
+    # Override the user directory paths for testing
+    user_dir_manager = get_user_dir_manager()
+    config_manager.config_loader.user_dir_manager = user_dir_manager
+    
+    # Set up test environment
+    test_dirs = {
+        "inputs": setup_test_env["inputs_dir"],
+        "inputs_application": setup_test_env["inputs_app_dir"],
+        "inputs_benchmark": setup_test_env["inputs_bench_dir"],
+        "inputs_source": setup_test_env["inputs_source_dir"],
+        "outputs": setup_test_env["outputs_dir"],
+        "outputs_application": setup_test_env["outputs_app_dir"],
+        "outputs_benchmark": setup_test_env["outputs_bench_dir"],
+        "registry": setup_test_env["registry_dir"]
+    }
+    user_dir_manager.set_test_environment(setup_test_env["temp_dir"], test_dirs)
     
     # Create a test application profile
     app_profile = {
@@ -49,11 +65,19 @@ def test_application_build(setup_test_env, monkeypatch):
             "keep_source": True,
             "keep_build": True
         },
+        "job": {
+            "name": "hello_world_job",
+            "scheduler": "local",
+            "queue": "default",
+            "nodes": 1,
+            "tasks_per_node": 1,
+            "time_limit": "01:00:00"
+        },
         "template": "hello_world.j2"
     }
     
     # Write the app profile to a file
-    app_profile_path = os.path.join(setup_test_env["config_dir"], "hello_world_app.yaml")
+    app_profile_path = os.path.join(setup_test_env["inputs_app_dir"], "hello_world_app.yaml")
     with open(app_profile_path, "w") as f:
         yaml.dump(app_profile, f)
     
@@ -87,28 +111,72 @@ int main() {
     # Verify essential components in the script
     assert "#!/bin/bash" in script_content
     assert "Building application" in script_content
-    assert "Job Name: hello_world_app" in script_content
+    assert "Job Name: hello_world_job" in script_content
     assert "gcc -O2" in script_content
 
 
 def test_benchmark_run(setup_test_env, monkeypatch):
     """Test benchmark run workflow."""
     # Mock the executor submit_job method to avoid actual job submission
-    def mock_submit_job(self, script_path):
+    def mock_execute(self, script_path):
         """Mock job submission."""
         return True, "test_job_id"
     
     # Apply the mock
-    monkeypatch.setattr("benchpro.executor.executor.LocalExecutor.submit_job", mock_submit_job)
+    monkeypatch.setattr("benchpro.executor.components.execution.LocalExecutionComponent.execute", mock_execute)
     
-    # Create configuration manager
-    config_manager = ConfigManager(
-        config_dir=setup_test_env["config_dir"],
-        profile_dir=setup_test_env["config_dir"]
-    )
+    # Create ConfigManager with the correct paths
+    config_manager = ConfigManager()
+    
+    # Override the user directory paths for testing
+    user_dir_manager = get_user_dir_manager()
+    config_manager.config_loader.user_dir_manager = user_dir_manager
+    
+    # Set up test environment
+    test_dirs = {
+        "inputs": setup_test_env["inputs_dir"],
+        "inputs_application": setup_test_env["inputs_app_dir"],
+        "inputs_benchmark": setup_test_env["inputs_bench_dir"],
+        "inputs_source": setup_test_env["inputs_source_dir"],
+        "outputs": setup_test_env["outputs_dir"],
+        "outputs_application": setup_test_env["outputs_app_dir"],
+        "outputs_benchmark": setup_test_env["outputs_bench_dir"],
+        "registry": setup_test_env["registry_dir"]
+    }
+    user_dir_manager.set_test_environment(setup_test_env["temp_dir"], test_dirs)
     
     # Create registry manager
     registry_manager = RegistryManager(registry_path=os.path.join(setup_test_env["registry_dir"], "registry.yaml"))
+    
+    # Create a test application profile for registration
+    app_profile = {
+        "task_type": "application",
+        "name": "hello_world_app",
+        "version": "1.0",
+        "build": {
+            "source": "hello_world.c",
+            "compiler": "gcc",
+            "flags": "-O2",
+            "output": "hello_world",
+            "threads": 1
+        },
+        "workspace": {
+            "source_dir": setup_test_env["inputs_source_dir"],
+            "build_dir": "build",
+            "logs_dir": "logs",
+            "keep_source": True,
+            "keep_build": True
+        },
+        "job": {
+            "name": "hello_world_job",
+            "scheduler": "local",
+            "queue": "default",
+            "nodes": 1,
+            "tasks_per_node": 1,
+            "time_limit": "01:00:00"
+        },
+        "template": "hello_world.j2"
+    }
     
     # Create a test benchmark profile
     bench_profile = {
@@ -122,6 +190,18 @@ def test_benchmark_run(setup_test_env, monkeypatch):
             "output_files": [],
             "threads": 1
         },
+        "job": {
+            "name": "hello_world_bench_job",
+            "scheduler": "local",
+            "queue": "default",
+            "nodes": 1,
+            "tasks_per_node": 1,
+            "time_limit": "01:00:00"
+        },
+        "environment": {
+            "modules": [],
+            "variables": {}
+        },
         "template": "hello_world.j2",
         "workspace": {
             "input_dir": setup_test_env["inputs_dir"],
@@ -132,8 +212,13 @@ def test_benchmark_run(setup_test_env, monkeypatch):
         }
     }
     
+    # Write the app profile to a file
+    app_profile_path = os.path.join(setup_test_env["inputs_app_dir"], "hello_world_app.yaml")
+    with open(app_profile_path, "w") as f:
+        yaml.dump(app_profile, f)
+    
     # Write the benchmark profile to a file
-    bench_profile_path = os.path.join(setup_test_env["config_dir"], "hello_world_bench.yaml")
+    bench_profile_path = os.path.join(setup_test_env["inputs_bench_dir"], "hello_world_bench.yaml")
     with open(bench_profile_path, "w") as f:
         yaml.dump(bench_profile, f)
     
@@ -154,7 +239,7 @@ def test_benchmark_run(setup_test_env, monkeypatch):
     orchestrator = TaskOrchestrator(config_manager, registry_manager=registry_manager)
     
     # Run the benchmark
-    success, job_id, script_path = orchestrator.execute("hello_world_bench", {}, dry_run=True)
+    success, job_id, script_path = orchestrator.execute("hello_world_bench", {"task_type": "benchmark"}, dry_run=True)
     
     # Verify the results
     assert success is True
@@ -175,18 +260,32 @@ def test_benchmark_run(setup_test_env, monkeypatch):
 def test_cli_overrides(setup_test_env, monkeypatch):
     """Test command-line overrides for job configuration."""
     # Mock the executor submit_job method to avoid actual job submission
-    def mock_submit_job(self, script_path):
+    def mock_execute(self, script_path):
         """Mock job submission."""
         return True, "test_job_id"
     
     # Apply the mock
-    monkeypatch.setattr("benchpro.executor.executor.LocalExecutor.submit_job", mock_submit_job)
+    monkeypatch.setattr("benchpro.executor.components.execution.LocalExecutionComponent.execute", mock_execute)
     
-    # Create configuration manager
-    config_manager = ConfigManager(
-        config_dir=setup_test_env["config_dir"],
-        profile_dir=setup_test_env["config_dir"]
-    )
+    # Create ConfigManager with the correct paths
+    config_manager = ConfigManager()
+    
+    # Override the user directory paths for testing
+    user_dir_manager = get_user_dir_manager()
+    config_manager.config_loader.user_dir_manager = user_dir_manager
+    
+    # Set up test environment
+    test_dirs = {
+        "inputs": setup_test_env["inputs_dir"],
+        "inputs_application": setup_test_env["inputs_app_dir"],
+        "inputs_benchmark": setup_test_env["inputs_bench_dir"],
+        "inputs_source": setup_test_env["inputs_source_dir"],
+        "outputs": setup_test_env["outputs_dir"],
+        "outputs_application": setup_test_env["outputs_app_dir"],
+        "outputs_benchmark": setup_test_env["outputs_bench_dir"],
+        "registry": setup_test_env["registry_dir"]
+    }
+    user_dir_manager.set_test_environment(setup_test_env["temp_dir"], test_dirs)
     
     # Create a test application profile
     app_profile = {
@@ -211,7 +310,7 @@ def test_cli_overrides(setup_test_env, monkeypatch):
     }
     
     # Write the app profile to a file
-    app_profile_path = os.path.join(setup_test_env["config_dir"], "cli_override_app.yaml")
+    app_profile_path = os.path.join(setup_test_env["inputs_app_dir"], "cli_override_app.yaml")
     with open(app_profile_path, "w") as f:
         yaml.dump(app_profile, f)
     
@@ -268,18 +367,32 @@ int main() {
 def test_full_workflow(setup_test_env, monkeypatch):
     """Test a complete workflow with all components."""
     # Mock the executor submit_job method to avoid actual job submission
-    def mock_submit_job(self, script_path):
+    def mock_execute(self, script_path):
         """Mock job submission."""
         return True, "test_job_id"
     
     # Apply the mock
-    monkeypatch.setattr("benchpro.executor.executor.LocalExecutor.submit_job", mock_submit_job)
+    monkeypatch.setattr("benchpro.executor.components.execution.LocalExecutionComponent.execute", mock_execute)
     
-    # Create configuration manager
-    config_manager = ConfigManager(
-        config_dir=setup_test_env["config_dir"],
-        profile_dir=setup_test_env["config_dir"]
-    )
+    # Create ConfigManager with the correct paths
+    config_manager = ConfigManager()
+    
+    # Override the user directory paths for testing
+    user_dir_manager = get_user_dir_manager()
+    config_manager.config_loader.user_dir_manager = user_dir_manager
+    
+    # Set up test environment
+    test_dirs = {
+        "inputs": setup_test_env["inputs_dir"],
+        "inputs_application": setup_test_env["inputs_app_dir"],
+        "inputs_benchmark": setup_test_env["inputs_bench_dir"],
+        "inputs_source": setup_test_env["inputs_source_dir"],
+        "outputs": setup_test_env["outputs_dir"],
+        "outputs_application": setup_test_env["outputs_app_dir"],
+        "outputs_benchmark": setup_test_env["outputs_bench_dir"],
+        "registry": setup_test_env["registry_dir"]
+    }
+    user_dir_manager.set_test_environment(setup_test_env["temp_dir"], test_dirs)
     
     # Create registry manager
     registry_manager = RegistryManager(registry_path=os.path.join(setup_test_env["registry_dir"], "registry.yaml"))
@@ -303,11 +416,19 @@ def test_full_workflow(setup_test_env, monkeypatch):
             "keep_source": True,
             "keep_build": True
         },
+        "job": {
+            "name": "workflow_job",
+            "scheduler": "local",
+            "queue": "default",
+            "nodes": 1,
+            "tasks_per_node": 1,
+            "time_limit": "01:00:00"
+        },
         "template": "hello_world.j2"
     }
     
     # Write the app profile to a file
-    app_profile_path = os.path.join(setup_test_env["config_dir"], "workflow_app.yaml")
+    app_profile_path = os.path.join(setup_test_env["inputs_app_dir"], "workflow_app.yaml")
     with open(app_profile_path, "w") as f:
         yaml.dump(app_profile, f)
     
@@ -323,6 +444,18 @@ def test_full_workflow(setup_test_env, monkeypatch):
             "output_files": [],
             "threads": 1
         },
+        "job": {
+            "name": "workflow_bench_job",
+            "scheduler": "local",
+            "queue": "default",
+            "nodes": 1,
+            "tasks_per_node": 1,
+            "time_limit": "01:00:00"
+        },
+        "environment": {
+            "modules": [],
+            "variables": {}
+        },
         "template": "hello_world.j2",
         "workspace": {
             "input_dir": setup_test_env["inputs_dir"],
@@ -334,7 +467,7 @@ def test_full_workflow(setup_test_env, monkeypatch):
     }
     
     # Write the benchmark profile to a file
-    bench_profile_path = os.path.join(setup_test_env["config_dir"], "workflow_bench.yaml")
+    bench_profile_path = os.path.join(setup_test_env["inputs_bench_dir"], "workflow_bench.yaml")
     with open(bench_profile_path, "w") as f:
         yaml.dump(bench_profile, f)
     
@@ -375,7 +508,7 @@ int main() {
     })
     
     # Step 3: Run benchmark
-    bench_success, bench_job_id, bench_script_path = orchestrator.execute("workflow_bench", {}, dry_run=True)
+    bench_success, bench_job_id, bench_script_path = orchestrator.execute("workflow_bench", {"task_type": "benchmark"}, dry_run=True)
     
     # Verify benchmark run results
     assert bench_success is True

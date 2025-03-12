@@ -1,15 +1,14 @@
 """
 Executor Module for BenchPRO.
 
-This module provides task execution functionality for BenchPRO.
+This module provides task execution functionality for BenchPRO using a composition-based architecture.
 """
 
-from benchpro.executor.task_base import Task
-from benchpro.executor.application_task import Application
-from benchpro.executor.benchmark_task import Benchmark
+from benchpro.executor.task import Task, Application, Benchmark
 from benchpro.executor.task_factory import TaskFactory
 from benchpro.executor.task_orchestrator import TaskOrchestrator
-from benchpro.executor.executor import Executor, LocalExecutor, SchedulerExecutor
+from benchpro.executor.components.execution import LocalExecutionComponent, SlurmExecutionComponent
+from benchpro.executor.scheduler import SlurmScheduler
 
 __all__ = [
     'Task',
@@ -17,7 +16,7 @@ __all__ = [
     'Benchmark',
     'TaskFactory',
     'TaskOrchestrator',
-    'Executor',
-    'LocalExecutor',
-    'SchedulerExecutor'
+    'LocalExecutionComponent',
+    'SlurmExecutionComponent',
+    'SlurmScheduler'
 ]

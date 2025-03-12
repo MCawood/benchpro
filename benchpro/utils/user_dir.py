@@ -106,7 +106,7 @@ class UserDirectoryManagerInterface:
         """
         raise NotImplementedError("Subclasses must implement this method")
     
-    def copy_default_files(self, source_dir: str, dest_dir_key: str, files: List[str]) -> bool:
+    def copy_default_files(self, source_dir: str, dest_dir_key: str, files: List[str], force: bool = False) -> bool:
         """
         Copy default files to a user directory.
         
@@ -114,25 +114,32 @@ class UserDirectoryManagerInterface:
             source_dir: The source directory.
             dest_dir_key: The destination directory key.
             files: List of files to copy.
+            force: If True, overwrite existing files even if they are newer.
             
         Returns:
             True if all files were copied successfully, False otherwise.
         """
         raise NotImplementedError("Subclasses must implement this method")
     
-    def copy_example_profiles(self) -> bool:
+    def copy_example_profiles(self, force: bool = False) -> bool:
         """
         Copy example profiles to user directories.
         
+        Args:
+            force: If True, overwrite existing files even if they are newer.
+            
         Returns:
             True if the profiles were copied successfully, False otherwise.
         """
         raise NotImplementedError("Subclasses must implement this method")
     
-    def copy_default_source_files(self) -> bool:
+    def copy_default_source_files(self, force: bool = False) -> bool:
         """
         Copy default source files to user directories.
         
+        Args:
+            force: If True, overwrite existing files even if they are newer.
+            
         Returns:
             True if the files were copied successfully, False otherwise.
         """
@@ -214,12 +221,12 @@ class UserDirectoryManager(UserDirectoryManagerInterface):
         self._ensure_settings_file()
         
         # Copy default source files
-        self.copy_default_source_files()
+        self.copy_default_source_files(force=False)
         
         # Copy example profiles (benchmark and application)
         # Only do this if this is not a test environment
         if not self._is_test_environment:
-            self.copy_example_profiles()
+            self.copy_example_profiles(force=False)
         
         # Load settings
         self.settings = self.load_settings()
@@ -509,7 +516,7 @@ class UserDirectoryManager(UserDirectoryManagerInterface):
                 
         return None
     
-    def copy_default_files(self, source_dir: str, dest_dir_key: str, files: List[str]) -> bool:
+    def copy_default_files(self, source_dir: str, dest_dir_key: str, files: List[str], force: bool = False) -> bool:
         """
         Copy default files to a user directory.
         
@@ -517,6 +524,7 @@ class UserDirectoryManager(UserDirectoryManagerInterface):
             source_dir: The source directory.
             dest_dir_key: The destination directory key.
             files: List of files to copy.
+            force: If True, overwrite existing files even if they are newer.
             
         Returns:
             True if all files were copied successfully, False otherwise.
@@ -532,16 +540,32 @@ class UserDirectoryManager(UserDirectoryManagerInterface):
             src_file = self.file_system.join_paths(source_dir, filename)
             dst_file = self.file_system.join_paths(dest_dir, filename)
             
-            # Skip if destination file already exists
-            if self.file_system.exists(dst_file):
-                logger.debug(f"Skipping existing file: {dst_file}")
-                continue
-                
             # Skip if source file doesn't exist
             if not self.file_system.exists(src_file):
                 logger.warning(f"Source file does not exist: {src_file}")
                 success = False
                 continue
+            
+            # Check if destination file exists
+            if self.file_system.exists(dst_file) and not force:
+                # Check which file is newer (only copy if source is newer)
+                try:
+                    src_mtime = self.file_system.get_mtime(src_file)
+                    dst_mtime = self.file_system.get_mtime(dst_file)
+                    
+                    if dst_mtime >= src_mtime:
+                        logger.debug(f"Skipping {dst_file} - destination file is newer or same age")
+                        continue
+                    else:
+                        logger.info(f"Updating {dst_file} - source file is newer")
+                except Exception as e:
+                    logger.warning(f"Error comparing timestamps for {src_file} and {dst_file}: {e}")
+                    # Skip if we can't compare timestamps
+                    continue
+            elif self.file_system.exists(dst_file) and force:
+                logger.info(f"Force overwriting {dst_file}")
+            else:
+                logger.debug(f"Copying new file {dst_file}")
                 
             try:
                 self.file_system.copy_file(src_file, dst_file)
@@ -552,10 +576,13 @@ class UserDirectoryManager(UserDirectoryManagerInterface):
                 
         return success
     
-    def copy_example_profiles(self) -> bool:
+    def copy_example_profiles(self, force: bool = False) -> bool:
         """
         Copy example profiles to user directories.
         
+        Args:
+            force: If True, overwrite existing files even if they are newer.
+            
         Returns:
             True if the profiles were copied successfully, False otherwise.
         """
@@ -564,26 +591,45 @@ class UserDirectoryManager(UserDirectoryManagerInterface):
             logger.warning("Could not locate examples directory")
             return False
             
-        # Copy application profiles
-        app_success = self.copy_default_files(
-            self.file_system.join_paths(example_dir, "inputs", "application"),
-            "inputs_application",
-            ["example_app.yaml"]
-        )
+        app_source_dir = self.file_system.join_paths(example_dir, "inputs", "application")
+        bench_source_dir = self.file_system.join_paths(example_dir, "inputs", "benchmark")
         
-        # Copy benchmark profiles
-        bench_success = self.copy_default_files(
-            self.file_system.join_paths(example_dir, "inputs", "benchmark"),
-            "inputs_benchmark",
-            ["example_bench.yaml"]
-        )
+        app_success = True
+        bench_success = True
+        
+        # Copy all YAML files from application directory
+        if self.file_system.exists(app_source_dir):
+            app_files = [f for f in self.file_system.list_dir(app_source_dir) 
+                        if f.endswith('.yaml') or f.endswith('.yml')]
+            if app_files:
+                app_success = self.copy_default_files(app_source_dir, "inputs_application", app_files, force=force)
+            else:
+                logger.debug(f"No YAML files found in {app_source_dir}")
+        else:
+            logger.warning(f"Application examples directory not found: {app_source_dir}")
+            app_success = False
+        
+        # Copy all YAML files from benchmark directory
+        if self.file_system.exists(bench_source_dir):
+            bench_files = [f for f in self.file_system.list_dir(bench_source_dir) 
+                          if f.endswith('.yaml') or f.endswith('.yml')]
+            if bench_files:
+                bench_success = self.copy_default_files(bench_source_dir, "inputs_benchmark", bench_files, force=force)
+            else:
+                logger.debug(f"No YAML files found in {bench_source_dir}")
+        else:
+            logger.warning(f"Benchmark examples directory not found: {bench_source_dir}")
+            bench_success = False
         
         return app_success and bench_success
     
-    def copy_default_source_files(self) -> bool:
+    def copy_default_source_files(self, force: bool = False) -> bool:
         """
         Copy default source files to user directories.
         
+        Args:
+            force: If True, overwrite existing files even if they are newer.
+            
         Returns:
             True if the files were copied successfully, False otherwise.
         """
@@ -591,12 +637,22 @@ class UserDirectoryManager(UserDirectoryManagerInterface):
         if not example_dir:
             logger.warning("Could not locate examples directory")
             return False
-            
-        return self.copy_default_files(
-            self.file_system.join_paths(example_dir, "inputs", "source"),
-            "inputs_source",
-            ["hello_world.c", "hello_world.cpp", "hello_world.f90"]
-        )
+        
+        source_dir = self.file_system.join_paths(example_dir, "inputs", "source")
+        
+        if not self.file_system.exists(source_dir):
+            logger.warning(f"Source examples directory not found: {source_dir}")
+            return False
+        
+        # Find all source files with common source file extensions
+        source_files = [f for f in self.file_system.list_dir(source_dir) 
+                       if f.endswith(('.c', '.cpp', '.f90', '.f', '.py', '.h', '.hpp'))]
+        
+        if not source_files:
+            logger.debug(f"No source files found in {source_dir}")
+            return True  # Not a failure, just no files to copy
+        
+        return self.copy_default_files(source_dir, "inputs_source", source_files, force=force)
 
 
 # Factory function to get or create a UserDirectoryManager instance

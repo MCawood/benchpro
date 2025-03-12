@@ -5,7 +5,7 @@ This module handles loading, merging, and validating YAML configuration files.
 """
 
 import os
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 
 from benchpro.utils.logger import get_logger
 from benchpro.utils.filesystem import FileSystem, RealFileSystem
@@ -242,19 +242,13 @@ class ConfigManager:
         self.logger.info(f"Loading profile configuration: {profile_name}")
         return self.config_loader.load_profile_config(profile_name, task_type)
     
-    def merge_configs(self, profile_name: str, cli_overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def merge_configs(self, profile_name: Union[str, Dict[str, Any]], cli_overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Merge configurations with proper precedence.
-        
-        This method:
-        1. Loads the profile configuration
-        2. Loads the default and system configurations
-        3. Merges the configurations with proper precedence
-        4. Substitutes variables in the configuration
+        Merge configurations from different sources.
         
         Args:
-            profile_name: Name of the profile to load.
-            cli_overrides: Optional dictionary of CLI parameter overrides.
+            profile_name: Name of the profile or a dictionary containing the profile configuration.
+            cli_overrides: Command-line overrides.
             
         Returns:
             Merged configuration dictionary.
@@ -269,8 +263,12 @@ class ConfigManager:
         if cli_overrides and "task_type" in cli_overrides:
             task_type = cli_overrides["task_type"]
         
-        # Load profile configuration first to determine task_type
-        profile_config = self.load_profile_config(profile_name, task_type)
+        # If profile_name is a dictionary, use it directly as the profile_config
+        if isinstance(profile_name, dict):
+            profile_config = profile_name
+        else:
+            # Load profile configuration from file
+            profile_config = self.load_profile_config(profile_name, task_type)
         
         # Determine task_type from profile
         if not task_type:

@@ -12,7 +12,6 @@ from benchpro.config.config_manager import ConfigManager
 from benchpro.config.loader import YamlConfigLoader
 from benchpro.results.result_capture import ResultCapture
 from benchpro.utils.logger import setup_logging
-from benchpro.executor.executor import Executor
 from benchpro.executor.scheduler import Scheduler
 
 

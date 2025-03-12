@@ -153,7 +153,7 @@ class YamlConfigLoader(ConfigLoaderInterface):
         Args:
             profile_name: Name of the profile to load.
             task_type: Type of task (application or benchmark).
-                     If None, will try to determine from the profile.
+                     If None, will try to auto-detect, but this is not recommended.
         
         Returns:
             The profile configuration.
@@ -171,39 +171,75 @@ class YamlConfigLoader(ConfigLoaderInterface):
         # List of potential profile paths to try
         potential_paths = []
         
-        # If a custom profile directory is provided, look there first
+        # If a custom profile directory is provided
         if self.profile_dir:
             self.logger.debug(f"Looking for profile in custom directory: {self.profile_dir}")
-            # Direct path in profile_dir
-            potential_paths.append(self.file_system.join_paths(self.profile_dir, f"{profile_name}.yaml"))
             
-            # For tests: Look in inputs/application and inputs/benchmark under profile_dir
-            if task_type is None or task_type == "application":
+            # When task_type is explicitly specified, ONLY look in that directory
+            if task_type == "application":
                 app_dir = self.file_system.join_paths(self.profile_dir, "inputs", "application")
                 potential_paths.append(self.file_system.join_paths(app_dir, f"{profile_name}.yaml"))
                 self.logger.debug(f"Looking for application profile at: {potential_paths[-1]}")
                 
-            if task_type is None or task_type == "benchmark":
+            elif task_type == "benchmark":
                 bench_dir = self.file_system.join_paths(self.profile_dir, "inputs", "benchmark")
                 potential_paths.append(self.file_system.join_paths(bench_dir, f"{profile_name}.yaml"))
                 self.logger.debug(f"Looking for benchmark profile at: {potential_paths[-1]}")
+                
+            # If no task_type specified, use old behavior but warn
+            else:
+                # Only as a fallback, allow looking in the root directory
+                potential_paths.append(self.file_system.join_paths(self.profile_dir, f"{profile_name}.yaml"))
+                self.logger.warning(f"No task_type specified - looking in profile root dir: {potential_paths[-1]}")
+                
+                # Then also look in application and benchmark subdirectories
+                app_dir = self.file_system.join_paths(self.profile_dir, "inputs", "application")
+                potential_paths.append(self.file_system.join_paths(app_dir, f"{profile_name}.yaml"))
+                self.logger.warning(f"No task_type specified - also looking in application dir: {potential_paths[-1]}")
+                
+                bench_dir = self.file_system.join_paths(self.profile_dir, "inputs", "benchmark")
+                potential_paths.append(self.file_system.join_paths(bench_dir, f"{profile_name}.yaml"))
+                self.logger.warning(f"No task_type specified - also looking in benchmark dir: {potential_paths[-1]}")
+        
+        # Otherwise, look in the user directories
         else:
-            # Otherwise, look in the user directories
-            if task_type is None or task_type == "application":
+            # When task_type is explicitly specified, ONLY look in that directory
+            if task_type == "application":
                 app_path = self.user_dir_manager.get_path("inputs_application")
                 potential_paths.append(self.file_system.join_paths(app_path, f"{profile_name}.yaml"))
                 self.logger.debug(f"Looking for application profile at: {potential_paths[-1]}")
-
-            if task_type is None or task_type == "benchmark":
+                
+            elif task_type == "benchmark":
                 bench_path = self.user_dir_manager.get_path("inputs_benchmark")
                 potential_paths.append(self.file_system.join_paths(bench_path, f"{profile_name}.yaml"))
                 self.logger.debug(f"Looking for benchmark profile at: {potential_paths[-1]}")
+                
+            # If no task_type specified, use old behavior but warn
+            else:
+                self.logger.warning("No task_type specified when loading profile - behavior may be unpredictable")
+                
+                # Look in application directory first, then benchmark
+                app_path = self.user_dir_manager.get_path("inputs_application")
+                potential_paths.append(self.file_system.join_paths(app_path, f"{profile_name}.yaml"))
+                self.logger.warning(f"No task_type specified - looking in application dir: {potential_paths[-1]}")
+                
+                bench_path = self.user_dir_manager.get_path("inputs_benchmark")
+                potential_paths.append(self.file_system.join_paths(bench_path, f"{profile_name}.yaml"))
+                self.logger.warning(f"No task_type specified - also looking in benchmark dir: {potential_paths[-1]}")
         
         # Try each potential path
         for path in potential_paths:
             try:
                 config = self.load_file(path)
                 self.logger.debug(f"Successfully loaded profile from: {path}")
+                
+                # If task_type was explicitly provided, validate that the loaded config matches
+                if task_type and config.get("task_type") != task_type:
+                    self.logger.warning(
+                        f"Profile loaded from {path} has task_type '{config.get('task_type')}', "
+                        f"but '{task_type}' was requested. This may cause issues."
+                    )
+                    
                 return config
             except FileNotFoundError:
                 self.logger.debug(f"Profile not found at: {path}")

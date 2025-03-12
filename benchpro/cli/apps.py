@@ -116,7 +116,7 @@ def remove_app(app_id: str, force: bool):
     if not force:
         click.confirm(f"Are you sure you want to remove application {app_id}?", abort=True)
     
-    success = registry_manager.remove(app_id)
+    success = registry_manager.remove_application(app_id)
     
     if success:
         click.echo(f"Application {app_id} removed from registry.")
@@ -298,7 +298,7 @@ def clean_registry(force: bool):
     
     # Remove applications
     for app in to_remove:
-        registry_manager.remove(app.get("id"))
+        registry_manager.remove_application(app.get("id"))
     
     click.echo(f"Removed {len(to_remove)} applications from the registry.")
 
