@@ -186,11 +186,15 @@ class TestBenchmarkSchema:
             "version": "1.0",
             "description": "Test benchmark",
             "run": {
-                "application": "test_app",
+                "executable": "test_app",
                 "arguments": "--verbose",
                 "input_files": ["input.dat"],
                 "output_files": ["output.dat"],
                 "threads": 4
+            },
+            "requirements": {
+                "application": "test_app",
+                "version": "1.0"
             },
             "environment": {
                 "modules": ["gcc/11.2.0"],
@@ -226,7 +230,8 @@ class TestBenchmarkSchema:
         # Check that the values are correctly set
         assert bench_schema.name == "test_bench"
         assert bench_schema.version == "1.0"
-        assert bench_schema.run.application == "test_app"
+        assert bench_schema.run.executable == "test_app"
+        assert bench_schema.requirements.application == "test_app"
         assert bench_schema.environment.modules == ["gcc/11.2.0"]
         assert bench_schema.job.scheduler == "slurm"
         assert bench_schema.workspace.input_dir == "test_input"
@@ -240,7 +245,7 @@ class TestBenchmarkSchema:
             "task_type": "benchmark",
             "version": "1.0",
             "run": {
-                "application": "test_app"
+                "executable": "test_app"
             },
             "workspace": {
                 "input_dir": "test_input"
@@ -271,7 +276,7 @@ class TestBenchmarkSchema:
             "name": "test_bench",
             "version": "1.0",
             "run": {
-                "application": "test_app"
+                "executable": "test_app"
             },
             "template": "test_bench.j2"
         }
@@ -285,7 +290,7 @@ class TestBenchmarkSchema:
             "name": "test_bench",
             "version": "1.0",
             "run": {
-                "application": "test_app"
+                "executable": "test_app"
             },
             "workspace": {
                 "input_dir": "test_input"
@@ -302,7 +307,7 @@ class TestBenchmarkSchema:
             "name": "test_bench",
             "version": "1.0",
             "run": {
-                "application": "test_app"
+                "executable": "test_app"
             },
             "workspace": {
                 "input_dir": "test_input"
@@ -320,11 +325,11 @@ class TestBenchmarkSchema:
             "name": "test_bench",
             "version": "1.0",
             "run": {
-                "application": "test_app",
+                "executable": "test_app",
                 "extra_field": "value"  # Extra field in run
             },
             "workspace": {
-                "input_dir": "test_input"
+                "input_dir": "test_input"  # Required field
             },
             "template": "test_bench.j2",
             "extra_field": "value"  # Extra field at top level

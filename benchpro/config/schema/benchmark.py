@@ -13,11 +13,20 @@ from benchpro.config.schema.base import BaseTaskSchema
 class RunConfig(BaseModel):
     """Run configuration for benchmarks."""
     
-    application: str = Field(..., description="Application to run")
-    arguments: str = Field("", description="Command-line arguments for the application")
-    input_files: List[str] = Field(default_factory=list, description="Input files for the benchmark")
-    output_files: List[str] = Field(default_factory=list, description="Output files to capture")
-    threads: int = Field(1, description="Number of threads to use for the benchmark")
+    executable: str = Field(..., description="Executable to run for the benchmark")
+    arguments: str = Field("", description="Arguments to pass to the executable")
+    input_files: List[str] = Field(default_factory=list, description="List of input files")
+    output_files: List[str] = Field(default_factory=list, description="List of output files")
+    threads: int = Field(1, description="Number of threads to use for running")
+    
+    model_config = ConfigDict(extra="allow")
+
+
+class RequirementsConfig(BaseModel):
+    """Requirements configuration for benchmarks."""
+    
+    application: str = Field(..., description="Required application name")
+    version: str = Field("latest", description="Required application version")
     
     model_config = ConfigDict(extra="allow")
 
@@ -34,7 +43,7 @@ class EnvironmentConfig(BaseModel):
 class ExecutionConfig(BaseModel):
     """Execution configuration for benchmarks."""
     
-    type: str = Field("slurm", description="Execution type (slurm, local, etc.)")
+    type: str = Field("local", description="Execution type (local, sched, etc.)")
     
     model_config = ConfigDict(extra="allow")
 
@@ -42,7 +51,7 @@ class ExecutionConfig(BaseModel):
 class JobConfig(BaseModel):
     """Job configuration for benchmarks."""
     
-    scheduler: str = Field("slurm", description="Job scheduler to use")
+    scheduler: str = Field("slurm", description="Job scheduler to use (controls script directives)")
     queue: Optional[str] = Field(None, description="Queue/partition to submit the job to")
     account: Optional[str] = Field(None, description="Account to charge for the job")
     nodes: int = Field(1, description="Number of nodes to request")
@@ -94,11 +103,12 @@ class BenchmarkSchema(BaseTaskSchema):
     """Schema for benchmark configuration."""
     
     run: RunConfig = Field(..., description="Run configuration")
+    requirements: Optional[RequirementsConfig] = Field(None, description="Requirements configuration")
     environment: EnvironmentConfig = Field(default_factory=EnvironmentConfig, description="Environment configuration")
-    execution: Optional[ExecutionConfig] = Field(None, description="Execution configuration")
+    execution: Optional[ExecutionConfig] = Field(default_factory=ExecutionConfig, description="Execution configuration")
     job: JobConfig = Field(default_factory=JobConfig, description="Job configuration")
     workspace: WorkspaceConfig = Field(..., description="Workspace configuration")
-    results: ResultConfig = Field(default_factory=ResultConfig, description="Result configuration")
+    results: Optional[ResultConfig] = Field(None, description="Results configuration")
     template: str = Field(..., description="Template to use for running the benchmark")
     
     @field_validator("task_type")
@@ -114,35 +124,39 @@ class BenchmarkSchema(BaseTaskSchema):
         json_schema_extra={
             "example": {
                 "task_type": "benchmark",
-                "name": "hello_world_bench",
+                "name": "linpack",
                 "version": "1.0",
-                "description": "Simple Hello World benchmark",
+                "description": "LINPACK benchmark",
                 "run": {
-                    "application": "hello_world",
-                    "arguments": "--verbose",
+                    "executable": "linpack",
+                    "arguments": "-n 1000",
                     "input_files": ["input.dat"],
                     "output_files": ["output.dat"],
-                    "threads": 1
+                    "threads": 4
+                },
+                "requirements": {
+                    "application": "linpack",
+                    "version": "1.0"
                 },
                 "environment": {
-                    "modules": ["gcc/11.2.0"],
+                    "modules": ["intel/24.0", "impi/21.11"],
                     "variables": {
-                        "OMP_NUM_THREADS": "1",
-                        "MKL_NUM_THREADS": "1"
+                        "OMP_NUM_THREADS": "4",
+                        "MKL_NUM_THREADS": "4"
                     }
                 },
                 "execution": {
-                    "type": "slurm"
+                    "type": "local"
                 },
                 "job": {
                     "scheduler": "slurm",
                     "queue": "compute",
                     "nodes": 1,
                     "tasks_per_node": 1,
-                    "time_limit": "00:10:00"
+                    "time_limit": "00:30:00"
                 },
                 "workspace": {
-                    "input_dir": "examples/input/hello_world_bench",
+                    "input_dir": "examples/input/linpack",
                     "output_dir": "output",
                     "logs_dir": "logs",
                     "keep_input": True,
@@ -157,7 +171,7 @@ class BenchmarkSchema(BaseTaskSchema):
                     },
                     "output_format": "json"
                 },
-                "template": "hello_world_bench.j2"
+                "template": "linpack.j2"
             }
         }
     ) 

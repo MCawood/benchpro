@@ -11,15 +11,14 @@ from typing import Dict, Any, List, Tuple, Optional
 from benchpro.executor.components.interfaces import (
     ConfigComponent,
     ValidationComponent,
-    ScriptGenerationComponent,
     ExecutionComponent,
-    ComponentError,
     ConfigError,
     ValidationError,
-    TemplateError,
-    ExecutionError,
-    StatusCheckError,
-    CancellationError
+    ExecutionError
+)
+from benchpro.templates.script_generators import (
+    ScriptGenerationComponent,
+    TemplateError
 )
 
 
@@ -64,14 +63,12 @@ class TestExecutionComponent(unittest.TestCase):
 class TestComponentExceptions(unittest.TestCase):
     """Tests for the component exception classes."""
     
-    def test_exception_hierarchy(self):
-        """Test that the exception classes have the expected hierarchy."""
-        self.assertTrue(issubclass(ConfigError, ComponentError))
-        self.assertTrue(issubclass(ValidationError, ComponentError))
-        self.assertTrue(issubclass(TemplateError, ComponentError))
-        self.assertTrue(issubclass(ExecutionError, ComponentError))
-        self.assertTrue(issubclass(StatusCheckError, ComponentError))
-        self.assertTrue(issubclass(CancellationError, ComponentError))
+    def test_exception_classes(self):
+        """Test that the exception classes are defined."""
+        self.assertTrue(issubclass(ConfigError, Exception))
+        self.assertTrue(issubclass(ValidationError, Exception))
+        self.assertTrue(issubclass(ExecutionError, Exception))
+        self.assertTrue(issubclass(TemplateError, Exception))
 
 
 if __name__ == '__main__':

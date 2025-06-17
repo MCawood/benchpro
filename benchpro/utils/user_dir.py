@@ -85,6 +85,15 @@ class UserDirectoryManagerInterface:
         """
         raise NotImplementedError("Subclasses must implement this method")
     
+    def get_logs_directory(self) -> str:
+        """
+        Get the logs directory path.
+        
+        Returns:
+            The logs directory path.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+    
     def load_settings(self) -> Dict[str, Any]:
         """
         Load user settings.
@@ -168,7 +177,9 @@ class UserDirectoryManager(UserDirectoryManagerInterface):
         "outputs_benchmark": "outputs/benchmark",
         "registry": "registry",
         "logs": "logs",
-        "cache": "cache"
+        "cache": "cache",
+        "config": "config",
+        "config_system": "config/system"
     }
     
     # Default settings
@@ -204,7 +215,9 @@ class UserDirectoryManager(UserDirectoryManagerInterface):
             "outputs_benchmark": self.file_system.join_paths(self.base_dir, self.DEFAULT_DIRS["outputs_benchmark"]),
             "registry": self.file_system.join_paths(self.base_dir, self.DEFAULT_DIRS["registry"]),
             "logs": self.file_system.join_paths(self.base_dir, self.DEFAULT_DIRS["logs"]),
-            "cache": self.file_system.join_paths(self.base_dir, self.DEFAULT_DIRS["cache"])
+            "cache": self.file_system.join_paths(self.base_dir, self.DEFAULT_DIRS["cache"]),
+            "config": self.file_system.join_paths(self.base_dir, self.DEFAULT_DIRS["config"]),
+            "config_system": self.file_system.join_paths(self.base_dir, self.DEFAULT_DIRS["config_system"])
         }
         
         # Settings file path
@@ -281,7 +294,7 @@ class UserDirectoryManager(UserDirectoryManagerInterface):
         Returns:
             The application directory path.
         """
-        return self.settings.get("application_directory", self.dirs["outputs_application"])
+        return self.settings.get("application_directory", self.dirs["inputs_application"])
     
     def get_benchmark_directory(self) -> str:
         """
@@ -290,7 +303,7 @@ class UserDirectoryManager(UserDirectoryManagerInterface):
         Returns:
             The benchmark directory path.
         """
-        return self.settings.get("benchmark_directory", self.dirs["outputs_benchmark"])
+        return self.settings.get("benchmark_directory", self.dirs["inputs_benchmark"])
     
     def get_source_directory(self) -> str:
         """
@@ -300,6 +313,15 @@ class UserDirectoryManager(UserDirectoryManagerInterface):
             The source directory path.
         """
         return self.settings.get("source_directory", self.dirs["inputs_source"])
+    
+    def get_logs_directory(self) -> str:
+        """
+        Get the logs directory path.
+        
+        Returns:
+            The logs directory path.
+        """
+        return self.dirs["logs"]
     
     def load_settings(self) -> Dict[str, Any]:
         """
@@ -354,34 +376,35 @@ class UserDirectoryManager(UserDirectoryManagerInterface):
     
     def set_test_environment(self, temp_dir: str, test_dirs: Optional[Dict[str, str]] = None) -> None:
         """
-        Configure the UserDirectoryManager for testing.
+        Set up a test environment with temporary directories.
         
         Args:
-            temp_dir: Temporary directory to use as the base for all test paths
-            test_dirs: Optional dictionary of test-specific directory paths
+            temp_dir: Base directory for test files.
+            test_dirs: Optional dictionary of test directories to use.
         """
+        # Save original directories
+        self._original_dirs = self.dirs.copy()
+        self._original_settings = self.settings.copy()
         self._is_test_environment = True
         
-        # Store the original dirs to restore after testing if needed
-        self._original_dirs = self.dirs.copy()
-        
-        # Set up test directories
+        # Create test directories
         if test_dirs:
             self._test_dirs = test_dirs
         else:
-            # Set up default test directory structure
             self._test_dirs = {
                 "root": temp_dir,
                 "inputs": self.file_system.join_paths(temp_dir, "inputs"),
                 "inputs_application": self.file_system.join_paths(temp_dir, "inputs", "application"),
-                "inputs_benchmark": self.file_system.join_paths(temp_dir, "inputs", "benchmark"), 
+                "inputs_benchmark": self.file_system.join_paths(temp_dir, "inputs", "benchmark"),
                 "inputs_source": self.file_system.join_paths(temp_dir, "inputs", "source"),
                 "outputs": self.file_system.join_paths(temp_dir, "outputs"),
                 "outputs_application": self.file_system.join_paths(temp_dir, "outputs", "application"),
                 "outputs_benchmark": self.file_system.join_paths(temp_dir, "outputs", "benchmark"),
                 "registry": self.file_system.join_paths(temp_dir, "registry"),
                 "logs": self.file_system.join_paths(temp_dir, "logs"),
-                "cache": self.file_system.join_paths(temp_dir, "cache")
+                "cache": self.file_system.join_paths(temp_dir, "cache"),
+                "config": self.file_system.join_paths(temp_dir, "config"),
+                "config_system": self.file_system.join_paths(temp_dir, "config", "system")
             }
             
             # Create all the test directories
@@ -390,6 +413,17 @@ class UserDirectoryManager(UserDirectoryManagerInterface):
         
         # Switch to using test directories
         self.dirs = self._test_dirs
+        
+        # Update settings to use test directories
+        test_settings = self.settings.copy()
+        test_settings.update({
+            "application_directory": self.dirs["inputs_application"],
+            "benchmark_directory": self.dirs["inputs_benchmark"],
+            "inputs_directory": self.dirs["inputs"],
+            "source_directory": self.dirs["inputs_source"]
+        })
+        self.settings = test_settings
+        
         logger.info(f"UserDirectoryManager configured for testing with base path: {temp_dir}")
         
         # Copy reference files from examples to test environment
@@ -401,6 +435,7 @@ class UserDirectoryManager(UserDirectoryManagerInterface):
             return
             
         self.dirs = self._original_dirs
+        self.settings = self._original_settings
         self._is_test_environment = False
         logger.info("UserDirectoryManager reset to original directories")
     
@@ -597,26 +632,26 @@ class UserDirectoryManager(UserDirectoryManagerInterface):
         app_success = True
         bench_success = True
         
-        # Copy all YAML files from application directory
+        # Copy all YAML and J2 template files from application directory
         if self.file_system.exists(app_source_dir):
             app_files = [f for f in self.file_system.list_dir(app_source_dir) 
-                        if f.endswith('.yaml') or f.endswith('.yml')]
+                        if f.endswith('.yaml') or f.endswith('.yml') or f.endswith('.j2')]
             if app_files:
                 app_success = self.copy_default_files(app_source_dir, "inputs_application", app_files, force=force)
             else:
-                logger.debug(f"No YAML files found in {app_source_dir}")
+                logger.debug(f"No YAML or template files found in {app_source_dir}")
         else:
             logger.warning(f"Application examples directory not found: {app_source_dir}")
             app_success = False
         
-        # Copy all YAML files from benchmark directory
+        # Copy all YAML and J2 template files from benchmark directory
         if self.file_system.exists(bench_source_dir):
             bench_files = [f for f in self.file_system.list_dir(bench_source_dir) 
-                          if f.endswith('.yaml') or f.endswith('.yml')]
+                          if f.endswith('.yaml') or f.endswith('.yml') or f.endswith('.j2')]
             if bench_files:
                 bench_success = self.copy_default_files(bench_source_dir, "inputs_benchmark", bench_files, force=force)
             else:
-                logger.debug(f"No YAML files found in {bench_source_dir}")
+                logger.debug(f"No YAML or template files found in {bench_source_dir}")
         else:
             logger.warning(f"Benchmark examples directory not found: {bench_source_dir}")
             bench_success = False

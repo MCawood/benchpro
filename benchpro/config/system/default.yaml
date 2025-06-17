@@ -1,0 +1,35 @@
+system:
+  name: "default"
+  description: "Default system configuration"
+  type: "unknown"
+  
+# Default job configuration
+job:
+  account: "default_account"
+  queue: "normal"
+  nodes: 1
+  tasks_per_node: 1
+  time_limit: "01:00:00"
+  
+# Default environment configuration
+environment:
+  modules_system: "none"
+  modules_default: []
+  variables:
+    SYSTEM_TYPE: "default"
+    
+# Default paths
+paths:
+  scratch: "/tmp/benchpro"
+  modules: "/usr/local/modules"
+
+# Default compiler settings
+compilers:
+  gcc:
+    command: "gcc"
+    flags_debug: "-g -O0"
+    flags_optimize: "-O2"
+  clang:
+    command: "clang"
+    flags_debug: "-g -O0"
+    flags_optimize: "-O2" 

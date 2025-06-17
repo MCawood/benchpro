@@ -62,27 +62,25 @@ class WorkspaceManager:
         workspace_dir = os.path.join(base_output_dir, task_id)
         os.makedirs(workspace_dir, exist_ok=True)
         
-        # Create subdirectories
-        source_dir = os.path.join(workspace_dir, "source")
-        build_dir = os.path.join(workspace_dir, "build")
+        # Create only the necessary subdirectories
         logs_dir = os.path.join(workspace_dir, "logs")
-        results_dir = os.path.join(workspace_dir, "results")
+        inputs_dir = os.path.join(workspace_dir, "inputs")
         
-        os.makedirs(source_dir, exist_ok=True)
-        os.makedirs(build_dir, exist_ok=True)
         os.makedirs(logs_dir, exist_ok=True)
-        os.makedirs(results_dir, exist_ok=True)
+        os.makedirs(inputs_dir, exist_ok=True)
         
         self.logger.info(f"Created workspace directory: {workspace_dir}")
         
-        # Return the workspace structure
+        # Return the workspace structure (maintaining the keys for compatibility)
         return {
             "workspace_dir": workspace_dir,
-            "source_dir": source_dir,
-            "build_dir": build_dir,
             "logs_dir": logs_dir,
-            "results_dir": results_dir,
-            "task_id": task_id
+            "inputs_dir": inputs_dir,
+            "task_id": task_id,
+            # Keep these keys for compatibility, but point to workspace_dir
+            "source_dir": workspace_dir,
+            "build_dir": workspace_dir,
+            "results_dir": workspace_dir
         }
         
     def copy_input_files(self, input_dir: str, workspace: Dict[str, str], 
@@ -120,7 +118,7 @@ class WorkspaceManager:
 
     def copy_profile_file(self, profile_path: str, workspace: Dict[str, str]) -> str:
         """
-        Copy a profile file to the workspace root directory.
+        Copy a profile file to the workspace inputs directory.
         
         Args:
             profile_path: Path to the profile file.
@@ -133,9 +131,9 @@ class WorkspaceManager:
             self.logger.error(f"Profile file not found: {profile_path}")
             return ""
             
-        # Get the destination path in the workspace root directory
-        workspace_dir = workspace["workspace_dir"]
-        dest_path = os.path.join(workspace_dir, os.path.basename(profile_path))
+        # Get the destination path in the inputs directory
+        inputs_dir = workspace["inputs_dir"]
+        dest_path = os.path.join(inputs_dir, os.path.basename(profile_path))
         
         # Copy the file
         shutil.copy2(profile_path, dest_path)
@@ -237,4 +235,96 @@ class WorkspaceManager:
         Returns:
             Random string.
         """
-        return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length)) 
+        return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+
+    def copy_template_file(self, template_path: str, workspace: Dict[str, str]) -> str:
+        """
+        Copy a template file to the workspace inputs directory.
+        
+        Args:
+            template_path: Path to the template file.
+            workspace: Workspace dictionary from create_workspace().
+            
+        Returns:
+            Path to the copied template file.
+        """
+        if not os.path.exists(template_path):
+            self.logger.error(f"Template file not found: {template_path}")
+            return ""
+            
+        # Get the destination path in the inputs directory
+        inputs_dir = workspace["inputs_dir"]
+        dest_path = os.path.join(inputs_dir, os.path.basename(template_path))
+        
+        # Copy the file
+        shutil.copy2(template_path, dest_path)
+        self.logger.info(f"Copied template file {template_path} to {dest_path}")
+        
+        return dest_path
+
+    def copy_debug_log(self, workspace: Dict[str, str]) -> str:
+        """
+        Copy the benchpro debug log to the workspace logs directory.
+        
+        Args:
+            workspace: Workspace dictionary from create_workspace().
+            
+        Returns:
+            Path to the copied log file.
+        """
+        # Get the benchpro logs directory
+        benchpro_logs_dir = self.user_dir_manager.get_logs_directory()
+        
+        if not os.path.exists(benchpro_logs_dir):
+            self.logger.warning(f"Benchpro logs directory not found: {benchpro_logs_dir}")
+            return ""
+            
+        # Find the most recent log file
+        log_files = glob.glob(os.path.join(benchpro_logs_dir, "benchpro_*.log"))
+        if not log_files:
+            self.logger.warning(f"No benchpro log files found in: {benchpro_logs_dir}")
+            return ""
+            
+        # Sort by modification time (most recent first)
+        most_recent_log = max(log_files, key=os.path.getmtime)
+        
+        # Get the destination path in the logs directory
+        logs_dir = workspace["logs_dir"]
+        dest_path = os.path.join(logs_dir, "benchpro_debug.log")
+        
+        # Copy the file
+        shutil.copy2(most_recent_log, dest_path)
+        self.logger.info(f"Copied benchpro log file {most_recent_log} to {dest_path}")
+        
+        return dest_path
+
+    def get_module_file_path(self, workspace_dir: str, app_name: str, app_version: str) -> str:
+        """
+        Get the path to a module file in the workspace.
+        
+        Args:
+            workspace_dir: Path to the workspace directory
+            app_name: Application name
+            app_version: Application version
+            
+        Returns:
+            Path to the module file
+        """
+        # Ensure the workspace_dir is an absolute path
+        workspace_dir = os.path.abspath(workspace_dir)
+        
+        # Create the path as [workspace_dir]/modulefiles/[app_name]/[app_version].lua
+        module_file_path = os.path.join(
+            workspace_dir, 
+            "modulefiles", 
+            app_name, 
+            f"{app_version}.lua"
+        )
+        
+        # Create the modulefiles directory
+        modulefiles_dir = os.path.dirname(module_file_path)
+        os.makedirs(modulefiles_dir, exist_ok=True)
+        self.logger.info(f"Created modulefiles directory: {modulefiles_dir}")
+        
+        self.logger.debug(f"Module file path: {module_file_path}")
+        return module_file_path 

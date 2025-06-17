@@ -1,8 +1,8 @@
-# Hello World Application Configuration
+# Hello World Application with Modules
 task_type: "application"
 name: "hello_world"
 version: "1.0"
-description: "Simple Hello World application"
+description: "Hello World application with Intel and Intel MPI dependencies"
 
 # Build configuration
 build:
@@ -12,10 +12,17 @@ build:
   output: "hello_world"
   threads: 4
 
-# Environment configuration (minimal for local execution)
+# Environment configuration with module dependencies
 environment:
-  modules: []
-  variables: {}
+  module_paths:
+    - "/Users/mcawood/dev/benchpro_2.0/examples/modulefiles"  # Path to custom modules
+  modules:
+    - name: intel
+      version: "24.0"
+    - name: impi
+      version: "21.11"
+  variables:
+    SYSTEM_TYPE: default
 
 # Job configuration
 job:

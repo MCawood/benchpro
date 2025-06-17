@@ -1,17 +1,11 @@
-#!/bin/bash
-# Simple hello world application build script
-
-# Job Information
-echo "Job Name: {{ job.name }}"
-echo "Start Time: $(date)"
-
-
 echo "Working in `pwd`"
+
+# Print system information
+echo "Running on system: {{ system.name }} ({{ system.description }})"
+echo "System type: {{ system.type }}"
+echo "Environment type: {{ environment.variables.SYSTEM_TYPE }}"
 
 # Build the application
 echo "Building application: {{ name }} {{ version }}"
 {{ build.compiler }} {{ build.flags }} -o {{ build.output }} {{ build.source }}
-
-echo "End Time: $(date)"
-echo "Application build completed successfully" 
 

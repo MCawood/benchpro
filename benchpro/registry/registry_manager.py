@@ -10,9 +10,11 @@ import time
 import json
 import fcntl
 from typing import Dict, Any, List, Optional, Union
+import copy
 
 from benchpro.utils.user_dir import user_dir_manager, UserDirectoryManagerInterface, get_user_dir_manager
 from benchpro.utils.logger import get_logger
+from benchpro.workspace.module_manager import ModuleManager, ModuleError
 
 
 class RegistryManager:
@@ -108,51 +110,89 @@ class RegistryManager:
         Register a new application in the registry.
         
         Args:
-            app_data: Application data to register.
-            
+            app_data: Application data to register. Should contain:
+                - name: Application name (required)
+                - version: Application version (defaults to "1.0")
+                - workspace_dir: Workspace directory path (required)
+                - binary_path: Path to application binary (required)
+                - module_file: Path to the module file (optional, provided by Application.run())
+                - environment: Environment configuration including modules (optional but expected)
+                
         Returns:
-            The ID of the registered application.
+            The ID of the registered application, or empty string on failure.
         """
-        self.logger.info(f"Registering application: {app_data.get('name', 'unknown')}")
-        self.logger.debug(f"Application data: {app_data}")
+        app_name = app_data.get('name', 'unknown')
+        self.logger.info(f"Registering application: {app_name}")
+        
+        # Simplified debug logging
+        if self.logger.isEnabledFor(10):  # DEBUG level
+            self.logger.debug(f"Application data keys: {list(app_data.keys())}")
         
         # Load the latest registry
         self.load()
         
-        # Ensure required fields are present
+        # Validate required fields
         required_fields = ["name", "workspace_dir", "binary_path"]
-        for field in required_fields:
-            if field not in app_data:
-                self.logger.error(f"Missing required field '{field}' in application data")
-                return ""
-                
+        missing_fields = [field for field in required_fields if field not in app_data]
+        if missing_fields:
+            error_msg = f"Missing required fields in application data: {', '.join(missing_fields)}"
+            self.logger.error(error_msg)
+            return ""
+        
+        # Log environment information if present
+        if "environment" in app_data:
+            self.logger.info(f"Application has environment configuration")
+            if "modules" in app_data["environment"]:
+                modules = app_data["environment"]["modules"]
+                self.logger.info(f"Application has {len(modules)} module dependencies")
+                if self.logger.isEnabledFor(10):  # DEBUG level
+                    self.logger.debug(f"Module details: {modules}")
+        else:
+            # Add environment back if it got lost somehow - ensure it at least exists
+            app_data["environment"] = {"modules": []}
+            self.logger.info(f"Added empty environment section to app_data")
+        
+        # Make a deep copy of app_data to avoid reference issues
+        app_data_copy = copy.deepcopy(app_data)
+        
         # Generate a unique ID if not provided
-        if "id" not in app_data:
+        if "id" not in app_data_copy:
             # Get version, default to "1.0" if not provided
-            version = app_data.get("version", "1.0")
+            version = app_data_copy.get("version", "1.0")
             # Remove dots from version for cleaner ID
             version_str = str(version).replace(".", "")
             # Generate ID in the format: [name]_[version]_[6-digit-hash]
-            app_data["id"] = f"{app_data['name']}_{version_str}_{self._generate_random_string(6)}"
+            app_data_copy["id"] = f"{app_name}_{version_str}_{self._generate_random_string(6)}"
             
         # Add timestamp if not provided
-        if "build_timestamp" not in app_data:
-            app_data["build_timestamp"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        if "build_timestamp" not in app_data_copy:
+            app_data_copy["build_timestamp"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             
         # Set status if not provided
-        if "status" not in app_data:
-            app_data["status"] = "completed"
+        if "status" not in app_data_copy:
+            app_data_copy["status"] = "completed"
+        
+        # Create a module file if possible
+        if all(field in app_data_copy for field in ["name", "version", "workspace_dir", "binary_path"]):
+            try:
+                module_manager = ModuleManager()
+                module_file_path = module_manager.create_module_file(app_data_copy)
+                app_data_copy["module_file"] = module_file_path
+                self.logger.info(f"Created module file: {module_file_path}")
+            except Exception as e:
+                self.logger.error(f"Failed to create module file: {str(e)}")
+                # Continue registration even if module file creation fails
             
         # Add the application to the registry
-        self.registry["applications"].append(app_data)
+        self.registry["applications"].append(app_data_copy)
         self.registry["last_updated"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         
         # Save the registry
         if self._save_registry():
-            self.logger.info(f"Successfully registered application {app_data['name']} with ID {app_data['id']}")
-            return app_data["id"]
+            self.logger.info(f"Successfully registered application {app_name} with ID {app_data_copy['id']}")
+            return app_data_copy["id"]
         else:
-            self.logger.error(f"Failed to register application {app_data['name']}")
+            self.logger.error(f"Failed to register application {app_name}")
             return ""
             
     def update_application(self, app_id: str, app_data: Dict[str, Any]) -> bool:
@@ -167,7 +207,6 @@ class RegistryManager:
             True if successful, False otherwise.
         """
         self.logger.info(f"Updating application with ID: {app_id}")
-        self.logger.debug(f"Update data: {app_data}")
         
         # Load the latest registry
         self.load()
@@ -287,7 +326,6 @@ class RegistryManager:
             
             # Return the most recently built application
             self.logger.debug(f"Found application: {sorted_matches[0].get('name', 'unknown')} (ID: {sorted_matches[0].get('id', 'unknown')})")
-            self.logger.debug(f"Using binary path: {sorted_matches[0].get('binary_path', '')}")
             return sorted_matches[0]
                 
         self.logger.debug(f"Application with name {app_name} not found in registry")
@@ -299,37 +337,55 @@ class RegistryManager:
         
         Args:
             criteria: Dictionary of criteria to match.
-            
+                Supported fields:
+                - name: Application name
+                - version: Application version
+                - label: Label inside metadata.label
+                
         Returns:
             List of matching applications.
         """
-        # Load the latest registry
+        # Load the latest registry to get fresh data
         self.load()
         
-        # Find matching applications
-        matches = []
-        for app in self.registry["applications"]:
-            match = True
-            for key, value in criteria.items():
-                # Handle nested keys (e.g., "build_parameters.compiler")
-                if "." in key:
-                    parts = key.split(".")
-                    app_value = app
-                    for part in parts:
-                        if part not in app_value:
-                            match = False
-                            break
-                        app_value = app_value[part]
-                    if match and app_value != value:
-                        match = False
-                # Handle direct keys
-                elif key not in app or app[key] != value:
-                    match = False
-                    
-            if match:
-                matches.append(app)
+        if not self.registry or "applications" not in self.registry:
+            self.logger.warning("No applications found in registry")
+            return []
+
+        # Start with all applications
+        applications = self.registry["applications"]
+        matching_apps = []
+
+        for app in applications:
+            # Check if app is a dictionary
+            if not isinstance(app, dict):
+                continue
                 
-        return matches
+            # Check name match (required)
+            if "name" in criteria and app.get("name") != criteria["name"]:
+                continue
+
+            # Check version match (optional)
+            if "version" in criteria and criteria["version"]:
+                if app.get("version") != criteria["version"]:
+                    continue
+
+            # Check label match (optional)
+            if "label" in criteria and criteria["label"]:
+                # Labels are stored in metadata.label, handle internally
+                if not app.get("metadata") or app.get("metadata", {}).get("label") != criteria["label"]:
+                    continue
+
+            # If we got here, all specified criteria matched
+            matching_apps.append(app)
+
+        # Sort by build timestamp if available, newest first
+        matching_apps.sort(
+            key=lambda app: app.get("build_timestamp", ""), 
+            reverse=True
+        )
+
+        return matching_apps
             
     def get_binary_path(self, app_id: str) -> str:
         """

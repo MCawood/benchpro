@@ -1,6 +1,7 @@
 """Test module for verifying the test environment setup."""
 import os
 import pytest
+from benchpro.utils.user_dir import user_dir_manager
 
 
 def test_environment_setup(setup_test_env):
@@ -35,4 +36,28 @@ def test_environment_setup(setup_test_env):
     
     # Verify the template files exist
     assert os.path.exists(app_template), "Application template hello_world.j2 not found"
-    assert os.path.exists(bench_template), "Benchmark template hello_world.j2 not found" 
+    assert os.path.exists(bench_template), "Benchmark template hello_world.j2 not found"
+
+
+def test_environment_isolation(setup_test_env):
+    """Test that the test environment is isolated from the user's real ~/.benchpro directory."""
+    # Get the test environment root directory
+    test_root = user_dir_manager.get_path("root")
+    
+    # Get the user's real ~/.benchpro directory
+    real_benchpro_path = os.path.expanduser("~/.benchpro")
+    
+    # Verify that the test is NOT using the user's real ~/.benchpro directory
+    assert test_root != real_benchpro_path, f"Test is using real user directory {real_benchpro_path} instead of isolated test environment {test_root}"
+    
+    # Verify that paths requested through user_dir_manager use the test environment
+    test_app_path = user_dir_manager.get_path("inputs_application")
+    assert real_benchpro_path not in test_app_path, f"Path {test_app_path} contains real user directory {real_benchpro_path}"
+    
+    # Verify that writing to the test environment doesn't affect the real user directory
+    test_file = os.path.join(test_app_path, "test_isolation.txt")
+    with open(test_file, "w") as f:
+        f.write("This is a test file that should only exist in the test environment")
+    
+    real_file_path = os.path.join(real_benchpro_path, "inputs", "application", "test_isolation.txt")
+    assert not os.path.exists(real_file_path), f"Test modified real user file at {real_file_path}" 

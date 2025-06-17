@@ -1,0 +1,35 @@
+system:
+  name: "darwin"
+  description: "macOS Development System"
+  type: "workstation"
+  
+# System-specific job defaults
+job:
+  account: "default_account"
+  queue: "default"
+  nodes: 1
+  tasks_per_node: 1
+  time_limit: "01:00:00"
+  
+# System-specific environment defaults
+environment:
+  modules_system: "none"
+  modules_default: []
+  variables:
+    SYSTEM_TYPE: "darwin"
+    
+# System-specific paths
+paths:
+  scratch: "/tmp/benchpro"
+  modules: "/usr/local/opt"
+
+# Compiler settings for this system
+compilers:
+  gcc:
+    command: "gcc"
+    flags_debug: "-g -O0"
+    flags_optimize: "-O2"
+  clang:
+    command: "clang"
+    flags_debug: "-g -O0"
+    flags_optimize: "-O2" 

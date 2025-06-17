@@ -8,6 +8,7 @@ The BenchPRO Configuration System provides a robust, extensible framework for ma
 - [Configuration Loading](loader.md): Loading and parsing configuration files
 - [Configuration Merging](merger.md): Merging configurations with appropriate precedence
 - [Template Variable Resolution](resolver.md): Resolving template variables in configurations
+- [Configuration Data Flow](dataflow.md): How configuration data flows through the system
 
 ## Overview
 
@@ -18,6 +19,7 @@ The configuration system is a core component of BenchPRO, responsible for:
 3. **Resolving template variables** in configuration values
 4. **Validating configurations** against schemas
 5. **Providing typed access** to configuration values
+6. **Structuring data** with validation and type safety
 
 BenchPRO supports a layered configuration approach, where settings are loaded from multiple sources:
 

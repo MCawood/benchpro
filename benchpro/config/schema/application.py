@@ -43,7 +43,7 @@ class EnvironmentConfig(BaseModel):
 class ExecutionConfig(BaseModel):
     """Execution configuration for applications."""
     
-    type: str = Field("slurm", description="Execution type (slurm, local, etc.)")
+    type: str = Field("local", description="Execution type (local, sched, etc.)")
     
     model_config = ConfigDict(extra="allow")
 
@@ -51,7 +51,7 @@ class ExecutionConfig(BaseModel):
 class JobConfig(BaseModel):
     """Job configuration for applications."""
     
-    scheduler: str = Field("slurm", description="Job scheduler to use")
+    scheduler: str = Field("slurm", description="Job scheduler to use (controls script directives)")
     queue: Optional[str] = Field(None, description="Queue/partition to submit the job to")
     account: Optional[str] = Field(None, description="Account to charge for the job")
     nodes: int = Field(1, description="Number of nodes to request")
@@ -78,7 +78,7 @@ class ApplicationSchema(BaseTaskSchema):
     
     build: BuildConfig = Field(..., description="Build configuration")
     environment: EnvironmentConfig = Field(default_factory=EnvironmentConfig, description="Environment configuration")
-    execution: Optional[ExecutionConfig] = Field(None, description="Execution configuration")
+    execution: Optional[ExecutionConfig] = Field(default_factory=ExecutionConfig, description="Execution configuration")
     job: JobConfig = Field(default_factory=JobConfig, description="Job configuration")
     workspace: WorkspaceConfig = Field(..., description="Workspace configuration")
     template: str = Field(..., description="Template to use for building the application")
@@ -114,7 +114,7 @@ class ApplicationSchema(BaseTaskSchema):
                     }
                 },
                 "execution": {
-                    "type": "slurm"
+                    "type": "local"
                 },
                 "job": {
                     "scheduler": "slurm",

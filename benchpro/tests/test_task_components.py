@@ -10,8 +10,8 @@ from unittest.mock import MagicMock, patch
 import os
 from typing import Dict, Any, List, Optional, Tuple
 
-from benchpro.executor.components.script_generation import (
-    BaseScriptGenerator, LocalScriptGenerator, SlurmScriptGenerator
+from benchpro.templates.script_generators import (
+    LocalScriptGenerator, SlurmScriptGenerator, TemplateError, ScriptGenerationComponent
 )
 from benchpro.executor.components.execution import (
     LocalExecutionComponent, SlurmExecutionComponent
@@ -22,7 +22,7 @@ from benchpro.executor.components.configuration import (
 from benchpro.executor.components.validation import (
     BaseValidationComponent, ApplicationValidationComponent, BenchmarkValidationComponent
 )
-from benchpro.executor.components.interfaces import TemplateError, ExecutionError
+from benchpro.executor.components.interfaces import ExecutionError
 
 
 class TestScriptGenerationComponents(unittest.TestCase):
@@ -30,146 +30,158 @@ class TestScriptGenerationComponents(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures."""
-        self.mock_template_engine = MagicMock()
-        self.mock_template_engine.render_template.return_value = "echo 'Hello, World!'"
+        # Create a mock for the script generator that returns a simple script
+        self.mock_script_generator = MagicMock()
+        self.mock_script_generator.generate_script.return_value = "echo 'Hello, World!'"
         
         self.test_variables = {
             "name": "test_task",
             "version": "1.0",
             "job": {
                 "name": "test_job",
-                "nodes": 2,
-                "tasks_per_node": 4,
-                "time_limit": "01:00:00",
                 "queue": "test_queue",
-                "account": "test_account"
-            },
-            "workspace": {
-                "logs_dir": "logs"
+                "nodes": 1,
+                "time_limit": "01:00:00"
             }
         }
+        
+        # Create a temporary directory for output
+        self.output_dir = "/tmp/test_script_output"
+        os.makedirs(self.output_dir, exist_ok=True)
+        
+        # Create a test template file
+        self.template_path = os.path.join(self.output_dir, "test_template.j2")
+        with open(self.template_path, "w") as f:
+            f.write("echo 'Hello, {{ name }}!'")
     
+    def _write_script_to_file(self, script_content, output_dir):
+        """Helper to write script content to a file and return the path."""
+        script_path = os.path.join(output_dir, "test_script.sh")
+        with open(script_path, "w") as f:
+            f.write(script_content)
+        return script_path
+        
     def test_local_script_generator(self):
         """Test the LocalScriptGenerator."""
-        generator = LocalScriptGenerator(template_engine=self.mock_template_engine)
+        # Create a generator
+        generator = LocalScriptGenerator()
         
-        # Test script generation
-        result = generator.generate_script("dummy_path", self.test_variables)
+        # Generate a script
+        script_content = generator.generate_script(self.template_path, self.test_variables)
         
-        # Verify template engine was called with correct arguments
-        self.mock_template_engine.render_template.assert_called_once()
-        self.assertEqual(result, "echo 'Hello, World!'")
+        # Save script to file
+        script_path = self._write_script_to_file(script_content, self.output_dir)
         
-        # Verify script_type was set correctly
-        args, kwargs = self.mock_template_engine.render_template.call_args
-        self.assertEqual(args[0], "dummy_path")
-        self.assertEqual(args[1]["script_type"], "local")
-    
+        # Check the script content
+        self.assertIn("Hello, test_task", script_content)
+        self.assertTrue(os.path.exists(script_path))
+        
     def test_slurm_script_generator(self):
         """Test the SlurmScriptGenerator."""
-        generator = SlurmScriptGenerator(template_engine=self.mock_template_engine)
+        # Create a generator
+        generator = SlurmScriptGenerator()
         
-        # Test script generation
-        result = generator.generate_script("dummy_path", self.test_variables)
+        # Generate a script
+        script_content = generator.generate_script(self.template_path, self.test_variables)
         
-        # Verify template engine was called with correct arguments
-        self.mock_template_engine.render_template.assert_called_once()
+        # Save script to file
+        script_path = self._write_script_to_file(script_content, self.output_dir)
         
-        # Verify Slurm directives were added
-        self.assertTrue(result.startswith("#!/bin/bash"))
-        self.assertIn("#SBATCH -J test_job", result)
-        self.assertIn("#SBATCH -N 2", result)
-        self.assertIn("#SBATCH --ntasks-per-node=4", result)
-        self.assertIn("#SBATCH -t 01:00:00", result)
-        self.assertIn("#SBATCH -p test_queue", result)
-        self.assertIn("#SBATCH -A test_account", result)
+        # Check the script content includes template content
+        self.assertIn("Hello, test_task", script_content)
+        self.assertTrue(os.path.exists(script_path))
         
-        # Verify template content is included
-        self.assertIn("echo 'Hello, World!'", result)
+        # Verify SLURM directives are present
+        self.assertIn("#SBATCH", script_content)
+        self.assertIn("#SBATCH -J test_job", script_content)
+        self.assertIn("#SBATCH -p test_queue", script_content)
+        self.assertIn("#SBATCH -N 1", script_content)
+        self.assertIn("#SBATCH -t 01:00:00", script_content)
         
-        # Verify script_type was set correctly
-        args, kwargs = self.mock_template_engine.render_template.call_args
-        self.assertEqual(args[0], "dummy_path")
-        self.assertEqual(args[1]["script_type"], "slurm")
-    
     def test_script_generator_error_handling(self):
         """Test error handling in script generators."""
-        # Make template engine raise an exception
-        self.mock_template_engine.render_template.side_effect = Exception("Template error")
+        # Create a non-existent template path
+        non_existent_path = os.path.join(self.output_dir, "non_existent.j2")
         
         # Test LocalScriptGenerator error handling
-        local_generator = LocalScriptGenerator(template_engine=self.mock_template_engine)
+        local_generator = LocalScriptGenerator()
         with self.assertRaises(TemplateError):
-            local_generator.generate_script("dummy_path", self.test_variables)
-        
+            local_generator.generate_script(non_existent_path, self.test_variables)
+            
         # Test SlurmScriptGenerator error handling
-        slurm_generator = SlurmScriptGenerator(template_engine=self.mock_template_engine)
+        slurm_generator = SlurmScriptGenerator()
         with self.assertRaises(TemplateError):
-            slurm_generator.generate_script("dummy_path", self.test_variables)
+            slurm_generator.generate_script(non_existent_path, self.test_variables)
 
 
 class TestExecutionComponents(unittest.TestCase):
     """Tests for the execution components."""
     
-    @patch('os.chmod')
-    @patch('subprocess.Popen')
-    def test_local_execution_component(self, mock_popen, mock_chmod):
-        """Test the LocalExecutionComponent."""
-        # Set up mock process
-        mock_process = MagicMock()
-        mock_process.pid = 12345
-        mock_popen.return_value = mock_process
+    def setUp(self):
+        """Set up test fixtures."""
+        # Create a temporary directory for output
+        self.output_dir = "/tmp/test_execution_output"
+        os.makedirs(self.output_dir, exist_ok=True)
         
-        # Create component
-        component = LocalExecutionComponent()
-        
-        # Test execute method
-        success, job_id = component.execute("test_script.sh")
-        
-        # Verify results
-        self.assertTrue(success)
-        self.assertEqual(job_id, "12345")
-        
-        # Verify script was made executable
-        mock_chmod.assert_called_once()
-        
-        # Verify subprocess was called
-        mock_popen.assert_called_once()
+        # Create a test script file
+        self.script_path = os.path.join(self.output_dir, "test_script.sh")
+        with open(self.script_path, "w") as f:
+            f.write("#!/bin/bash\necho 'Hello, World!'\n")
+        os.chmod(self.script_path, 0o755)
     
-    @patch('os.chmod')
-    def test_slurm_execution_component(self, mock_chmod):
-        """Test the SlurmExecutionComponent."""
-        # Create mock scheduler
-        mock_scheduler = MagicMock()
-        mock_scheduler.submit_job.return_value = "123456"
-        mock_scheduler.check_status.return_value = "RUNNING"
-        mock_scheduler.cancel_job.return_value = True
+    @patch('subprocess.Popen')
+    def test_local_execution_component(self, mock_popen):
+        """Test the LocalExecutionComponent."""
+        # Mock time.time() to return a fixed value for job ID generation
+        with patch('time.time', return_value=1234567.89):
+            # Create component
+            component = LocalExecutionComponent()
+            
+            # Test execute method
+            success, job_id = component.execute(self.script_path)
+            
+            # Verify results
+            self.assertTrue(success)
+            # Job ID should be time.time() * 1000 as an integer string
+            expected_job_id = str(int(1234567.89 * 1000))
+            self.assertEqual(job_id, expected_job_id)
+            
+            # Check that os.system was called, but we can't directly test it
+            # since it's a direct system call
         
-        # Create component with mock scheduler (no need to mock get_scheduler)
-        component = SlurmExecutionComponent(scheduler=mock_scheduler)
+    def test_slurm_execution_component(self):
+        """Test the SlurmExecutionComponent using mock SLURM fixtures."""
+        import pytest
         
-        # Test execute method
-        success, job_id = component.execute("test_script.sh")
+        # We'll use the mock SLURM system directly since this is a unittest class
+        from benchpro.tests.fixtures.mock_slurm import create_mock_slurm_system, patch_slurm_commands
         
-        # Verify results
-        self.assertTrue(success)
-        self.assertEqual(job_id, "123456")
+        mock_slurm = create_mock_slurm_system(auto_progress_jobs=True, job_run_time=0.05)
         
-        # Verify script was made executable
-        mock_chmod.assert_called_once()
-        
-        # Verify scheduler was called
-        mock_scheduler.submit_job.assert_called_once_with("test_script.sh")
-        
-        # Test get_status method
-        status = component.get_status("123456")
-        self.assertEqual(status, "RUNNING")
-        mock_scheduler.check_status.assert_called_once_with("123456")
-        
-        # Test cancel_job method
-        result = component.cancel_job("123456")
-        self.assertTrue(result)
-        mock_scheduler.cancel_job.assert_called_once_with("123456")
+        try:
+            with patch_slurm_commands(mock_slurm):
+                # Create component
+                component = SlurmExecutionComponent()
+                
+                # Test execute method
+                success, job_id = component.execute(self.script_path)
+                
+                # Verify results
+                self.assertTrue(success)
+                self.assertIsNotNone(job_id)
+                self.assertTrue(job_id.isdigit(), f"Job ID should be numeric, got: {job_id}")
+                
+                # Verify job exists in mock system
+                job = mock_slurm.get_job(job_id)
+                self.assertIsNotNone(job, "Job should exist in mock system")
+                
+                # Verify command history
+                command_history = mock_slurm.command_history
+                sbatch_calls = [call for call in command_history if call[0] == "sbatch"]
+                self.assertEqual(len(sbatch_calls), 1, "Should have called sbatch once")
+                
+        finally:
+            mock_slurm.stop()
 
 
 class TestConfigComponents(unittest.TestCase):
@@ -324,7 +336,8 @@ class TestValidationComponents(unittest.TestCase):
             "version": "1.0",
             "task_type": "benchmark",
             "run": {
-                "application": "test_app"
+                "application": "test_app",
+                "executable": "/path/to/executable"
             }
         }
         is_valid, errors = component.validate(valid_config)

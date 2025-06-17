@@ -99,8 +99,12 @@ class ConfigManager:
         
         # Check if task_type is specified in CLI overrides
         task_type = None
-        if cli_overrides and "task_type" in cli_overrides:
-            task_type = cli_overrides["task_type"]
+        system_name = None
+        if cli_overrides:
+            if "task_type" in cli_overrides:
+                task_type = cli_overrides["task_type"]
+            if "system" in cli_overrides:
+                system_name = cli_overrides["system"]
         
         # Load profile configuration first to determine task_type
         profile_config = self.config_loader.load_profile_config(profile_name, task_type)
@@ -114,7 +118,7 @@ class ConfigManager:
         
         # Load default and system configurations
         default_config = self.config_loader.load_default_config()
-        system_config = self.config_loader.load_system_config()
+        system_config = self.config_loader.load_system_config(system_name)
         
         # Merge configurations in order of precedence
         configs = [default_config, system_config, profile_config]
@@ -126,13 +130,55 @@ class ConfigManager:
         # Merge configurations
         merged_config = self.config_merger.merge_all(configs)
         
+        # Apply smart defaults to avoid redundant configuration
+        resolved_config = self._apply_smart_defaults(merged_config)
+        
         # Substitute variables
-        resolved_config = self.variable_resolver.resolve(merged_config)
+        resolved_config = self.variable_resolver.resolve(resolved_config)
         
         # Validate configuration
         validated_config = self.config_validator.validate(resolved_config)
         
         return validated_config
+    
+    def _apply_smart_defaults(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Apply smart defaults to avoid redundant configuration.
+        
+        This method implements the logic to automatically set related configuration
+        fields based on primary settings, reducing the need for users to specify
+        redundant or confusing parameter combinations.
+        
+        Args:
+            config: The merged configuration dictionary.
+            
+        Returns:
+            Configuration with smart defaults applied.
+        """
+        # Make a copy to avoid modifying the input
+        result = config.copy()
+        
+        # Get execution type
+        execution_type = result.get("execution", {}).get("type", "local")
+        
+        # Apply scheduler defaults based on execution type
+        if "job" not in result:
+            result["job"] = {}
+            
+        # Set smart defaults for job.scheduler based on execution.type
+        if execution_type == "local":
+            # For local execution, always set scheduler to local (will be ignored)
+            result.setdefault("job", {})["scheduler"] = "local"
+        elif execution_type == "sched":
+            # For scheduled execution, default to slurm unless explicitly set to something else
+            current_scheduler = result.get("job", {}).get("scheduler")
+            if not current_scheduler or current_scheduler == "local":
+                result.setdefault("job", {})["scheduler"] = "slurm"
+            # If scheduler is explicitly set to something else (like "pbs"), preserve it
+        
+        self.logger.debug(f"Applied smart defaults: execution.type={execution_type}, job.scheduler={result['job']['scheduler']}")
+        
+        return result
     
     def validate_config(self, config: Dict[str, Any]) -> List[str]:
         """
@@ -225,50 +271,29 @@ class ConfigManager:
         self.logger.info(f"Loading system configuration: {system_name or 'default'}")
         return self.config_loader.load_system_config(system_name)
     
-    def load_profile_config(self, profile_name: str, task_type: Optional[str] = None) -> Dict[str, Any]:
+    def load_profile_config(self, profile_name: str, task_type: Optional[str] = None, 
+                         system_name: Optional[str] = None) -> Dict[str, Any]:
         """
-        Load a profile configuration.
+        Load configuration from a profile.
         
         Args:
             profile_name: Name of the profile to load.
-            task_type: Type of task (application or benchmark). If None, auto-detect.
+            task_type: Type of task (application or benchmark).
+                       If None, will be determined from the profile configuration.
+            system_name: Name of the system configuration to load.
+                       If None, will use 'default'.
             
         Returns:
-            Profile configuration dictionary.
+            The profile configuration with defaults merged.
             
         Raises:
-            FileNotFoundError: If the profile file doesn't exist.
+            FileNotFoundError: If the profile doesn't exist.
+            ValueError: If the configuration validation fails.
         """
         self.logger.info(f"Loading profile configuration: {profile_name}")
-        return self.config_loader.load_profile_config(profile_name, task_type)
-    
-    def merge_configs(self, profile_name: Union[str, Dict[str, Any]], cli_overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Merge configurations from different sources.
         
-        Args:
-            profile_name: Name of the profile or a dictionary containing the profile configuration.
-            cli_overrides: Command-line overrides.
-            
-        Returns:
-            Merged configuration dictionary.
-            
-        Raises:
-            FileNotFoundError: If the profile file doesn't exist.
-        """
-        self.logger.info(f"Merging configurations for profile: {profile_name}")
-        
-        # Check if task_type is specified in CLI overrides
-        task_type = None
-        if cli_overrides and "task_type" in cli_overrides:
-            task_type = cli_overrides["task_type"]
-        
-        # If profile_name is a dictionary, use it directly as the profile_config
-        if isinstance(profile_name, dict):
-            profile_config = profile_name
-        else:
-            # Load profile configuration from file
-            profile_config = self.load_profile_config(profile_name, task_type)
+        # Load profile configuration
+        profile_config = self.config_loader.load_profile_config(profile_name, task_type)
         
         # Determine task_type from profile
         if not task_type:
@@ -279,14 +304,10 @@ class ConfigManager:
         
         # Load default and system configurations
         default_config = self.load_default_config()
-        system_config = self.load_system_config()
+        system_config = self.load_system_config(system_name)
         
         # Merge configurations in order of precedence
         configs = [default_config, system_config, profile_config]
-        
-        # Add CLI overrides if provided
-        if cli_overrides:
-            configs.append(cli_overrides)
         
         # Merge configurations
         merged_config = self.config_merger.merge_all(configs)
@@ -294,4 +315,45 @@ class ConfigManager:
         # Substitute variables
         resolved_config = self.variable_resolver.resolve(merged_config)
         
-        return resolved_config 
+        return resolved_config
+    
+    def merge_configs(self, profile_name: Union[str, Dict[str, Any]], cli_overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Load and merge configurations for a profile.
+        
+        Args:
+            profile_name: Name of the profile to load or a profile configuration dictionary.
+            cli_overrides: CLI parameter overrides.
+            
+        Returns:
+            The merged configuration.
+            
+        Raises:
+            FileNotFoundError: If the profile file doesn't exist.
+            ValueError: If the configuration validation fails.
+        """
+        # Get task type from CLI overrides if specified
+        task_type = cli_overrides.get("task_type") if cli_overrides else None
+        system_name = cli_overrides.get("system") if cli_overrides else None
+        
+        # Load profile configuration
+        if isinstance(profile_name, dict):
+            profile_config = profile_name
+        else:
+            profile_config = self.load_profile_config(profile_name, task_type, system_name)
+        
+        # If task_type not specified in CLI overrides, get it from the profile
+        if not task_type and isinstance(profile_name, str):
+            task_type = profile_config.get("task_type", "benchmark")  # Default to benchmark for backward compatibility
+        
+        # Merge CLI overrides if provided
+        if cli_overrides:
+            self.logger.debug("Merging configurations")
+            merged_config = self.config_merger.merge_configs(profile_config, cli_overrides)
+        else:
+            merged_config = profile_config
+        
+        # Apply smart defaults to avoid redundant configuration
+        merged_config = self._apply_smart_defaults(merged_config)
+        
+        return merged_config 

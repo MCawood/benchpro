@@ -4,8 +4,12 @@ Welcome to the BenchPRO reference documentation. This section provides detailed 
 
 ## Contents
 
+- [Testing System](testing/testing.md): Centralized test data management, fixtures, and testing best practices.
 - [Utility Modules](utils/index.md): Common utility modules used throughout BenchPRO.
 - [Configuration System](config/index.md): Schema-based configuration management and validation.
+- [Executor System](executor/index.md): Task execution and composition architecture.
+- [Template System](templates/index.md): Block-based template composition for script generation.
+- [Workspace System](workspace/index.md): Workspace management and module file creation.
 
 ## How to Use This Documentation
 

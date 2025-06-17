@@ -47,6 +47,21 @@ class HierarchicalConfigMerger(ConfigMergerInterface):
         
         return result
     
+    def merge_configs(self, base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Merge a profile configuration with CLI overrides.
+        
+        This is a convenience method that calls merge().
+        
+        Args:
+            base: Base configuration (profile).
+            override: Configuration to override the base (CLI overrides).
+            
+        Returns:
+            Merged configuration.
+        """
+        return self.merge(base, override)
+    
     def merge_all(self, configs: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Merge multiple configurations.

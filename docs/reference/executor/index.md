@@ -18,13 +18,22 @@ The executor module defines:
 - Task Factories: Classes for creating and configuring tasks
 - Scheduler Integration: Support for job schedulers like Slurm
 
+## Related Systems
+
+The executor module works closely with other BenchPRO systems:
+
+- [Template System](../templates/index.md): For generating execution scripts using block-based composition
+- Config System: For loading and validating task configurations
+- Registry: For application and benchmark registration and discovery
+- Workspace: For managing task workspace directories
+
 ## Architecture
 
 The executor system now uses a composition-based architecture where tasks are composed of interchangeable components:
 
 1. **ConfigComponent**: Manages task configuration
 2. **ValidationComponent**: Validates configuration
-3. **ScriptGenerationComponent**: Generates execution scripts
+3. **ScriptGenerationComponent**: Generates execution scripts using the [Template System](../templates/index.md)
 4. **ExecutionComponent**: Executes scripts and monitors jobs
 
 This architecture improves:

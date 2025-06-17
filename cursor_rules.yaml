@@ -2,6 +2,10 @@
 # This file provides guidance to the AI within the Cursor IDE.
 # It reflects the current architecture and development approach for BenchPRO 2.0.
 #
+# IMPORTANT: BenchPRO 2.0 is in EARLY DEVELOPMENT. Backward compatibility is NOT a concern.
+# We prioritize clean, minimal, well-structured code and are rapidly iterating.
+# Do not attempt to maintain compatibility with previous versions as this creates technical debt.
+#
 # Overview:
 # - BenchPRO 2.0 is a task-based system for building applications and running benchmarks in HPC environments.
 # - The core architecture uses a Task hierarchy (Task → Application/Benchmark) with a TaskFactory pattern.
@@ -14,6 +18,12 @@ version: "2.0"
 description: >
   This Cursor rules file instructs the AI to focus on enhancing the BenchPRO 2.0 system.
   The AI should produce code, tests, and documentation that are modular, well-structured, and adhere to the following guidelines:
+  
+  - **Development Philosophy:**
+    - We are in early development with rapid iteration - do NOT worry about backward compatibility
+    - Always prioritize clean, minimal, and well-structured code over supporting legacy functionality
+    - It is better to reimplement a feature cleanly than to adapt or extend problematic code
+    - Breaking changes are acceptable when they improve the architecture
   
   - **Directory Structure:**
     - `/benchpro/cli/` - Command-line interface using Click
@@ -80,6 +90,8 @@ rules:
   - Place new code in the appropriate directory based on its function.
   - Update tests when modifying existing functionality.
   - Provide comprehensive docstrings for all new classes and functions.
-  - Focus on clean implementation rather than backward compatibility.
+  - NEVER prioritize backward compatibility - we are in early development.
+  - Always prefer clean implementations over extending problematic code.
+  - Prefer breaking changes that improve architecture over maintaining compatibility.
   - Use type hints for all function parameters and return values.
   - Implement proper error handling with descriptive error messages.

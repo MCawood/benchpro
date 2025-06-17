@@ -173,6 +173,8 @@ class SlurmScheduler(Scheduler):
             
             # If the job is not found in the queue, check sacct to see if it's completed
             if result.returncode != 0 or not result.stdout.strip():
+                squeue_failed = result.returncode != 0
+                
                 # Build the sacct command
                 cmd = ["sacct", "-j", job_id, "-n", "-o", "State"]
                 
@@ -193,7 +195,11 @@ class SlurmScheduler(Scheduler):
                     else:
                         return status
                 else:
-                    return "UNKNOWN"
+                    # squeue failed and sacct has no results - likely invalid job ID
+                    if squeue_failed:
+                        raise StatusCheckError(f"Job ID {job_id} not found - invalid job ID")
+                    else:
+                        return "UNKNOWN"
             else:
                 return result.stdout.strip()
                 

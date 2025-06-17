@@ -6,14 +6,6 @@ job:
   description: "Default job configuration"
   output_dir: "examples/output"
   
-# Scheduler configuration
-scheduler:
-  type: "slurm"
-  queue: "default"
-  nodes: 1
-  tasks_per_node: 1
-  time_limit: "01:00:00"
-  
 # Execution configuration
 execution:
   type: "local"

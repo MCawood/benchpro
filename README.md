@@ -31,13 +31,13 @@ pip install -e .
 ### Building an Application
 
 ```bash
-benchpro build hello_world_app
+bp build hello_world_app
 ```
 
 ### Running a Benchmark
 
 ```bash
-benchpro bench hello_world_bench
+bp bench hello_world_bench
 ```
 
 ### Enabling Shell Completion

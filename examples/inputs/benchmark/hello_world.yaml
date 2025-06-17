@@ -1,12 +1,18 @@
-# Hello World Benchmark Configuration
+# Hello World Command Extractor Benchmark Configuration
 task_type: "benchmark"
-name: "hello_world"
+name: "hello_world_benchmark"
 version: "1.0"
-description: "Simple Hello World benchmark"
+description: "Simple Hello World benchmark using command extractor"
+
+# Application requirement
+requirements:
+  application: "hello_world"
+  version: ""
+  label: ""
 
 # Run configuration
 run:
-  application: "hello_world"
+  executable: "hello_world"
   arguments: ""
   input_files: []
   output_files: []
@@ -41,8 +47,8 @@ workspace:
 # Results configuration
 results:
   extraction:
-    method: "regex"
-    pattern: "Result: ([0-9.]+) seconds"
+    method: "command"
+    command: "grep 'Result:' {log_file} | awk '{print $2}'"
     metric: "execution_time"
     unit: "seconds"
   output_format: "json"

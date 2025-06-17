@@ -6,6 +6,7 @@ These interfaces allow for dependency injection and easier testing.
 """
 
 from typing import Dict, Any, List, Optional, Protocol, runtime_checkable
+from abc import ABC, abstractmethod
 
 
 @runtime_checkable
@@ -65,15 +66,19 @@ class ConfigLoaderInterface(Protocol):
         """
         ...
     
-    def load_profile_config(self, profile_name: str, task_type: Optional[str] = None) -> Dict[str, Any]:
+    @abstractmethod
+    def load_profile_config(self, profile_name: str, task_type: Optional[str] = None, 
+                           system_name: Optional[str] = None) -> Dict[str, Any]:
         """
         Load a profile configuration.
         
         Args:
             profile_name: Name of the profile to load.
             task_type: Type of task (application or benchmark).
-                     If None, will try to determine from the profile.
-                
+                     If None, will try to auto-detect, but this is not recommended.
+            system_name: Name of the system configuration to load.
+                       If None, will use 'default'.
+            
         Returns:
             The profile configuration.
             
@@ -81,7 +86,7 @@ class ConfigLoaderInterface(Protocol):
             FileNotFoundError: If the profile file doesn't exist.
             ValueError: If the profile file is invalid.
         """
-        ...
+        pass
 
 
 @runtime_checkable

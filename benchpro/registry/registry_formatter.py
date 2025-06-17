@@ -298,6 +298,46 @@ class RegistryFormatter:
                 
             details.append(tabulate(params, tablefmt="fancy_grid"))
             
+        # Add Module File information
+        details.append("")
+        details.append("# Module File Information")
+        
+        # Check if module file exists
+        workspace_dir = app.get("workspace_dir", "")
+        app_name = app.get("name", "")
+        app_version = app.get("version", "")
+        
+        if workspace_dir and app_name and app_version:
+            # Construct the expected module file path
+            module_file_path = os.path.join(
+                workspace_dir, 
+                "modulefiles", 
+                app_name, 
+                f"{app_version}.lua"
+            )
+            
+            if os.path.exists(module_file_path):
+                file_stats = os.stat(module_file_path)
+                file_size = file_stats.st_size / 1024  # KB
+                mod_time = datetime.fromtimestamp(file_stats.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+                
+                module_info = [
+                    ["Path", module_file_path],
+                    ["Exists", "Yes"],
+                    ["Size", f"{file_size:.2f} KB"],
+                    ["Modified", mod_time]
+                ]
+                
+                details.append(tabulate(module_info, tablefmt="fancy_grid"))
+                details.append("")
+                details.append("Module Usage Example:")
+                details.append(f"  module use {os.path.dirname(os.path.dirname(module_file_path))}")
+                details.append(f"  module load {app_name}/{app_version}")
+            else:
+                details.append(f"Module file not found at expected path: {module_file_path}")
+        else:
+            details.append("Unable to determine module file path (missing workspace, name, or version).")
+            
         # Add Binary Verification section (useful information, not just for tests)
         details.append("")
         details.append("# Binary Verification")

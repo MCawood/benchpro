@@ -78,10 +78,20 @@ class TestConfigValidator:
             "name": "test_bench",
             "version": "1.0",
             "run": {
-                "application": "test_app"
+                "executable": "test_app",  # Required field for benchmark schema
+                "arguments": "--test",
+                "input_files": [],
+                "output_files": [],
+                "threads": 1
+            },
+            "requirements": {
+                "application": "test_app",
+                "version": "1.0"
             },
             "workspace": {
-                "input_dir": "test_input"
+                "input_dir": "test_input",
+                "output_dir": "test_output",
+                "logs_dir": "logs"
             },
             "template": "test_bench.j2"
         }
@@ -92,7 +102,8 @@ class TestConfigValidator:
         # Check that the values are correctly set
         assert validated_config["name"] == "test_bench"
         assert validated_config["version"] == "1.0"
-        assert validated_config["run"]["application"] == "test_app"
+        assert validated_config["run"]["executable"] == "test_app"
+        assert validated_config["requirements"]["application"] == "test_app"
     
     def test_validate_invalid_config(self):
         """Test validating an invalid configuration."""
@@ -208,7 +219,7 @@ class TestConfigValidator:
         assert app_example["task_type"] == "application"
         
         bench_example = self.validator.get_example_config("benchmark")
-        assert bench_example["name"] == "hello_world_bench"
+        assert bench_example["name"] == "linpack"
         assert bench_example["task_type"] == "benchmark"
         
         # Invalid task type

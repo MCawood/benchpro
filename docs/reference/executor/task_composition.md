@@ -165,9 +165,9 @@ success, job_id = bench_task.submit_job(script_path)
 The execution type can be specified in the YAML configuration:
 
 ```yaml
-# Set execution type to slurm
+# Set execution type to sched
 execution:
-  type: slurm
+  type: sched
   
 # Job configuration (used for Slurm directives)
 job:

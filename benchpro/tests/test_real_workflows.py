@@ -66,7 +66,9 @@ def extract_job_id(output):
         r"PID: (\d+)",
         r"job[- ]id[: ]+(\d+)",
         r"with PID: (\d+)",
-        r"Local job started with PID: (\d+)"
+        r"Local job started with PID: (\d+)",
+        r"Script executing with job ID: (\d+)",
+        r"Job submitted successfully with ID: (\d+)"
     ]
     
     for pattern in job_id_patterns:
@@ -148,8 +150,10 @@ def test_build_run_capture_workflow():
     print(f"Standard output:\n{stdout}")
     print(f"Standard error:\n{stderr}")
     
-    assert "Job script generated" in stderr, "Build should generate a script"
-    assert "Local job started with PID" in stderr, "Build should start a process"
+    # Check for script generation message - using the actual log message from the code
+    assert "Script generated and saved to:" in stderr, "Build should generate a script"
+    # Check for job execution message - using the actual log message from the code
+    assert "Script executing with job ID:" in stderr, "Build should start a process"
     
     # Extract the job ID from stderr
     build_job_id = extract_job_id(stderr)
@@ -165,8 +169,10 @@ def test_build_run_capture_workflow():
     print(f"Standard output:\n{stdout}")
     print(f"Standard error:\n{stderr}")
     
-    assert "Job script generated" in stderr, "Benchmark should generate a script"
-    assert "Local job started with PID" in stderr, "Benchmark should start a process"
+    # Check for script generation message - using the actual log message from the code
+    assert "Script generated and saved to:" in stderr, "Benchmark should generate a script"
+    # Check for job execution message - using the actual log message from the code
+    assert "Script executing with job ID:" in stderr, "Benchmark should start a process"
     
     # Extract the job ID from stderr
     benchmark_job_id = extract_job_id(stderr)
@@ -176,9 +182,26 @@ def test_build_run_capture_workflow():
     print(f"Waiting for job {benchmark_job_id} to complete...")
     wait_for_job_completion(benchmark_job_id)
     
+    # Extract the workspace directory from the log output - should contain benchmark_hello_world_benchmark.sh
+    workspace_dir_match = re.search(r"Script generated and saved to: (.+)/benchmark_hello_world_benchmark\.sh", stderr)
+    workspace_dir = workspace_dir_match.group(1) if workspace_dir_match else None
+    
+    if not workspace_dir:
+        # Try another pattern for workspace creation
+        workspace_dir_match = re.search(r"Created workspace directory: (.+)", stderr)
+        workspace_dir = workspace_dir_match.group(1) if workspace_dir_match else None
+    
+    if not workspace_dir:
+        # Try extracting from any script path pattern
+        workspace_dir_match = re.search(r"Script generated and saved to: (.+)/[^/]+\.sh", stderr)
+        workspace_dir = workspace_dir_match.group(1) if workspace_dir_match else None
+    
+    assert workspace_dir, "Should be able to extract workspace directory from output"
+    print(f"Extracted workspace directory: {workspace_dir}")
+    
     # Capture results
-    print(f"\nRunning command: bp capture --job-id {benchmark_job_id} --workspace-dir logs --profile hello_world")
-    exit_code, stdout, stderr = run_command(["capture", "--job-id", benchmark_job_id, "--workspace-dir", "logs", "--profile", "hello_world"])
+    print(f"\nRunning command: bp capture --job-id {benchmark_job_id} --workspace-dir {workspace_dir} --profile hello_world")
+    exit_code, stdout, stderr = run_command(["capture", "--job-id", benchmark_job_id, "--workspace-dir", workspace_dir, "--profile", "hello_world"])
     print(f"Exit code: {exit_code}")
     print(f"Standard output:\n{stdout}")
     print(f"Standard error:\n{stderr}")

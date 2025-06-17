@@ -43,6 +43,62 @@ def get_profile_names(ctx, param, incomplete: str) -> List[str]:
     return sorted(list(set(profiles)))
 
 
+def get_build_profiles(ctx, param, incomplete: str) -> List[str]:
+    """
+    Get a list of available application (build) profile names for completion.
+    
+    Args:
+        ctx: Click context
+        param: Click parameter
+        incomplete: The incomplete command being typed
+        
+    Returns:
+        List of application profile names that match the incomplete string
+    """
+    # Get application profile directory
+    app_profile_dir = os.path.join(user_dir_manager.get_path("inputs_application"), "*.yaml")
+    
+    # Get all YAML files in the directory
+    app_profiles = glob.glob(app_profile_dir)
+    
+    # Extract the base names without extensions
+    profiles = []
+    for profile in app_profiles:
+        name = os.path.basename(profile).replace(".yaml", "")
+        if name.startswith(incomplete):
+            profiles.append(name)
+    
+    return sorted(profiles)
+
+
+def get_bench_profiles(ctx, param, incomplete: str) -> List[str]:
+    """
+    Get a list of available benchmark profile names for completion.
+    
+    Args:
+        ctx: Click context
+        param: Click parameter
+        incomplete: The incomplete command being typed
+        
+    Returns:
+        List of benchmark profile names that match the incomplete string
+    """
+    # Get benchmark profile directory
+    bench_profile_dir = os.path.join(user_dir_manager.get_path("inputs_benchmark"), "*.yaml")
+    
+    # Get all YAML files in the directory
+    bench_profiles = glob.glob(bench_profile_dir)
+    
+    # Extract the base names without extensions
+    profiles = []
+    for profile in bench_profiles:
+        name = os.path.basename(profile).replace(".yaml", "")
+        if name.startswith(incomplete):
+            profiles.append(name)
+    
+    return sorted(profiles)
+
+
 def get_system_names(ctx, param, incomplete: str) -> List[str]:
     """
     Get a list of available system names for completion.

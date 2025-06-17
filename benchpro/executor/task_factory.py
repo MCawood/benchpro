@@ -1,175 +1,122 @@
-"""
-Task Factory for BenchPRO using the composition-based architecture.
-
-This module provides a factory for creating tasks with appropriate components.
-"""
-
-import os
-from typing import Dict, Any, Optional, List, Type
-
+from typing import Dict, Any
 from benchpro.config.config_manager import ConfigManager
-from benchpro.templates.template_engine import TemplateEngine
-from benchpro.workspace.workspace_manager import WorkspaceManager
 from benchpro.registry.registry_manager import RegistryManager
-from benchpro.utils.user_dir import get_user_dir_manager
-
-from benchpro.executor.components.configuration import (
-    ApplicationConfigComponent, BenchmarkConfigComponent
+from benchpro.executor.components.interfaces import (
+    ConfigComponent, ValidationComponent, ExecutionComponent
 )
+from benchpro.executor.components.configuration import BaseConfigComponent
 from benchpro.executor.components.validation import (
     ApplicationValidationComponent, BenchmarkValidationComponent
-)
-from benchpro.executor.components.script_generation import (
-    LocalScriptGenerator, SlurmScriptGenerator
 )
 from benchpro.executor.components.execution import (
     LocalExecutionComponent, SlurmExecutionComponent
 )
+from benchpro.templates.script_generators import (
+    LocalScriptGenerator, SlurmScriptGenerator, ScriptGenerationComponent
+)
 from benchpro.executor.task import Task, Application, Benchmark
-
 from benchpro.utils.logger import get_logger
 
+logger = get_logger(__name__)
 
 class TaskFactory:
     """
-    Factory for creating task instances using the composition-based architecture.
-    
-    This factory creates tasks with appropriate components based on the task type
-    and execution type.
+    Factory for creating task instances with appropriate components.
+    This factory uses dependency injection to assemble tasks.
     """
-    
-    def __init__(self):
-        """Initialize the TaskFactory."""
+
+    def __init__(self, config_manager: ConfigManager, registry_manager: RegistryManager):
+        """
+        Initialize the TaskFactory.
+        Args:
+            config_manager: The configuration manager instance.
+            registry_manager: The registry manager instance.
+        """
         self.logger = get_logger(__name__)
-        self.logger.debug("Initializing TaskFactory")
-        
-    def create_task(self, task_type: str, execution_type: Optional[str] = None, 
-                   config: Optional[Dict[str, Any]] = None) -> Task:
+        self.logger.info("Initializing TaskFactory with injected dependencies.")
+        self.config_manager = config_manager
+        self.registry_manager = registry_manager
+
+    def create_task(self, config: Dict[str, Any]) -> Task:
         """
-        Create a task instance with appropriate components.
-        
+        Create a Task instance based on the provided configuration.
         Args:
-            task_type: Type of task to create ("application" or "benchmark").
-            execution_type: Type of execution to use ("local" or "slurm").
-                           If None, defaults to "local".
-            config: Optional configuration dictionary to use for component creation.
-                   
+            config: The merged configuration for the task.
         Returns:
-            A Task instance of the appropriate type with configured components.
-            
-        Raises:
-            ValueError: If an invalid task_type or execution_type is provided.
+            A fully-formed Task instance.
         """
-        self.logger.debug(f"Creating task of type: {task_type} with execution type: {execution_type or 'default'}")
+        task_type = config.get("task_type")
+        if not task_type:
+            raise ValueError("Configuration must include a 'task_type'.")
+
+        # Use execution.type as the canonical source for execution type
+        # Fall back to "local" if not specified
+        execution_type = config.get("execution", {}).get("type", "local")
         
-        # Default to local execution if not specified
-        if not execution_type:
-            execution_type = "local"
-            
-        # Validate task type
-        if task_type not in ["application", "benchmark"]:
-            raise ValueError(f"Invalid task type: {task_type}. Must be 'application' or 'benchmark'.")
-            
-        # Validate execution type
-        if execution_type not in ["local", "slurm"]:
-            raise ValueError(f"Invalid execution type: {execution_type}. Must be 'local' or 'slurm'.")
-        
-        # Create components based on task type and execution type
-        config_component = self._create_config_component(task_type, config)
+        self.logger.info(f"Creating '{task_type}' task with execution type: '{execution_type}'")
+
+        # Create components, using the injected managers
+        config_component = self._create_config_component(config)
         validation_component = self._create_validation_component(task_type)
-        script_gen_component = self._create_script_generation_component(execution_type)
+        script_generation_component = self._create_script_generation_component(execution_type)
         execution_component = self._create_execution_component(execution_type)
-        
-        # Create and return the task instance
-        if task_type == "application":
-            return Application(
-                config_component=config_component,
-                validation_component=validation_component,
-                script_generation_component=script_gen_component,
-                execution_component=execution_component
-            )
-        else:  # task_type == "benchmark"
-            return Benchmark(
-                config_component=config_component,
-                validation_component=validation_component,
-                script_generation_component=script_gen_component,
-                execution_component=execution_component
-            )
-    
-    def _create_config_component(self, task_type: str, config: Optional[Dict[str, Any]] = None):
-        """
-        Create the appropriate config component based on task type.
-        
-        Args:
-            task_type: Type of task ("application" or "benchmark").
-            config: Optional configuration dictionary with additional options.
-            
-        Returns:
-            A config component instance appropriate for the task type.
-            
-        Raises:
-            ValueError: If an unknown task type is provided.
-        """
+
+        # Assemble the task with its components
         if task_type.lower() == "application":
-            # Log that we're creating an application config component
-            self.logger.debug(f"Creating ApplicationConfigComponent with task_type={task_type.lower()}")
-            
-            # Create the component with workspace details from config if available
-            component = ApplicationConfigComponent(
-                config_manager=ConfigManager(user_dir_manager=get_user_dir_manager()),
-                user_dir_manager=get_user_dir_manager(),
-                task_type=task_type.lower()  # Pass task_type explicitly
+            task = Application(
+                config_component=config_component,
+                validation_component=validation_component,
+                script_generation_component=script_generation_component,
+                execution_component=execution_component
             )
-            
-            # If config is provided and has workspace details, set it directly
-            if config and 'workspace' in config:
-                self.logger.debug(f"Setting workspace configuration from provided config")
-                component.set_config(config)
-                
-            return component
         elif task_type.lower() == "benchmark":
-            # Log that we're creating a benchmark config component
-            self.logger.debug(f"Creating BenchmarkConfigComponent with task_type={task_type.lower()}")
-            
-            # Create the component with workspace details from config if available
-            component = BenchmarkConfigComponent(
-                config_manager=ConfigManager(user_dir_manager=get_user_dir_manager()),
-                user_dir_manager=get_user_dir_manager(),
-                task_type=task_type.lower()  # Pass task_type explicitly
+            task = Benchmark(
+                config_component=config_component,
+                validation_component=validation_component,
+                script_generation_component=script_generation_component,
+                execution_component=execution_component
             )
-            
-            # If config is provided and has workspace details, set it directly
-            if config and 'workspace' in config:
-                self.logger.debug(f"Setting workspace configuration from provided config")
-                component.set_config(config)
-                
-            return component
         else:
-            raise ValueError(f"Unknown task type for config component: {task_type}")
-    
-    def _create_validation_component(self, task_type: str):
-        """Create the appropriate validation component based on task type."""
+            raise ValueError(f"Unsupported task type: {task_type}")
+
+        self.logger.info(f"'{task_type}' task created successfully.")
+        return task
+
+    def _create_config_component(self, config: Dict[str, Any]) -> ConfigComponent:
+        """Creates a ConfigComponent that uses the injected ConfigManager."""
+        # Use the BaseConfigComponent which accepts config_manager parameter
+        component = BaseConfigComponent(config_manager=self.config_manager)
+        component.set_config(config)
+        return component
+
+    def _create_validation_component(self, task_type: str) -> ValidationComponent:
+        """Create a ValidationComponent for the specified task type."""
         if task_type.lower() == "application":
             return ApplicationValidationComponent()
         elif task_type.lower() == "benchmark":
             return BenchmarkValidationComponent()
-        else:
-            raise ValueError(f"Unknown task type for validation component: {task_type}")
-    
-    def _create_script_generation_component(self, execution_type: str):
-        """Create the appropriate script generation component based on execution type."""
+        raise ValueError(f"No validation component for task type: {task_type}")
+
+    def _create_script_generation_component(self, execution_type: str) -> ScriptGenerationComponent:
+        """Create a ScriptGenerationComponent for the specified execution type."""
         if execution_type.lower() == "local":
-            return LocalScriptGenerator(template_engine=TemplateEngine(user_dir_manager=get_user_dir_manager()))
-        elif execution_type.lower() == "slurm":
-            return SlurmScriptGenerator(template_engine=TemplateEngine(user_dir_manager=get_user_dir_manager()))
+            script_generation_component = LocalScriptGenerator()
+        elif execution_type.lower() == "sched":
+            script_generation_component = SlurmScriptGenerator()
         else:
-            raise ValueError(f"Unknown execution type for script generation component: {execution_type}")
-    
-    def _create_execution_component(self, execution_type: str):
-        """Create the appropriate execution component based on execution type."""
+            logger.warning(f"Unknown execution type '{execution_type}', defaulting to local")
+            script_generation_component = LocalScriptGenerator()
+        
+        return script_generation_component
+
+    def _create_execution_component(self, execution_type: str) -> ExecutionComponent:
+        """Create an ExecutionComponent for the specified execution context."""
         if execution_type.lower() == "local":
-            return LocalExecutionComponent()
-        elif execution_type.lower() == "slurm":
-            return SlurmExecutionComponent()
+            execution_component = LocalExecutionComponent()
+        elif execution_type.lower() == "sched":
+            execution_component = SlurmExecutionComponent()
         else:
-            raise ValueError(f"Unknown execution type for execution component: {execution_type}") 
+            logger.warning(f"Unknown execution type '{execution_type}', defaulting to local")
+            execution_component = LocalExecutionComponent()
+        
+        return execution_component

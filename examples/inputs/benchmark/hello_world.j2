@@ -6,7 +6,14 @@ echo "Job Name: {{ job.name }}"
 echo "Start Time: $(date)"
 
 # Load any required modules
-{% if environment.modules %}
+{% if environment and environment.module_paths %}
+echo "Adding module paths..."
+{% for module_path in environment.module_paths %}
+module use {{ module_path }}
+{% endfor %}
+{% endif %}
+
+{% if environment and environment.modules %}
 echo "Loading modules..."
 {% for module in environment.modules %}
 module load {{ module }}
@@ -14,7 +21,7 @@ module load {{ module }}
 {% endif %}
 
 # Set any environment variables
-{% if environment.variables %}
+{% if environment and environment.variables %}
 echo "Setting environment variables..."
 {% for key, value in environment.variables.items() %}
 export {{ key }}="{{ value }}"
@@ -25,11 +32,11 @@ export {{ key }}="{{ value }}"
 mkdir -p {{ workspace.output_dir }}
 
 # Run the application
-echo "Running application: {{ run.application }}"
+echo "Running executable: {{ run.executable }}"
 
 # Run with timing
 echo "Starting benchmark run..."
-time {{ run.application }} {{ run.arguments }}
+time {{ run.executable }} {{ run.arguments }}
 
 # Copy results to results directory
 echo "Benchmark completed. Saving results..."

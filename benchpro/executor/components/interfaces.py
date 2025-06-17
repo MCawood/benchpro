@@ -1,20 +1,34 @@
 """
-Component interfaces for BenchPRO Task composition.
+Component interfaces for the BenchPRO execution system.
 
-This module defines the abstract interfaces for components used in the
-composition-based task architecture.
+This module defines the interfaces for components used in the BenchPRO execution system.
+Components are used to compose Task objects with different functionalities.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Tuple, List, Optional
+
+
+class ConfigError(Exception):
+    """Exception raised for configuration errors."""
+    pass
+
+
+class ValidationError(Exception):
+    """Exception raised for validation errors."""
+    pass
+
+
+class ExecutionError(Exception):
+    """Exception raised for execution errors."""
+    pass
 
 
 class ConfigComponent(ABC):
     """
-    Interface for components that handle task configuration.
+    Interface for configuration components.
     
-    ConfigComponent implementations are responsible for loading, validating, and
-    providing access to task configuration.
+    Configuration components are responsible for loading, merging, and managing configuration data.
     """
     
     @abstractmethod
@@ -26,10 +40,26 @@ class ConfigComponent(ABC):
             config_path: Path to the configuration file.
             
         Returns:
-            Loaded configuration as a dictionary.
+            The loaded configuration as a dictionary.
             
         Raises:
-            ConfigError: If the configuration cannot be loaded or is invalid.
+            ConfigError: If the configuration cannot be loaded.
+        """
+        pass
+    
+    @abstractmethod
+    def merge_config(self, overrides: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Merge configuration overrides with the current configuration.
+        
+        Args:
+            overrides: Dictionary of configuration overrides.
+            
+        Returns:
+            The merged configuration.
+            
+        Raises:
+            ConfigError: If the configuration cannot be merged.
         """
         pass
     
@@ -39,120 +69,138 @@ class ConfigComponent(ABC):
         Get the current configuration.
         
         Returns:
-            Current configuration as a dictionary.
+            The current configuration.
+            
+        Raises:
+            ConfigError: If the configuration is not available.
         """
         pass
     
     @abstractmethod
-    def merge_config(self, override_config: Dict[str, Any]) -> Dict[str, Any]:
+    def get_environment_section(self) -> Optional[Dict[str, Any]]:
         """
-        Merge override configuration with the current configuration.
+        Get the environment section from the configuration.
+        
+        This method provides direct access to the environment section,
+        which contains module dependencies and environment variables.
+        
+        Returns:
+            The environment section as a dictionary, or None if not present.
+        """
+        pass
+    
+    @abstractmethod
+    def get_module_dependencies(self) -> Optional[List[Dict[str, str]]]:
+        """
+        Get the module dependencies from the configuration.
+        
+        This method provides direct access to the module dependencies 
+        specified in the environment section.
+        
+        Returns:
+            List of module dictionaries, or None if not present.
+            Each module dictionary typically contains 'name' and 'version' keys.
+        """
+        pass
+    
+    @abstractmethod
+    def validate_required_sections(self, required_sections: List[str], 
+                                 optional_sections: Optional[List[str]] = None) -> bool:
+        """
+        Validate that the configuration contains all required sections.
         
         Args:
-            override_config: Configuration to merge with the current configuration.
+            required_sections: List of required section names.
+            optional_sections: Optional list of optional section names.
             
         Returns:
-            Merged configuration as a dictionary.
+            True if all required sections are present.
+            
+        Raises:
+            ConfigError: If any required section is missing.
+        """
+        pass
+    
+    @abstractmethod
+    def get_section(self, section_name: str, default: Any = None) -> Any:
+        """
+        Get a specific section from the configuration.
+        
+        This is a generic method to access any top-level section by name.
+        
+        Args:
+            section_name: Name of the section to retrieve.
+            default: Default value to return if the section is not found.
+            
+        Returns:
+            The requested section, or the default value if not found.
         """
         pass
 
 
 class ValidationComponent(ABC):
     """
-    Interface for components that validate task configuration.
+    Interface for validation components.
     
-    ValidationComponent implementations are responsible for ensuring that
-    the task configuration meets the requirements for execution.
+    Validation components are responsible for validating configuration data.
     """
     
     @abstractmethod
-    def validate(self, config: Dict[str, Any]) -> Tuple[bool, Optional[List[str]]]:
+    def validate(self, config: Dict[str, Any]) -> Tuple[bool, List[str]]:
         """
-        Validate a configuration.
+        Validate the configuration.
         
         Args:
-            config: Configuration to validate.
+            config: The configuration to validate.
             
         Returns:
             A tuple containing:
                 - True if the configuration is valid, False otherwise.
-                - List of validation error messages (if any).
+                - A list of validation error messages (empty if no errors).
+                
+        Raises:
+            ValidationError: If validation fails.
         """
         pass
-    
+        
     @abstractmethod
     def get_required_fields(self) -> List[str]:
         """
-        Get the list of required fields for this task type.
+        Get the list of required fields for configuration validation.
         
         Returns:
-            List of required field names.
+            A list of required field names.
         """
         pass
 
 
-class ScriptGenerationComponent(ABC):
-    """
-    Interface for components that generate execution scripts.
-    
-    ScriptGenerationComponent implementations are responsible for generating
-    scripts from templates, with variables populated from the task configuration.
-    """
-    
-    @abstractmethod
-    def generate_script(self, template_path: str, variables: Dict[str, Any]) -> str:
-        """
-        Generate a script from a template.
-        
-        Args:
-            template_path: Path to the template file.
-            variables: Variables to use when rendering the template.
-            
-        Returns:
-            Generated script content as a string.
-            
-        Raises:
-            TemplateError: If the template cannot be loaded or rendered.
-        """
-        pass
-    
-    @abstractmethod
-    def prepare_variables(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Prepare variables for template rendering.
-        
-        Args:
-            config: Task configuration.
-            
-        Returns:
-            Dictionary of variables for template rendering.
-        """
-        pass
+# NOTE: The ScriptGenerationComponent has been moved to benchpro.templates.script_generators
+# to avoid circular dependencies
 
 
 class ExecutionComponent(ABC):
     """
-    Interface for components that execute scripts.
+    Interface for execution components.
     
-    ExecutionComponent implementations are responsible for executing scripts,
-    monitoring their execution, and retrieving results.
+    Execution components are responsible for executing scripts and managing job status.
     """
     
     @abstractmethod
-    def execute(self, script_path: str) -> Tuple[bool, Optional[str]]:
+    def execute(self, script_path: str, workspace: Optional[Dict[str, str]] = None) -> Tuple[bool, Optional[str]]:
         """
         Execute a script.
         
         Args:
             script_path: Path to the script to execute.
+            workspace: Optional workspace dictionary with paths for logs and other directories.
             
         Returns:
             A tuple containing:
-                - True if the script was successfully submitted, False otherwise.
-                - Job ID or process ID (if submitted, None otherwise).
+                - True if the script was executed successfully, False otherwise.
+                - Job ID (if submitted, None otherwise).
                 
         Raises:
-            ExecutionError: If the script cannot be executed.
+            ExecutionError: If the script execution fails.
         """
         pass
     
@@ -162,13 +210,13 @@ class ExecutionComponent(ABC):
         Get the status of a job.
         
         Args:
-            job_id: ID of the job to check.
+            job_id: The ID of the job to check.
             
         Returns:
-            Status of the job as a string (e.g., "RUNNING", "COMPLETED", "FAILED").
+            The status of the job.
             
         Raises:
-            StatusCheckError: If the status cannot be retrieved.
+            ExecutionError: If the status check fails.
         """
         pass
     
@@ -178,49 +226,12 @@ class ExecutionComponent(ABC):
         Cancel a job.
         
         Args:
-            job_id: ID of the job to cancel.
+            job_id: The ID of the job to cancel.
             
         Returns:
-            True if the job was successfully cancelled, False otherwise.
+            True if the job was cancelled successfully, False otherwise.
             
         Raises:
-            CancellationError: If the job cannot be cancelled.
+            ExecutionError: If the job cancellation fails.
         """
-        pass
-
-
-# Common exceptions for components
-
-class ComponentError(Exception):
-    """Base class for all component-related exceptions."""
-    pass
-
-
-class ConfigError(ComponentError):
-    """Exception raised when a configuration error occurs."""
-    pass
-
-
-class ValidationError(ComponentError):
-    """Exception raised when a validation error occurs."""
-    pass
-
-
-class TemplateError(ComponentError):
-    """Exception raised when a template error occurs."""
-    pass
-
-
-class ExecutionError(ComponentError):
-    """Exception raised when an execution error occurs."""
-    pass
-
-
-class StatusCheckError(ComponentError):
-    """Exception raised when a status check error occurs."""
-    pass
-
-
-class CancellationError(ComponentError):
-    """Exception raised when a job cancellation error occurs."""
-    pass 
+        pass 

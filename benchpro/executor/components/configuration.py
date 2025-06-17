@@ -106,6 +106,120 @@ class BaseConfigComponent(ConfigComponent):
         except Exception as e:
             self.logger.error(f"Failed to merge configuration: {str(e)}")
             raise ConfigError(f"Failed to merge configuration: {str(e)}")
+            
+    def get_environment_section(self) -> Optional[Dict[str, Any]]:
+        """
+        Get the environment section from the configuration.
+        
+        This method provides direct access to the environment section,
+        which contains module dependencies and environment variables.
+        
+        Returns:
+            The environment section as a dictionary, or None if not present.
+        """
+        self.logger.debug("Retrieving environment section from configuration")
+        
+        if not self.config:
+            self.logger.warning("No configuration loaded, cannot retrieve environment section")
+            return None
+            
+        env_section = self.config.get("environment")
+        
+        if env_section is None:
+            self.logger.debug("No environment section found in configuration")
+        else:
+            self.logger.debug(f"Found environment section with {len(env_section)} entries")
+            
+        return env_section
+    
+    def get_module_dependencies(self) -> Optional[List[Dict[str, str]]]:
+        """
+        Get the module dependencies from the configuration.
+        
+        This method provides direct access to the module dependencies 
+        specified in the environment section.
+        
+        Returns:
+            List of module dictionaries, or None if not present.
+            Each module dictionary typically contains 'name' and 'version' keys.
+        """
+        self.logger.debug("Retrieving module dependencies from configuration")
+        
+        env_section = self.get_environment_section()
+        
+        if not env_section:
+            return None
+            
+        modules = env_section.get("modules")
+        
+        if modules is None:
+            self.logger.debug("No modules found in environment section")
+        else:
+            self.logger.debug(f"Found {len(modules)} module dependencies")
+            
+        return modules
+    
+    def get_section(self, section_name: str, default: Any = None) -> Any:
+        """
+        Get a specific section from the configuration.
+        
+        This is a generic method to access any top-level section by name.
+        
+        Args:
+            section_name: Name of the section to retrieve.
+            default: Default value to return if the section is not found.
+            
+        Returns:
+            The requested section, or the default value if not found.
+        """
+        self.logger.debug(f"Retrieving section '{section_name}' from configuration")
+        
+        if not self.config:
+            self.logger.warning(f"No configuration loaded, cannot retrieve section '{section_name}'")
+            return default
+            
+        section = self.config.get(section_name, default)
+        
+        if section is default:
+            self.logger.debug(f"Section '{section_name}' not found in configuration")
+        
+        return section
+    
+    def validate_required_sections(self, required_sections: List[str], 
+                                 optional_sections: Optional[List[str]] = None) -> bool:
+        """
+        Validate that the configuration contains all required sections.
+        
+        Args:
+            required_sections: List of required section names.
+            optional_sections: Optional list of optional section names.
+            
+        Returns:
+            True if all required sections are present.
+            
+        Raises:
+            ConfigError: If any required section is missing.
+        """
+        self.logger.debug(f"Validating required sections: {required_sections}")
+        
+        if not self.config:
+            raise ConfigError("No configuration loaded, cannot validate sections")
+            
+        missing_sections = [section for section in required_sections if section not in self.config]
+        
+        if missing_sections:
+            error_msg = f"Missing required configuration sections: {', '.join(missing_sections)}"
+            self.logger.error(error_msg)
+            raise ConfigError(error_msg)
+            
+        # Check for optional sections and log warnings for missing ones
+        if optional_sections:
+            missing_optional = [section for section in optional_sections if section not in self.config]
+            if missing_optional:
+                self.logger.warning(f"Missing optional configuration sections: {', '.join(missing_optional)}")
+                
+        self.logger.debug("All required sections are present")
+        return True
 
 
 class ApplicationConfigComponent(BaseConfigComponent):
@@ -171,6 +285,120 @@ class ApplicationConfigComponent(BaseConfigComponent):
             build_config["threads"] = 1
         
         return config
+        
+    def get_environment_section(self) -> Optional[Dict[str, Any]]:
+        """
+        Get the environment section from the configuration.
+        
+        This method provides direct access to the environment section,
+        which contains module dependencies and environment variables.
+        
+        Returns:
+            The environment section as a dictionary, or None if not present.
+        """
+        self.logger.debug("Retrieving environment section from application configuration")
+        
+        if not self.config:
+            self.logger.warning("No configuration loaded, cannot retrieve environment section")
+            return None
+            
+        env_section = self.config.get("environment")
+        
+        if env_section is None:
+            self.logger.debug("No environment section found in configuration")
+        else:
+            self.logger.debug(f"Found environment section with {len(env_section)} entries")
+            
+        return env_section
+    
+    def get_module_dependencies(self) -> Optional[List[Dict[str, str]]]:
+        """
+        Get the module dependencies from the configuration.
+        
+        This method provides direct access to the module dependencies 
+        specified in the environment section.
+        
+        Returns:
+            List of module dictionaries, or None if not present.
+            Each module dictionary typically contains 'name' and 'version' keys.
+        """
+        self.logger.debug("Retrieving module dependencies from application configuration")
+        
+        env_section = self.get_environment_section()
+        
+        if not env_section:
+            return None
+            
+        modules = env_section.get("modules")
+        
+        if modules is None:
+            self.logger.debug("No modules found in environment section")
+        else:
+            self.logger.debug(f"Found {len(modules)} module dependencies")
+            
+        return modules
+    
+    def get_section(self, section_name: str, default: Any = None) -> Any:
+        """
+        Get a specific section from the configuration.
+        
+        This is a generic method to access any top-level section by name.
+        
+        Args:
+            section_name: Name of the section to retrieve.
+            default: Default value to return if the section is not found.
+            
+        Returns:
+            The requested section, or the default value if not found.
+        """
+        self.logger.debug(f"Retrieving section '{section_name}' from application configuration")
+        
+        if not self.config:
+            self.logger.warning(f"No configuration loaded, cannot retrieve section '{section_name}'")
+            return default
+            
+        section = self.config.get(section_name, default)
+        
+        if section is default:
+            self.logger.debug(f"Section '{section_name}' not found in configuration")
+        
+        return section
+    
+    def validate_required_sections(self, required_sections: List[str], 
+                                 optional_sections: Optional[List[str]] = None) -> bool:
+        """
+        Validate that the configuration contains all required sections.
+        
+        Args:
+            required_sections: List of required section names.
+            optional_sections: Optional list of optional section names.
+            
+        Returns:
+            True if all required sections are present.
+            
+        Raises:
+            ConfigError: If any required section is missing.
+        """
+        self.logger.debug(f"Validating required sections in application configuration: {required_sections}")
+        
+        if not self.config:
+            raise ConfigError("No configuration loaded, cannot validate sections")
+            
+        missing_sections = [section for section in required_sections if section not in self.config]
+        
+        if missing_sections:
+            error_msg = f"Missing required configuration sections: {', '.join(missing_sections)}"
+            self.logger.error(error_msg)
+            raise ConfigError(error_msg)
+            
+        # Check for optional sections and log warnings for missing ones
+        if optional_sections:
+            missing_optional = [section for section in optional_sections if section not in self.config]
+            if missing_optional:
+                self.logger.warning(f"Missing optional configuration sections: {', '.join(missing_optional)}")
+                
+        self.logger.debug("All required sections are present in application configuration")
+        return True
 
 
 class BenchmarkConfigComponent(BaseConfigComponent):
@@ -235,4 +463,118 @@ class BenchmarkConfigComponent(BaseConfigComponent):
         if "threads" not in run_config:
             run_config["threads"] = 1
         
-        return config 
+        return config
+        
+    def get_environment_section(self) -> Optional[Dict[str, Any]]:
+        """
+        Get the environment section from the configuration.
+        
+        This method provides direct access to the environment section,
+        which contains module dependencies and environment variables.
+        
+        Returns:
+            The environment section as a dictionary, or None if not present.
+        """
+        self.logger.debug("Retrieving environment section from benchmark configuration")
+        
+        if not self.config:
+            self.logger.warning("No configuration loaded, cannot retrieve environment section")
+            return None
+            
+        env_section = self.config.get("environment")
+        
+        if env_section is None:
+            self.logger.debug("No environment section found in configuration")
+        else:
+            self.logger.debug(f"Found environment section with {len(env_section)} entries")
+            
+        return env_section
+    
+    def get_module_dependencies(self) -> Optional[List[Dict[str, str]]]:
+        """
+        Get the module dependencies from the configuration.
+        
+        This method provides direct access to the module dependencies 
+        specified in the environment section.
+        
+        Returns:
+            List of module dictionaries, or None if not present.
+            Each module dictionary typically contains 'name' and 'version' keys.
+        """
+        self.logger.debug("Retrieving module dependencies from benchmark configuration")
+        
+        env_section = self.get_environment_section()
+        
+        if not env_section:
+            return None
+            
+        modules = env_section.get("modules")
+        
+        if modules is None:
+            self.logger.debug("No modules found in environment section")
+        else:
+            self.logger.debug(f"Found {len(modules)} module dependencies")
+            
+        return modules
+    
+    def get_section(self, section_name: str, default: Any = None) -> Any:
+        """
+        Get a specific section from the configuration.
+        
+        This is a generic method to access any top-level section by name.
+        
+        Args:
+            section_name: Name of the section to retrieve.
+            default: Default value to return if the section is not found.
+            
+        Returns:
+            The requested section, or the default value if not found.
+        """
+        self.logger.debug(f"Retrieving section '{section_name}' from benchmark configuration")
+        
+        if not self.config:
+            self.logger.warning(f"No configuration loaded, cannot retrieve section '{section_name}'")
+            return default
+            
+        section = self.config.get(section_name, default)
+        
+        if section is default:
+            self.logger.debug(f"Section '{section_name}' not found in configuration")
+        
+        return section
+    
+    def validate_required_sections(self, required_sections: List[str], 
+                                 optional_sections: Optional[List[str]] = None) -> bool:
+        """
+        Validate that the configuration contains all required sections.
+        
+        Args:
+            required_sections: List of required section names.
+            optional_sections: Optional list of optional section names.
+            
+        Returns:
+            True if all required sections are present.
+            
+        Raises:
+            ConfigError: If any required section is missing.
+        """
+        self.logger.debug(f"Validating required sections in benchmark configuration: {required_sections}")
+        
+        if not self.config:
+            raise ConfigError("No configuration loaded, cannot validate sections")
+            
+        missing_sections = [section for section in required_sections if section not in self.config]
+        
+        if missing_sections:
+            error_msg = f"Missing required configuration sections: {', '.join(missing_sections)}"
+            self.logger.error(error_msg)
+            raise ConfigError(error_msg)
+            
+        # Check for optional sections and log warnings for missing ones
+        if optional_sections:
+            missing_optional = [section for section in optional_sections if section not in self.config]
+            if missing_optional:
+                self.logger.warning(f"Missing optional configuration sections: {', '.join(missing_optional)}")
+                
+        self.logger.debug("All required sections are present in benchmark configuration")
+        return True 

@@ -59,12 +59,67 @@ class ConfigComponent(ABC):
             Merged configuration as a dictionary.
         """
         pass
+        
+    @abstractmethod
+    def get_environment_section(self) -> Optional[Dict[str, Any]]:
+        """
+        Get the environment section from the configuration.
+        
+        Returns:
+            The environment section as a dictionary, or None if not present.
+        """
+        pass
+    
+    @abstractmethod
+    def get_module_dependencies(self) -> Optional[List[Dict[str, str]]]:
+        """
+        Get the module dependencies from the configuration.
+        
+        Returns:
+            List of module dictionaries, or None if not present.
+        """
+        pass
+    
+    @abstractmethod
+    def validate_required_sections(self, required_sections: List[str], 
+                                 optional_sections: Optional[List[str]] = None) -> bool:
+        """
+        Validate that the configuration contains all required sections.
+        
+        Args:
+            required_sections: List of required section names.
+            optional_sections: Optional list of optional section names.
+            
+        Returns:
+            True if all required sections are present.
+            
+        Raises:
+            ConfigError: If any required section is missing.
+        """
+        pass
+    
+    @abstractmethod
+    def get_section(self, section_name: str, default: Any = None) -> Any:
+        """
+        Get a specific section from the configuration.
+        
+        Args:
+            section_name: Name of the section to retrieve.
+            default: Default value to return if the section is not found.
+            
+        Returns:
+            The requested section, or the default value if not found.
+        """
+        pass
 ```
 
 Key responsibilities:
 - Loading configuration from YAML files
 - Providing access to configuration values
 - Merging override configurations
+- Accessing environment and module configuration
+- Validating required configuration sections
+- Retrieving specific configuration sections
 
 ### ValidationComponent
 

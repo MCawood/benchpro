@@ -18,7 +18,7 @@ from benchpro.cli.apps import get_app_command
 from benchpro.registry.registry_manager import RegistryManager
 from benchpro.registry.registry_formatter import RegistryFormatter
 from benchpro.utils.logger import get_log_file
-from benchpro.cli.completion import get_app_ids, get_profile_names, get_system_names, get_binary_paths
+from benchpro.cli.completion import get_app_ids, get_profile_names, get_system_names, get_binary_paths, get_build_profiles, get_bench_profiles
 from benchpro.config.config_manager import ConfigManager
 from benchpro.executor.task_orchestrator import TaskOrchestrator
 from benchpro.results.result_capture import ResultCapture
@@ -61,7 +61,7 @@ cli.add_command(get_app_command)
 
 # Build command
 @cli.command()
-@click.argument("profile", shell_complete=get_profile_names)
+@click.argument("profile", shell_complete=get_build_profiles)
 @click.option(
     "--output-dir", 
     help="Directory where build outputs will be stored."
@@ -83,7 +83,7 @@ cli.add_command(get_app_command)
 )
 @click.option(
     "--execution-type",
-    type=click.Choice(["local", "slurm"]),
+    type=click.Choice(["local", "sched"]),
     help="Execution type to use for running the build. If not specified, uses executor or the default from configuration."
 )
 @click.option(
@@ -121,8 +121,8 @@ def build(profile: str, output_dir: Optional[str] = None,
     if execution_type:
         cli_overrides["execution"]["type"] = execution_type
     elif executor:
-        # Map legacy executor types to execution types
-        cli_overrides["execution"]["type"] = "slurm" if executor == "scheduler" else executor
+        # Set execution type based on executor parameter
+        cli_overrides["execution"]["type"] = "sched" if executor == "scheduler" else executor
         
     if force:
         cli_overrides["force"] = True
@@ -152,7 +152,7 @@ def build(profile: str, output_dir: Optional[str] = None,
 
 # Benchmark command
 @cli.command()
-@click.argument("profile", shell_complete=get_profile_names)
+@click.argument("profile", shell_complete=get_bench_profiles)
 @click.option(
     "--output-dir", 
     help="Directory where benchmark outputs will be stored."
@@ -174,7 +174,7 @@ def build(profile: str, output_dir: Optional[str] = None,
 )
 @click.option(
     "--execution-type",
-    type=click.Choice(["local", "slurm"]),
+    type=click.Choice(["local", "sched"]),
     help="Execution type to use for running the benchmark. If not specified, uses executor or the default from configuration."
 )
 @click.option(
@@ -207,8 +207,8 @@ def bench(profile: str, output_dir: Optional[str] = None,
     if execution_type:
         cli_overrides["execution"]["type"] = execution_type
     elif executor:
-        # Map legacy executor types to execution types
-        cli_overrides["execution"]["type"] = "slurm" if executor == "scheduler" else executor
+        # Set execution type based on executor parameter
+        cli_overrides["execution"]["type"] = "sched" if executor == "scheduler" else executor
         
     if version:
         cli_overrides["version"] = version
@@ -247,7 +247,7 @@ def bench(profile: str, output_dir: Optional[str] = None,
 )
 @click.option(
     "--execution-type",
-    type=click.Choice(["local", "slurm"]),
+    type=click.Choice(["local", "sched"]),
     help="Execution type used to run the job. If not specified, uses executor or the default from configuration."
 )
 @click.option(
@@ -266,7 +266,7 @@ def status(job_id: str, executor: Optional[str] = None, execution_type: Optional
         default_config = config_manager.load_default_config()
         
         if not execution_type and executor:
-            execution_type = "slurm" if executor == "scheduler" else executor
+            execution_type = "sched" if executor == "scheduler" else executor
             
         if not execution_type:
             # Get default from config
@@ -274,7 +274,7 @@ def status(job_id: str, executor: Optional[str] = None, execution_type: Optional
             execution_type = default_execution
             
         # Create the appropriate execution component
-        if execution_type == "slurm":
+        if execution_type == "sched":
             execution_component = SlurmExecutionComponent()
         else:
             execution_component = LocalExecutionComponent()

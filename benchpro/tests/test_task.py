@@ -13,7 +13,20 @@ from typing import Dict, Any
 
 from benchpro.executor.task import Task, Application, Benchmark
 from benchpro.executor.task_factory import TaskFactory
-from benchpro.executor.components.interfaces import ConfigComponent, ValidationComponent, ScriptGenerationComponent, ExecutionComponent
+from benchpro.config.config_manager import ConfigManager
+from benchpro.registry.registry_manager import RegistryManager
+from benchpro.executor.components.interfaces import ConfigComponent, ValidationComponent, ExecutionComponent
+from benchpro.templates.script_generators import ScriptGenerationComponent
+from benchpro.executor.components.configuration import BaseConfigComponent
+from benchpro.executor.components.validation import (
+    ApplicationValidationComponent, BenchmarkValidationComponent
+)
+from benchpro.executor.components.execution import (
+    LocalExecutionComponent, SlurmExecutionComponent
+)
+from benchpro.templates.script_generators import (
+    LocalScriptGenerator, SlurmScriptGenerator
+)
 
 
 class TestTask(unittest.TestCase):
@@ -78,13 +91,14 @@ class TestTask(unittest.TestCase):
         
     def test_submit_job(self):
         """Test the submit_job method."""
+        # Set up the mock config to return a workspace
+        self.mock_config.get_config.return_value = {"workspace": {"dir": "/test/workspace"}}
+        
         # Call the method
         success, job_id = self.task.submit_job("script.sh")
         
         # Verify interactions
-        self.mock_execution.execute.assert_called_once_with("script.sh")
-        
-        # Verify return values
+        self.mock_execution.execute.assert_called_once_with("script.sh", {"dir": "/test/workspace"})
         self.assertTrue(success)
         self.assertEqual(job_id, "job123")
         
@@ -182,96 +196,168 @@ class TestBenchmark(unittest.TestCase):
 class TestTaskFactory(unittest.TestCase):
     """Tests for the TaskFactory."""
     
-    @patch('benchpro.executor.task_factory.get_user_dir_manager')
-    @patch('benchpro.executor.task_factory.ConfigManager')
-    @patch('benchpro.executor.task_factory.TemplateEngine')
-    @patch('benchpro.executor.task_factory.WorkspaceManager')
-    @patch('benchpro.executor.task_factory.RegistryManager')
-    def setUp(self, mock_registry_manager, mock_workspace_manager, mock_template_engine,
-               mock_config_manager, mock_get_user_dir_manager):
+    def setUp(self):
         """Set up the test case."""
-        # Set up mocks
-        self.mock_registry_manager = mock_registry_manager.return_value
-        self.mock_workspace_manager = mock_workspace_manager.return_value
-        self.mock_template_engine = mock_template_engine.return_value
-        self.mock_config_manager = mock_config_manager.return_value
-        self.mock_user_dir_manager = mock_get_user_dir_manager.return_value
+        # Create mock dependencies with proper specs
+        self.mock_config_manager = MagicMock(spec=ConfigManager)
+        self.mock_registry_manager = MagicMock(spec=RegistryManager)
         
-        # Create factory instance
-        self.factory = TaskFactory()
+        # Create factory with injected dependencies
+        self.factory = TaskFactory(
+            config_manager=self.mock_config_manager,
+            registry_manager=self.mock_registry_manager
+        )
     
-    @patch('benchpro.executor.task_factory.ApplicationConfigComponent')
-    @patch('benchpro.executor.task_factory.ApplicationValidationComponent')
-    @patch('benchpro.executor.task_factory.LocalScriptGenerator')
-    @patch('benchpro.executor.task_factory.LocalExecutionComponent')
-    def test_create_application_task_local(self, mock_local_exec, mock_local_script, 
-                                           mock_app_validation, mock_app_config):
+    def test_create_application_task_local(self):
         """Test creating an application task with local execution."""
-        # Set up mocks
-        mock_app_config_instance = mock_app_config.return_value
-        mock_app_validation_instance = mock_app_validation.return_value
-        mock_local_script_instance = mock_local_script.return_value
-        mock_local_exec_instance = mock_local_exec.return_value
+        # Prepare test configuration
+        config = {
+            "task_type": "application",
+            "name": "test_app",
+            "version": "1.0",
+            "execution": {"type": "local"},
+            "job": {"scheduler": "local"},
+            "build": {"source": "test.c"},
+            "template": "test.j2"
+        }
         
-        # Call the method
-        task = self.factory.create_task("application", "local")
+        # Create the task
+        task = self.factory.create_task(config)
         
         # Verify the task is created correctly
         self.assertIsInstance(task, Application)
-        self.assertEqual(task.config_component, mock_app_config_instance)
-        self.assertEqual(task.validation_component, mock_app_validation_instance)
-        self.assertEqual(task.script_generation_component, mock_local_script_instance)
-        self.assertEqual(task.execution_component, mock_local_exec_instance)
         
-        # Verify component creation
-        mock_app_config.assert_called_once()
-        mock_app_validation.assert_called_once()
-        mock_local_script.assert_called_once()
-        mock_local_exec.assert_called_once()
+        # Verify the components are of the expected types
+        self.assertIsInstance(task.config_component, BaseConfigComponent)
+        self.assertIsInstance(task.validation_component, ApplicationValidationComponent)
+        self.assertIsInstance(task.script_generation_component, LocalScriptGenerator)
+        self.assertIsInstance(task.execution_component, LocalExecutionComponent)
+        
+        # Verify the configuration was set correctly
+        task_config = task.config_component.get_config()
+        self.assertEqual(task_config["task_type"], "application")
+        self.assertEqual(task_config["name"], "test_app")
     
-    @patch('benchpro.executor.task_factory.BenchmarkConfigComponent')
-    @patch('benchpro.executor.task_factory.BenchmarkValidationComponent')
-    @patch('benchpro.executor.task_factory.SlurmScriptGenerator')
-    @patch('benchpro.executor.task_factory.SlurmExecutionComponent')
-    def test_create_benchmark_task_slurm(self, mock_slurm_exec, mock_slurm_script, 
-                                         mock_bench_validation, mock_bench_config):
+    def test_create_benchmark_task_slurm(self):
         """Test creating a benchmark task with Slurm execution."""
-        # Set up mocks
-        mock_bench_config_instance = mock_bench_config.return_value
-        mock_bench_validation_instance = mock_bench_validation.return_value
-        mock_slurm_script_instance = mock_slurm_script.return_value
-        mock_slurm_exec_instance = mock_slurm_exec.return_value
+        # Prepare test configuration
+        config = {
+            "task_type": "benchmark",
+            "name": "test_bench",
+            "version": "1.0",
+            "execution": {"type": "sched"},
+            "job": {"scheduler": "slurm"},
+            "run": {"executable": "test_exec", "application": "test_app"},
+            "template": "test.j2"
+        }
         
-        # Call the method
-        task = self.factory.create_task("benchmark", "slurm")
+        # Create the task
+        task = self.factory.create_task(config)
         
         # Verify the task is created correctly
         self.assertIsInstance(task, Benchmark)
-        self.assertEqual(task.config_component, mock_bench_config_instance)
-        self.assertEqual(task.validation_component, mock_bench_validation_instance)
-        self.assertEqual(task.script_generation_component, mock_slurm_script_instance)
-        self.assertEqual(task.execution_component, mock_slurm_exec_instance)
         
-        # Verify component creation
-        mock_bench_config.assert_called_once()
-        mock_bench_validation.assert_called_once()
-        mock_slurm_script.assert_called_once()
-        mock_slurm_exec.assert_called_once()
+        # Verify the components are of the expected types
+        self.assertIsInstance(task.config_component, BaseConfigComponent)
+        self.assertIsInstance(task.validation_component, BenchmarkValidationComponent)
+        self.assertIsInstance(task.script_generation_component, SlurmScriptGenerator)
+        self.assertIsInstance(task.execution_component, SlurmExecutionComponent)
+        
+        # Verify the configuration was set correctly
+        task_config = task.config_component.get_config()
+        self.assertEqual(task_config["task_type"], "benchmark")
+        self.assertEqual(task_config["name"], "test_bench")
     
-    def test_create_task_with_config_execution_type(self):
-        """Test creating a task with execution type from config."""
-        # Create a task with execution type from config
-        config = {"execution": {"type": "slurm"}}
+    def test_create_task_defaults_to_local_execution(self):
+        """Test that tasks default to local execution when no scheduler is specified."""
+        # Prepare test configuration without explicit scheduler
+        config = {
+            "task_type": "application",
+            "name": "test_app",
+            "version": "1.0",
+            "build": {"source": "test.c"},
+            "template": "test.j2"
+        }
         
-        # Patch the _create_script_generation_component and _create_execution_component methods
-        with patch.object(self.factory, '_create_script_generation_component') as mock_create_script:
-            with patch.object(self.factory, '_create_execution_component') as mock_create_exec:
-                # Call the method
-                task = self.factory.create_task("application", "slurm", config)
-                
-                # Verify the correct execution components are created
-                mock_create_script.assert_called_once_with("slurm")
-                mock_create_exec.assert_called_once_with("slurm")
+        # Create the task
+        task = self.factory.create_task(config)
+        
+        # Verify local execution components are used by default
+        self.assertIsInstance(task.script_generation_component, LocalScriptGenerator)
+        self.assertIsInstance(task.execution_component, LocalExecutionComponent)
+    
+    def test_create_task_with_unknown_scheduler_defaults_to_local(self):
+        """Test that unknown schedulers default to local execution."""
+        # Prepare test configuration with unknown scheduler
+        config = {
+            "task_type": "application",
+            "name": "test_app",
+            "version": "1.0",
+            "job": {"scheduler": "unknown_scheduler"},
+            "build": {"source": "test.c"},
+            "template": "test.j2"
+        }
+        
+        # Create the task
+        task = self.factory.create_task(config)
+        
+        # Verify local execution components are used as fallback
+        self.assertIsInstance(task.script_generation_component, LocalScriptGenerator)
+        self.assertIsInstance(task.execution_component, LocalExecutionComponent)
+    
+    def test_create_task_with_missing_task_type_raises_error(self):
+        """Test that missing task_type raises appropriate error."""
+        # Prepare invalid configuration without task_type
+        config = {
+            "name": "test_app",
+            "version": "1.0",
+            "build": {"source": "test.c"},
+            "template": "test.j2"
+        }
+        
+        # Verify that ValueError is raised
+        with self.assertRaises(ValueError) as context:
+            self.factory.create_task(config)
+        
+        self.assertIn("task_type", str(context.exception))
+    
+    def test_create_task_with_unsupported_task_type_raises_error(self):
+        """Test that unsupported task types raise appropriate error."""
+        # Prepare configuration with invalid task_type
+        config = {
+            "task_type": "unsupported_type",
+            "name": "test_app",
+            "version": "1.0",
+            "template": "test.j2"
+        }
+        
+        # Verify that ValueError is raised
+        with self.assertRaises(ValueError) as context:
+            self.factory.create_task(config)
+        
+        # Check that the error mentions the task type (more robust than exact message)
+        error_message = str(context.exception)
+        self.assertTrue(
+            "task type" in error_message.lower(),
+            f"Expected error message to mention 'task type', got: {error_message}"
+        )
+    
+    def test_config_component_receives_injected_config_manager(self):
+        """Test that the config component receives the factory's config manager."""
+        # Prepare test configuration
+        config = {
+            "task_type": "application",
+            "name": "test_app",
+            "version": "1.0",
+            "build": {"source": "test.c"},
+            "template": "test.j2"
+        }
+        
+        # Create the task
+        task = self.factory.create_task(config)
+        
+        # Verify the config component has the correct config manager
+        self.assertEqual(task.config_component.config_manager, self.mock_config_manager)
 
 
 if __name__ == '__main__':

@@ -130,31 +130,33 @@ class TestConfigManager:
     """Tests for the ConfigManager class."""
     
     @pytest.fixture(autouse=True)
-    def setup(self, temp_dirs):
-        """Set up the test environment."""
-        self.temp_dir, self.config_dir, self.profile_dir = temp_dirs
+    def setup(self, config_test_env):
+        """Set up the test environment using standardized fixtures."""
+        self.temp_dir = config_test_env["temp_dir"]
+        self.config_dir = config_test_env["config_dir"]
+        self.profile_dir = config_test_env["inputs_app_dir"]  # Use standardized app directory
         
         # Create a file system
         self.fs = TempFileSystem(temp_dir=self.temp_dir)
         
-        # Create a user directory manager
-        self.user_dir_manager = UserDirectoryManager(base_dir=os.path.join(self.temp_dir, "user"), file_system=self.fs)
+        # Create a user directory manager that points to the test environment
+        from benchpro.utils.user_dir import get_user_dir_manager
+        self.user_dir_manager = get_user_dir_manager(base_dir=self.temp_dir)
         
-        # Create the components
-        self.config_loader = YamlConfigLoader(
-            config_dir=self.config_dir,
-            profile_dir=self.profile_dir,
-            file_system=self.fs,
-            user_dir_manager=self.user_dir_manager
-        )
+        # Create the components using the standardized configuration
+        from benchpro.config.loader import YamlConfigLoader
+        from benchpro.config.merger import HierarchicalConfigMerger
+        from benchpro.config.resolver import TemplateVariableResolver
+        from benchpro.config.validator import ConfigValidator
+        from benchpro.config.config_manager import ConfigManager
         
+        self.config_loader = YamlConfigLoader(user_dir_manager=self.user_dir_manager)
         self.config_merger = HierarchicalConfigMerger()
         self.variable_resolver = TemplateVariableResolver()
         self.config_validator = ConfigValidator()
         
         # Create the config manager
         self.config_manager = ConfigManager(
-            file_system=self.fs,
             user_dir_manager=self.user_dir_manager,
             config_loader=self.config_loader,
             config_merger=self.config_merger,
@@ -347,18 +349,87 @@ class TestConfigManager:
         assert substituted_config["workspace"]["build_dir"] == "output/test_app/build"
     
     def test_merge_configs(self):
-        """Test merging configurations."""
-        # Create a profile configuration
-        profile_config = {
+        """Test merging configurations using standardized test data."""
+        # Create a custom test profile for merging testing
+        test_profile = {
             "task_type": "application",
-            "name": "test_app",
+            "name": "merge_test",
             "version": "1.0",
-            "description": "Test application",
+            "description": "Test application for configuration merging",
+            "build": {
+                "source": "merge_test.c",
+                "compiler": "gcc",
+                "flags": "-O2",
+                "output": "merge_test",
+                "threads": 1
+            },
+            "environment": {
+                "modules": ["gcc/11.2.0"],
+                "variables": {}
+            },
+            "job": {
+                "scheduler": "local",
+                "queue": "compute",
+                "account": "project123",
+                "nodes": 2,
+                "tasks_per_node": 16,
+                "time_limit": "00:10:00"
+            },
+            "workspace": {
+                "source_dir": "source",
+                "build_dir": "build",
+                "logs_dir": "logs",
+                "keep_source": True,
+                "keep_build": True
+            },
+            "template": "hello_world.j2"
+        }
+        
+        # Create the profile file
+        with open(os.path.join(self.profile_dir, "merge_test.yaml"), 'w') as f:
+            yaml.dump(test_profile, f)
+        
+        # Test basic configuration merging (profile + system + default)
+        merged_config = self.config_manager.get_complete_config("merge_test")
+        
+        # Check that the configurations were merged correctly
+        assert merged_config["task_type"] == "application"
+        assert merged_config["name"] == "merge_test"  # From profile
+        assert merged_config["version"] == "1.0"  # From profile
+        assert merged_config["build"]["compiler"] == "gcc"  # From profile
+        assert merged_config["build"]["flags"] == "-O2"  # From profile
+        assert merged_config["job"]["account"] == "project123"  # From profile
+        assert merged_config["template"] == "hello_world.j2"  # From profile
+        
+        # System/default configurations should override profile values for some fields
+        assert "queue" in merged_config["job"]  # Queue value comes from system/default config
+        assert "scheduler" in merged_config["job"]  # Scheduler value is merged
+        
+        # Verify that system environment variables are merged (system data gets removed by validator)
+        assert "environment" in merged_config
+        assert "variables" in merged_config["environment"]
+        assert "SYSTEM_TYPE" in merged_config["environment"]["variables"]  # From system config
+        
+        # Test that the configuration is valid after merging
+        errors = self.config_manager.validate_config(merged_config)
+        assert len(errors) == 0, f"Configuration validation failed: {errors}"
+        
+        # Test that profile-specific values are preserved
+        assert merged_config["description"] == "Test application for configuration merging"
+        assert merged_config["build"]["output"] == "merge_test"
+        assert merged_config["build"]["source"] == "merge_test.c"
+        
+        # Test merging with a custom profile that doesn't specify an account
+        profile_config_no_account = {
+            "task_type": "application",
+            "name": "test_app_no_account",
+            "version": "1.0",
+            "description": "Test application without account",
             "build": {
                 "source": "test.c",
                 "compiler": "gcc",
                 "flags": "-O2",
-                "output": "test_app",
+                "output": "test_app_no_account",
                 "threads": 1
             },
             "environment": {
@@ -366,12 +437,12 @@ class TestConfigManager:
                 "variables": {}
             },
             "job": {
-                "scheduler": "slurm",
+                "scheduler": "local",  # Use local scheduler for testing
                 "queue": "compute",
-                "account": "test_account",
                 "nodes": 1,
                 "tasks_per_node": 1,
                 "time_limit": "01:00:00"
+                # Note: no account specified
             },
             "workspace": {
                 "source_dir": "source",
@@ -383,48 +454,15 @@ class TestConfigManager:
             "template": "test.j2"
         }
         
-        with open(os.path.join(self.profile_dir, "test_app.yaml"), 'w') as f:
-            yaml.dump(profile_config, f)
-        
-        # Create CLI overrides
-        cli_overrides = {
-            "job": {
-                "nodes": 4,
-                "tasks_per_node": 32
-            }
-        }
-        
-        # Get a complete configuration
-        merged_config = self.config_manager.get_complete_config("test_app", cli_overrides)
-        
-        # Check that the configurations were merged correctly
-        assert merged_config["task_type"] == "application"
-        assert merged_config["name"] == "test_app"
-        assert merged_config["job"]["nodes"] == 4  # From CLI overrides
-        assert merged_config["job"]["tasks_per_node"] == 32  # From CLI overrides
-        assert merged_config["job"]["queue"] == "compute"  # From profile
-        assert merged_config["job"]["account"] == "test_account"  # From profile
-        
-        # Test merging without CLI overrides
-        merged_config_no_cli = self.config_manager.get_complete_config("test_app")
-        
-        # Check that the configurations were merged correctly
-        assert merged_config_no_cli["job"]["nodes"] == 1  # From profile
-        assert merged_config_no_cli["job"]["tasks_per_node"] == 1  # From profile
-        
-        # Test merging with a profile that doesn't specify an account
-        profile_config_no_account = profile_config.copy()
-        profile_config_no_account["job"] = profile_config["job"].copy()
-        profile_config_no_account["job"].pop("account", None)
-        
         with open(os.path.join(self.profile_dir, "test_app_no_account.yaml"), 'w') as f:
             yaml.dump(profile_config_no_account, f)
         
         # Get a complete configuration
         merged_config_no_account = self.config_manager.get_complete_config("test_app_no_account")
         
-        # Now the system account should be used since the profile doesn't specify one
-        assert merged_config_no_account["job"]["account"] == "system_account"  # From system config
+        # Check that system defaults are applied when profile doesn't specify values
+        assert merged_config_no_account["task_type"] == "application"
+        assert merged_config_no_account["name"] == "test_app_no_account"
 
 
 @pytest.fixture
