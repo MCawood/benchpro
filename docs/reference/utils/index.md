@@ -6,6 +6,7 @@ This section contains documentation for the utility modules in BenchPRO.
 
 - [FileSystem Abstraction](filesystem.md): A unified interface for file system operations.
 - [User Directory Manager](user_dir.md): Manages user-specific directories and files.
+- [Example Files and Synchronization](example_files.md): Management and synchronization of example configuration files.
 
 ## Overview
 

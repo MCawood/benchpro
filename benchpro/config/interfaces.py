@@ -92,17 +92,39 @@ class ConfigLoaderInterface(Protocol):
 @runtime_checkable
 class ConfigMergerInterface(Protocol):
     """
-    Interface for merging configurations with proper precedence.
+    Interface for merging configurations with proper precedence and tracking.
+    
+    This interface defines the primary configuration merging capabilities,
+    including comprehensive origin tracking and audit trail generation.
     
     Responsibilities:
-    - Merge configurations from different sources
-    - Handle precedence rules
+    - Merge configurations from different sources with metadata tracking
+    - Handle precedence rules and maintain audit trail
     - Handle deep merging of nested dictionaries
+    - Generate comprehensive configuration reports
     """
+    
+    def merge_sources(self, sources: List, profile_name: str, 
+                     cli_overrides: Optional[Dict[str, Any]] = None):
+        """
+        Merge configuration sources with comprehensive tracking.
+        
+        This is the primary method for configuration merging, providing full
+        tracking of origins and generating a complete configuration report.
+        
+        Args:
+            sources: List of ConfigSource objects to merge, in precedence order.
+            profile_name: Name of the profile being processed.
+            cli_overrides: Optional CLI overrides to apply.
+            
+        Returns:
+            ConfigReport with complete tracking information.
+        """
+        ...
     
     def merge(self, base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Merge two configurations.
+        Merge two configurations (compatibility method).
         
         Args:
             base: Base configuration.
@@ -115,7 +137,7 @@ class ConfigMergerInterface(Protocol):
     
     def merge_all(self, configs: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Merge multiple configurations.
+        Merge multiple configurations (compatibility method).
         
         Args:
             configs: List of configurations to merge, in order of precedence (lowest to highest).

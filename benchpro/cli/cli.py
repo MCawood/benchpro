@@ -95,10 +95,22 @@ cli.add_command(get_app_command)
     "--version",
     help="Override the application version specified in the profile."
 )
+@click.option(
+    "--param-report",
+    is_flag=True,
+    help="Display detailed parameter report showing configuration sources and values."
+)
+@click.option(
+    "--param-report-format",
+    type=click.Choice(["table", "json", "yaml"]),
+    default="table",
+    help="Format for parameter report output."
+)
 def build(profile: str, output_dir: Optional[str] = None, 
           system: Optional[str] = None, dry_run: bool = False,
           executor: Optional[str] = None, execution_type: Optional[str] = None,
-          force: bool = False, version: Optional[str] = None):
+          force: bool = False, version: Optional[str] = None,
+          param_report: bool = False, param_report_format: str = "table"):
     """Build an application from a profile."""
     
     # Create CLI overrides dictionary
@@ -133,7 +145,7 @@ def build(profile: str, output_dir: Optional[str] = None,
     try:
         # Always use the composition-based orchestrator
         orchestrator = TaskOrchestrator()
-        result = orchestrator.execute(profile, cli_overrides, dry_run)
+        result = orchestrator.execute(profile, cli_overrides, dry_run, param_report, param_report_format)
         
         success, job_id, script_path = result
         if not success:
@@ -181,10 +193,22 @@ def build(profile: str, output_dir: Optional[str] = None,
     "--version",
     help="Override the application version requirement specified in the benchmark profile."
 )
+@click.option(
+    "--param-report",
+    is_flag=True,
+    help="Display detailed parameter report showing configuration sources and values."
+)
+@click.option(
+    "--param-report-format",
+    type=click.Choice(["table", "json", "yaml"]),
+    default="table",
+    help="Format for parameter report output."
+)
 def bench(profile: str, output_dir: Optional[str] = None, 
           system: Optional[str] = None, dry_run: bool = False,
           executor: Optional[str] = None, execution_type: Optional[str] = None,
-          version: Optional[str] = None):
+          version: Optional[str] = None, param_report: bool = False, 
+          param_report_format: str = "table"):
     """Run a benchmark from a profile."""
     
     # Create CLI overrides dictionary
@@ -216,7 +240,7 @@ def bench(profile: str, output_dir: Optional[str] = None,
     try:
         # Always use the composition-based orchestrator
         orchestrator = TaskOrchestrator()
-        result = orchestrator.execute(profile, cli_overrides, dry_run)
+        result = orchestrator.execute(profile, cli_overrides, dry_run, param_report, param_report_format)
         
         success, job_id, script_path = result
         if not success:

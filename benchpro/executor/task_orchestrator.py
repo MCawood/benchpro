@@ -1,5 +1,6 @@
 
 import os
+import sys
 from typing import Dict, Any, Optional, Tuple
 
 from benchpro.config.config_manager import ConfigManager
@@ -8,6 +9,7 @@ from benchpro.registry.registry_manager import RegistryManager
 from benchpro.utils.user_dir import get_user_dir_manager
 from benchpro.executor.task_factory import TaskFactory
 from benchpro.utils.logger import get_logger
+from benchpro.config.report_generator import ParameterReportDisplay
 
 class TaskOrchestrator:
     """
@@ -36,14 +38,31 @@ class TaskOrchestrator:
         )
 
     def execute(self, profile_name: str, cli_overrides: Optional[Dict[str, Any]] = None,
-                dry_run: bool = False) -> Tuple[bool, Optional[str], str]:
+                dry_run: bool = False, param_report: bool = False, 
+                param_report_format: str = "table") -> Tuple[bool, Optional[str], str]:
         """
         Orchestrate the execution of a task for the specified profile.
         """
         self.logger.info(f"Orchestrating task execution for profile: {profile_name}")
         try:
-            # Load and merge all configurations
-            config = self.config_manager.merge_configs(profile_name, cli_overrides)
+            # Generate parameter report if requested
+            if param_report:
+                # Get complete configuration report with tracking
+                config_report = self.config_manager.get_complete_config_report(profile_name, cli_overrides)
+                
+                # Display the report
+                display = ParameterReportDisplay()
+                display.display_report(config_report, param_report_format, dry_run)
+                
+                # If dry-run with param-report, exit after showing report
+                if dry_run:
+                    return True, None, "(param-report-only)"
+                
+                # For normal execution, continue with the final config
+                config = config_report.final_config
+            else:
+                # Normal execution without parameter tracking
+                config = self.config_manager.merge_configs(profile_name, cli_overrides)
 
             # Create a workspace for the task
             workspace = self.workspace_manager.create_workspace(

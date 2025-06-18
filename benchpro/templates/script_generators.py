@@ -103,26 +103,19 @@ class ComposableScriptGenerator(ScriptGenerationComponent):
         # Add execution context to variables
         variables["execution_context"] = self.execution_context
         
-        # Check if 'system' is specified as a string and ensure the system config is accessible
-        # This handles the case where system is specified via CLI as --system darwin
-        system_name = variables.get('system')
-        if isinstance(system_name, str):
-            self.logger.debug(f"System specified as '{system_name}', ensuring system configuration is accessible")
+        # Handle system configuration for template access
+        system_config = variables.get('system')
+        
+        if isinstance(system_config, str):
+            # System specified as string (e.g., from CLI --system darwin)
+            system_name = system_config
+            self.logger.debug(f"System specified as string '{system_name}', creating system configuration")
             
-            # If system configuration is loaded under a 'system' key in the configuration,
-            # make it directly accessible for the template
-            if 'system' not in variables or not isinstance(variables['system'], dict):
-                # Set up a default structure if not present
-                variables['system'] = {
-                    'name': system_name,
-                    'description': f"{system_name.capitalize()} System",
-                    'type': system_name
-                }
-            
-            # Make sure system name is set in the system dictionary
-            else:
-                if isinstance(variables['system'], dict) and 'name' not in variables['system']:
-                    variables['system']['name'] = system_name
+            variables['system'] = {
+                'name': system_name,
+                'description': f"{system_name.capitalize()} System",
+                'type': system_name
+            }
             
             # Ensure environment.variables.SYSTEM_TYPE is set correctly
             if 'environment' not in variables:
@@ -130,10 +123,44 @@ class ComposableScriptGenerator(ScriptGenerationComponent):
             if 'variables' not in variables['environment']:
                 variables['environment']['variables'] = {}
             
-            # Always set SYSTEM_TYPE to match the system name when specified via CLI or config
-            # This ensures the template can access {{ environment.variables.SYSTEM_TYPE }}
             variables['environment']['variables']['SYSTEM_TYPE'] = system_name
             self.logger.debug(f"Setting environment.variables.SYSTEM_TYPE to {system_name}")
+            
+        elif isinstance(system_config, dict):
+            # System configuration loaded from files (already a dictionary)
+            self.logger.debug("System configuration loaded from files, ensuring template accessibility")
+            
+            # System config is already accessible, just ensure SYSTEM_TYPE is set in environment
+            system_name = system_config.get('name', 'default')
+            
+            # Ensure environment.variables.SYSTEM_TYPE matches system name
+            if 'environment' not in variables:
+                variables['environment'] = {}
+            if 'variables' not in variables['environment']:
+                variables['environment']['variables'] = {}
+            
+            # Only set SYSTEM_TYPE if not already set, to avoid overriding explicit config
+            if 'SYSTEM_TYPE' not in variables['environment']['variables']:
+                variables['environment']['variables']['SYSTEM_TYPE'] = system_name
+                self.logger.debug(f"Setting environment.variables.SYSTEM_TYPE to {system_name}")
+        
+        else:
+            # No system configuration, provide minimal defaults
+            self.logger.debug("No system configuration found, providing defaults")
+            variables['system'] = {
+                'name': 'default',
+                'description': 'Default system configuration',
+                'type': 'unknown'
+            }
+            
+            # Ensure environment.variables.SYSTEM_TYPE is set
+            if 'environment' not in variables:
+                variables['environment'] = {}
+            if 'variables' not in variables['environment']:
+                variables['environment']['variables'] = {}
+            
+            if 'SYSTEM_TYPE' not in variables['environment']['variables']:
+                variables['environment']['variables']['SYSTEM_TYPE'] = 'default'
         
         # Log the variables for debugging
         self.logger.debug(f"Template variables prepared: {variables.get('system', {})}")

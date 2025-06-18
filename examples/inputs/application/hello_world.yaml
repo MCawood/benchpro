@@ -17,10 +17,8 @@ environment:
   module_paths:
     - "/Users/mcawood/dev/benchpro_2.0/examples/modulefiles"  # Path to custom modules
   modules:
-    - name: intel
-      version: "24.0"
-    - name: impi
-      version: "21.11"
+    - "intel/24.0"
+    - "impi/21.11"
   variables:
     SYSTEM_TYPE: default
 
