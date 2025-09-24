@@ -41,7 +41,7 @@ def test_factory_can_create_task_in_isolated_dir(isolated_user_dir, monkeypatch)
     # Since we're testing isolation, we create real ConfigManager and RegistryManager
     # but they will use our isolated directory due to the monkeypatch
     config_manager = ConfigManager(user_dir_manager=isolated_user_dir)
-    registry_manager = RegistryManager(user_dir_manager=isolated_user_dir)
+    registry_manager = RegistryManager()
     
     # 3. Create the TaskFactory with proper dependency injection
     factory = TaskFactory(
@@ -90,7 +90,7 @@ def test_factory_isolation_with_application_task(isolated_user_dir, monkeypatch)
     
     # Create dependencies
     config_manager = ConfigManager(user_dir_manager=isolated_user_dir)
-    registry_manager = RegistryManager(user_dir_manager=isolated_user_dir)
+    registry_manager = RegistryManager()
     factory = TaskFactory(config_manager=config_manager, registry_manager=registry_manager)
     
     # Prepare application configuration

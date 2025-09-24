@@ -83,9 +83,11 @@ def test_execute_with_default_config(mock_orchestrator_setup):
         "workspace_dir": os.path.join(test_env["temp_dir"], "workspace"),
         "logs_dir": os.path.join(test_env["temp_dir"], "workspace", "logs"),
         "inputs_dir": os.path.join(test_env["temp_dir"], "workspace", "inputs"),
-        "source_dir": os.path.join(test_env["temp_dir"], "workspace", "source"),
-        "build_dir": os.path.join(test_env["temp_dir"], "workspace", "build"),
+        "metadata_dir": os.path.join(test_env["temp_dir"], "workspace", ".benchpro"),
+        "scripts_dir": os.path.join(test_env["temp_dir"], "workspace", "scripts"),
         "results_dir": os.path.join(test_env["temp_dir"], "workspace", "results"),
+        "build_dir": os.path.join(test_env["temp_dir"], "workspace", "build"),
+        "source_dir": os.path.join(test_env["temp_dir"], "workspace", "source"),
         "task_id": "123"
     }
     mock_workspace_manager.create_workspace.return_value = workspace_mock
@@ -125,9 +127,11 @@ def test_execute_with_cli_overrides(mock_orchestrator_setup):
         "workspace_dir": os.path.join(test_env["temp_dir"], "workspace"),
         "logs_dir": os.path.join(test_env["temp_dir"], "workspace", "logs"),
         "inputs_dir": os.path.join(test_env["temp_dir"], "workspace", "inputs"),
-        "source_dir": os.path.join(test_env["temp_dir"], "workspace", "source"),
-        "build_dir": os.path.join(test_env["temp_dir"], "workspace", "build"),
+        "metadata_dir": os.path.join(test_env["temp_dir"], "workspace", ".benchpro"),
+        "scripts_dir": os.path.join(test_env["temp_dir"], "workspace", "scripts"),
         "results_dir": os.path.join(test_env["temp_dir"], "workspace", "results"),
+        "build_dir": os.path.join(test_env["temp_dir"], "workspace", "build"),
+        "source_dir": os.path.join(test_env["temp_dir"], "workspace", "source"),
         "task_id": "123"
     }
     mock_workspace_manager.create_workspace.return_value = workspace_mock
@@ -191,9 +195,11 @@ def test_execute_with_scheduler_to_slurm_mapping(mock_orchestrator_setup):
         "workspace_dir": os.path.join(test_env["temp_dir"], "workspace"),
         "logs_dir": os.path.join(test_env["temp_dir"], "workspace", "logs"),
         "inputs_dir": os.path.join(test_env["temp_dir"], "workspace", "inputs"),
-        "source_dir": os.path.join(test_env["temp_dir"], "workspace", "source"),
-        "build_dir": os.path.join(test_env["temp_dir"], "workspace", "build"),
+        "metadata_dir": os.path.join(test_env["temp_dir"], "workspace", ".benchpro"),
+        "scripts_dir": os.path.join(test_env["temp_dir"], "workspace", "scripts"),
         "results_dir": os.path.join(test_env["temp_dir"], "workspace", "results"),
+        "build_dir": os.path.join(test_env["temp_dir"], "workspace", "build"),
+        "source_dir": os.path.join(test_env["temp_dir"], "workspace", "source"),
         "task_id": "123"
     }
     mock_workspace_manager.create_workspace.return_value = workspace_mock

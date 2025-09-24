@@ -56,7 +56,7 @@ def test_benchmark_execution_passes(isolated_user_dir, monkeypatch):
     # classes construct themselves, and they will automatically receive
     # the correct (isolated) user directory manager.
     config_manager = ConfigManager(user_dir_manager=isolated_user_dir)
-    registry_manager = RegistryManager(user_dir_manager=isolated_user_dir)
+    registry_manager = RegistryManager()
     workspace_manager = WorkspaceManager(user_dir_manager=isolated_user_dir)
     task_factory = TaskFactory(
         config_manager=config_manager,
@@ -70,16 +70,23 @@ def test_benchmark_execution_passes(isolated_user_dir, monkeypatch):
 
     # 4. Register a dependency application
     app_binary_path = isolated_user_dir.get_path("outputs_application", "hello_world")
-    registry_manager.register_application({
-        "name": "hello_world_app", "version": "1.0", "binary_path": app_binary_path,
-        "workspace_dir": "dummy", "build_parameters": {}, "metadata": {}
-    })
+    # Note: register_task is the new method for creating task records
+    task_id = registry_manager.register_task_submission({
+        "name": "hello_world_app",
+        "version": "1.0",
+        "task_type": "application",
+        "status": "COMPLETED",
+        "binary_path": app_binary_path,
+        "build_parameters": {},
+        "metadata": {}
+    }, "dummy")
 
     # 5. Define and write the benchmark profile to the isolated environment
     benchmark_profile = {
         "task_type": "benchmark", "name": "golden_benchmark",
         "run": {"application": "hello_world_app", "executable": "placeholder"},
-        "job": {"scheduler": "local"}, "template": "vanilla.j2"
+        "job": {"scheduler": "local"}, "template": "vanilla.j2",
+        "workspace": {"input_dir": "inputs"}
     }
     profile_path = isolated_user_dir.get_path("inputs_benchmark", "golden_benchmark.yaml")
     with open(profile_path, "w") as f:

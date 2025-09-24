@@ -16,7 +16,7 @@ class MockRegistryManager:
     """Mock RegistryManager for testing"""
     
     def __init__(self, return_value=None):
-        self.find_applications = MagicMock(return_value=return_value or [])
+        self.list_applications = MagicMock(return_value=return_value or [])
 
 
 class TestBenchmarkRequirements(unittest.TestCase):
@@ -90,7 +90,7 @@ class TestBenchmarkRequirements(unittest.TestCase):
         with patch('benchpro.executor.task.RegistryManager', autospec=True) as MockRegistry:
             # Setup the mock
             mock_instance = MockRegistry.return_value
-            mock_instance.find_applications.return_value = [self.app_data]
+            mock_instance.list_applications.return_value = [self.app_data]
             
             # Create benchmark with our mocks
             benchmark = Benchmark(
@@ -109,15 +109,15 @@ class TestBenchmarkRequirements(unittest.TestCase):
             # Print the config to debug
             print(f"Config after prepare: {config}")
             
-            # Check if find_applications was called
-            self.assertTrue(mock_instance.find_applications.called)
+            # Check if list_applications was called
+            self.assertTrue(mock_instance.list_applications.called)
         
     @patch('benchpro.executor.task.RegistryManager', autospec=True)
     def test_resolve_application_requirements(self, MockRegistry):
         """Test resolving application requirements."""
         # Configure the mock instance
         mock_instance = MockRegistry.return_value
-        mock_instance.find_applications.return_value = [self.app_data]
+        mock_instance.list_applications.return_value = [self.app_data]
         
         # Create a Benchmark instance with our mocks
         benchmark = Benchmark(
@@ -131,13 +131,12 @@ class TestBenchmarkRequirements(unittest.TestCase):
         config = benchmark.prepare("test_profile")
         
         # Check that requirements were resolved correctly
-        mock_instance.find_applications.assert_called_once()
-        call_args = mock_instance.find_applications.call_args[0][0]
+        mock_instance.list_applications.assert_called_once()
+        # The new API calls list_applications with status_filter, then filters results
+        call_args, call_kwargs = mock_instance.list_applications.call_args
         
-        # Verify the search criteria
-        self.assertEqual(call_args["name"], "test_app")
-        self.assertEqual(call_args["version"], "1.2.3")
-        self.assertEqual(call_args["label"], "mpi")
+        # Verify that it was called with status_filter=None
+        self.assertEqual(call_kwargs.get('status_filter'), None)
         
         # Check that application info was stored
         self.assertIn("dependencies", config)
@@ -160,7 +159,7 @@ class TestBenchmarkRequirements(unittest.TestCase):
         """Test handling when no applications match the requirements."""
         # Configure the mock to return no matches
         mock_instance = MockRegistry.return_value
-        mock_instance.find_applications.return_value = []
+        mock_instance.list_applications.return_value = []
         
         # Create a Benchmark instance with our mocks
         benchmark = Benchmark(
@@ -175,8 +174,8 @@ class TestBenchmarkRequirements(unittest.TestCase):
         with self.assertRaises(ApplicationNotFoundError) as context:
             benchmark.prepare("test_profile")
         
-        # Check that find_applications was called
-        mock_instance.find_applications.assert_called_once()
+        # Check that list_applications was called
+        mock_instance.list_applications.assert_called_once()
         
         # Check the error message
         self.assertIn("Required application 'test_app' not found in registry", str(context.exception))
@@ -192,7 +191,7 @@ class TestBenchmarkRequirements(unittest.TestCase):
         
         # Configure the mock to return multiple matches
         mock_instance = MockRegistry.return_value
-        mock_instance.find_applications.return_value = [self.app_data, app_data2]
+        mock_instance.list_applications.return_value = [self.app_data, app_data2]
         
         # Create a Benchmark instance with our mocks
         benchmark = Benchmark(
@@ -205,8 +204,8 @@ class TestBenchmarkRequirements(unittest.TestCase):
         # Call prepare
         config = benchmark.prepare("test_profile")
         
-        # Check that find_applications was called
-        mock_instance.find_applications.assert_called_once()
+        # Check that list_applications was called
+        mock_instance.list_applications.assert_called_once()
         
         # Check that the newest application was chosen
         self.assertIn("dependencies", config)
@@ -237,8 +236,8 @@ class TestBenchmarkRequirements(unittest.TestCase):
         # Call prepare
         config = benchmark.prepare("test_profile")
         
-        # Check that find_applications was not called
-        mock_instance.find_applications.assert_not_called()
+        # Check that list_applications was not called
+        mock_instance.list_applications.assert_not_called()
         
         # Config should not have application dependency
         self.assertNotIn("dependencies", config) 

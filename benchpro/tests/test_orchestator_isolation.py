@@ -17,23 +17,30 @@ def test_orchestrator_can_execute_task_in_isolated_dir(orchestrator_test_env, mo
     
     # 2. Create components using the standardized test environment
     from benchpro.config.config_manager import ConfigManager
-    from benchpro.registry.registry_manager import RegistryManager
     from benchpro.utils.user_dir import user_dir_manager
-    
+    from unittest.mock import MagicMock
+
     # The fixture sets up user_dir_manager to point to the test environment
     config_manager = ConfigManager(user_dir_manager=user_dir_manager)
-    registry_manager = RegistryManager()
+    
+    # Mock registry manager to avoid database dependency
+    mock_registry_manager = MagicMock()
+    mock_registry_manager.register_task_submission.return_value = "mock_task_id"
     
     # 3. Create the orchestrator using the standardized components
+    from benchpro.workspace.workspace_manager import WorkspaceManager
+    workspace_manager = WorkspaceManager(user_dir_manager=user_dir_manager)
+    
     orchestrator = TaskOrchestrator(
         config_manager=config_manager,
-        registry_manager=registry_manager
+        registry_manager=mock_registry_manager,
+        workspace_manager=workspace_manager
     )
     
     # 4. Replace the orchestrator's internal factory with one using our test managers
     orchestrator.task_factory = TaskFactory(
         config_manager=config_manager,
-        registry_manager=registry_manager
+        registry_manager=mock_registry_manager
     )
 
     # 5. Register the required application (the standardized test env should have test_app available)

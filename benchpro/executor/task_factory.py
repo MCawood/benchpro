@@ -61,20 +61,22 @@ class TaskFactory:
         script_generation_component = self._create_script_generation_component(execution_type)
         execution_component = self._create_execution_component(execution_type)
 
-        # Assemble the task with its components
+        # Assemble the task with its components, including registry manager
         if task_type.lower() == "application":
             task = Application(
                 config_component=config_component,
                 validation_component=validation_component,
                 script_generation_component=script_generation_component,
-                execution_component=execution_component
+                execution_component=execution_component,
+                registry_manager=self.registry_manager
             )
         elif task_type.lower() == "benchmark":
             task = Benchmark(
                 config_component=config_component,
                 validation_component=validation_component,
                 script_generation_component=script_generation_component,
-                execution_component=execution_component
+                execution_component=execution_component,
+                registry_manager=self.registry_manager
             )
         else:
             raise ValueError(f"Unsupported task type: {task_type}")

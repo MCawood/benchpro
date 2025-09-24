@@ -128,12 +128,11 @@ class TestTaskFactoryWithSmartDefaults:
     def test_task_factory_uses_execution_type_for_script_generator(self, standardized_test_env):
         """Test that TaskFactory chooses script generator based on execution.type."""
         from benchpro.executor.task_factory import TaskFactory
-        from benchpro.config.config_manager import ConfigManager
-        from benchpro.registry.registry_manager import RegistryManager
+        from unittest.mock import Mock
         
-        # Create task factory with real dependencies
-        config_manager = ConfigManager()
-        registry_manager = RegistryManager()
+        # Create task factory with mocked dependencies
+        config_manager = Mock()
+        registry_manager = Mock()
         factory = TaskFactory(config_manager, registry_manager)
         
         # Test local execution
@@ -158,7 +157,11 @@ class TestEndToEndCLIOverrides:
     
     def test_cli_override_execution_type_end_to_end(self, standardized_test_env):
         """Test CLI override of execution.type works end-to-end."""
-        orchestrator = TaskOrchestrator()
+        from unittest.mock import Mock
+        
+        # Create the orchestrator with mocked registry
+        registry_manager = Mock()
+        orchestrator = TaskOrchestrator(registry_manager=registry_manager)
         
         # Override execution type to local
         cli_overrides = {

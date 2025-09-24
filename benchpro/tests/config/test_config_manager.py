@@ -503,8 +503,11 @@ def mock_config_merger():
     """Create a mock ConfigMerger for testing."""
     merger = Mock(spec=ConfigMergerInterface)
     
-    # Set up mock return values
-    merger.merge_all.return_value = {
+    # Import ConfigReport to create proper mock response
+    from benchpro.config.metadata import ConfigReport
+    
+    # Set up mock return values for the new merge_sources method
+    mock_config = {
         "task_type": "application",
         "name": "test_app",
         "version": "2.0",
@@ -519,6 +522,21 @@ def mock_config_merger():
         }
     }
     
+    # Create a mock ConfigReport with all required attributes
+    mock_report = Mock(spec=ConfigReport)
+    mock_report.final_config = mock_config
+    mock_report.config_metadata = {}
+    mock_report.merge_history = []  # Add this missing attribute
+    
+    merger.merge_sources.return_value = mock_report
+    # Keep the old method for backward compatibility
+    merger.merge_all.return_value = mock_config
+    
+    # Add the _deep_update method that's called internally
+    def mock_deep_update(target, source):
+        target.update(source)
+    merger._deep_update = Mock(side_effect=mock_deep_update)
+    
     return merger
 
 
@@ -529,6 +547,10 @@ def mock_variable_resolver():
     
     # Set up mock return values
     def resolve_side_effect(config):
+        # Handle case where config might be a Mock or None
+        if config is None or not isinstance(config, dict):
+            return config
+            
         # Replace ${name} with the value of name
         if "reference" in config and config["reference"] == "${name}":
             config = config.copy()
@@ -598,7 +620,8 @@ def test_get_complete_config(config_manager, mock_config_loader, mock_config_mer
     mock_config_loader.load_default_config.assert_called_once()
     mock_config_loader.load_system_config.assert_called_once()
     
-    mock_config_merger.merge_all.assert_called_once()
+    # Updated to check for new merge_sources method
+    mock_config_merger.merge_sources.assert_called_once()
     mock_variable_resolver.resolve.assert_called_once()
     mock_config_validator.validate.assert_called_once()
     
@@ -627,11 +650,12 @@ def test_get_complete_config_with_cli_overrides(config_manager, mock_config_merg
     config = config_manager.get_complete_config("test_app", cli_overrides)
     
     # Check that the merger was called with the CLI overrides
-    mock_config_merger.merge_all.assert_called_once()
-    args, kwargs = mock_config_merger.merge_all.call_args
-    assert len(args) == 1
-    assert len(args[0]) == 4  # default, system, profile, cli_overrides
-    assert args[0][3] == cli_overrides
+    mock_config_merger.merge_sources.assert_called_once()
+    args, kwargs = mock_config_merger.merge_sources.call_args
+    assert len(args) == 3  # sources, profile_name, cli_overrides
+    sources, profile_name, cli_overrides_arg = args
+    assert profile_name == "test_app"
+    assert cli_overrides_arg == cli_overrides
 
 
 def test_validate_config(config_manager, mock_config_validator):

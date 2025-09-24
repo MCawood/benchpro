@@ -37,17 +37,14 @@ def list_apps(name: Optional[str], version: Optional[str], output_format: str,
     """List applications in the registry."""
     registry_manager = RegistryManager()
     
-    # Load applications from registry
-    applications = registry_manager.load().get("applications", [])
-    
-    # Check for invalid entries
-    valid_applications = []
-    invalid_entries = []
-    for app in applications:
-        if isinstance(app, dict):
-            valid_applications.append(app)
-        else:
-            invalid_entries.append(app)
+    # Load applications from new database registry
+    try:
+        # Get all applications regardless of status for listing
+        valid_applications = registry_manager.list_applications(status_filter=None)
+        invalid_entries = []  # Database ensures data integrity
+    except Exception as e:
+        click.echo(f"Error loading applications: {e}", err=True)
+        sys.exit(1)
     
     # Fix invalid entries if requested
     if invalid_entries and fix:
@@ -89,10 +86,10 @@ def list_apps(name: Optional[str], version: Optional[str], output_format: str,
 def app_info(app_id: str, no_color: bool):
     """Get detailed information about an application."""
     registry_manager = RegistryManager()
-    applications = registry_manager.load().get("applications", [])
+    valid_applications = registry_manager.list_applications(status_filter=None)
     
     # Filter out invalid entries
-    valid_applications = [app for app in applications if isinstance(app, dict)]
+    # Applications are already valid from database
     
     # Find application by ID
     app = next((app for app in valid_applications if app.get("id") == app_id), None)
@@ -131,10 +128,10 @@ def remove_app(app_id: str, force: bool):
 def verify_app(app_id: str, no_color: bool):
     """Verify the integrity of an application binary."""
     registry_manager = RegistryManager()
-    applications = registry_manager.load().get("applications", [])
+    valid_applications = registry_manager.list_applications(status_filter=None)
     
     # Filter out invalid entries
-    valid_applications = [app for app in applications if isinstance(app, dict)]
+    # Applications are already valid from database
     
     # Find application by ID
     app = next((app for app in valid_applications if app.get("id") == app_id), None)
@@ -181,12 +178,12 @@ def verify_app(app_id: str, no_color: bool):
 def app_stats(no_color: bool):
     """Show statistics about applications in the registry."""
     registry_manager = RegistryManager()
-    applications = registry_manager.load().get("applications", [])
+    valid_applications = registry_manager.list_applications(status_filter=None)
     
     # Filter out non-dictionary entries
     valid_applications = []
     invalid_count = 0
-    for app in applications:
+    for app in valid_applications:
         if isinstance(app, dict):
             valid_applications.append(app)
         else:
@@ -273,10 +270,10 @@ def app_stats(no_color: bool):
 def clean_registry(force: bool):
     """Clean the registry by removing entries with missing binaries."""
     registry_manager = RegistryManager()
-    applications = registry_manager.load().get("applications", [])
+    valid_applications = registry_manager.list_applications(status_filter=None)
     
     # Filter out invalid entries
-    valid_applications = [app for app in applications if isinstance(app, dict)]
+    # Applications are already valid from database
     
     # Find applications with missing binaries
     to_remove = []
@@ -338,9 +335,9 @@ def register_app(app_name: str, binary_path: str, version: str = "1.0",
         }
     }
     
-    # Register the application
+    # Register the application using the new task submission API
     registry_manager = RegistryManager()
-    app_id = registry_manager.register_application(app_data)
+    app_id = registry_manager.register_task_submission(app_data, app_data["workspace_dir"])
     
     if app_id:
         click.echo(f"Registered application {app_name} with ID: {app_id}")

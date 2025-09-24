@@ -41,7 +41,7 @@ def test_end_to_end_workflow_in_isolation(isolated_user_dir, monkeypatch):
     # 3. Create the dependency chain using our isolated directory manager.
     #    This is now possible because the source code is correctly refactored.
     config_manager = ConfigManager(user_dir_manager=isolated_user_dir)
-    registry_manager = RegistryManager(user_dir_manager=isolated_user_dir)
+    registry_manager = RegistryManager()
     workspace_manager = WorkspaceManager(user_dir_manager=isolated_user_dir)
     orchestrator = TaskOrchestrator(
         config_manager=config_manager,
@@ -55,7 +55,8 @@ def test_end_to_end_workflow_in_isolation(isolated_user_dir, monkeypatch):
         "name": "golden_path_profile",
         "run": { "application": "some_app", "executable": "placeholder" },
         "job": { "scheduler": "local" },
-        "template": "vanilla.j2"
+        "template": "vanilla.j2",
+        "workspace": {"input_dir": "inputs"}
     }
     profile_path = isolated_user_dir.get_path("inputs_benchmark", "golden_path_profile.yaml")
     
@@ -69,10 +70,10 @@ def test_end_to_end_workflow_in_isolation(isolated_user_dir, monkeypatch):
         f.write("#!/bin/bash\\n{{ command }}\\n")
         
     # 5. Register a dummy dependency application
-    registry_manager.register_application({
-        "name": "some_app", "version": "1.0", "binary_path": "/bin/true",
-        "workspace_dir": "dummy", "build_parameters": {}, "metadata": {}
-    })
+    registry_manager.register_task_submission({
+        "name": "some_app", "version": "1.0", "task_type": "application", 
+        "binary_path": "/bin/true", "build_parameters": {}, "metadata": {}
+    }, "dummy")
 
     # 6. Execute the orchestrator, which should now succeed
     success, job_id, script_path = orchestrator.execute("golden_path_profile", {})

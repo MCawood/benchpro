@@ -260,58 +260,78 @@ def bench(profile: str, output_dir: Optional[str] = None,
 # Status command
 @cli.command()
 @click.option(
+    "--task-id", 
+    help="ID of the task to check status for."
+)
+@click.option(
     "--job-id", 
-    required=True, 
-    help="ID of the job to check."
+    help="ID of the job to check status for."
 )
 @click.option(
-    "--executor",
-    type=click.Choice(["local", "scheduler"]),
-    help="Executor used to run the job. If not specified, uses the default from configuration."
+    "--refresh", 
+    is_flag=True,
+    help="Force refresh of status from scheduler (for running jobs)."
 )
 @click.option(
-    "--execution-type",
-    type=click.Choice(["local", "sched"]),
-    help="Execution type used to run the job. If not specified, uses executor or the default from configuration."
+    "--format", "output_format",
+    type=click.Choice(["table", "json", "yaml"]),
+    default="table",
+    help="Output format for status information."
 )
-@click.option(
-    "--scheduler-type", 
-    default="slurm",
-    help="Type of scheduler to use for status check (only for scheduler executor)."
-)
-def status(job_id: str, executor: Optional[str] = None, execution_type: Optional[str] = None, 
-           scheduler_type: str = "slurm"):
-    """Check the status of a running job."""
-    from benchpro.executor.components.execution import SlurmExecutionComponent, LocalExecutionComponent
+def status(task_id: Optional[str] = None, job_id: Optional[str] = None, 
+           refresh: bool = False, output_format: str = "table"):
+    """Check the status of a task or job using the registry."""
     
+    if not task_id and not job_id:
+        click.echo("Error: Either --task-id or --job-id must be provided.", err=True)
+        sys.exit(1)
+        
     try:
-        # Determine execution type
-        config_manager = ConfigManager()
-        default_config = config_manager.load_default_config()
+        registry_manager = RegistryManager()
         
-        if not execution_type and executor:
-            execution_type = "sched" if executor == "scheduler" else executor
+        if task_id:
+            # Query by task ID
+            task_status = registry_manager.get_task_status(task_id, force_refresh=refresh)
+            task_info = registry_manager.get_task_info(task_id)
             
-        if not execution_type:
-            # Get default from config
-            default_execution = default_config.get("execution", {}).get("type", "local")
-            execution_type = default_execution
+            if not task_info:
+                click.echo(f"Task ID '{task_id}' not found in registry.", err=True)
+                sys.exit(1)
             
-        # Create the appropriate execution component
-        if execution_type == "sched":
-            execution_component = SlurmExecutionComponent()
-        else:
-            execution_component = LocalExecutionComponent()
+            # Display task information
+            click.echo(f"Task ID: {task_id}")
+            click.echo(f"Name: {task_info.get('name', 'unknown')}")
+            click.echo(f"Type: {task_info.get('task_type', 'unknown')}")
+            click.echo(f"Status: {task_status}")
             
-        # Check job status
-        status = execution_component.get_status(job_id)
-        
-        # Print status information
-        click.echo(f"Job ID: {job_id}")
-        click.echo(f"Status: {status}")
+            if task_info.get('job_id'):
+                click.echo(f"Job ID: {task_info['job_id']}")
+                
+            if task_info.get('workspace_dir'):
+                click.echo(f"Workspace: {task_info['workspace_dir']}")
+                
+        elif job_id:
+            # Query by job ID
+            task_info = registry_manager.find_task_by_job_id(job_id)
+            
+            if not task_info:
+                click.echo(f"Job ID '{job_id}' not found in registry.", err=True)
+                sys.exit(1)
+            
+            task_status = registry_manager.get_task_status(task_info['id'], force_refresh=refresh)
+            
+            # Display job information
+            click.echo(f"Job ID: {job_id}")
+            click.echo(f"Task ID: {task_info['id']}")
+            click.echo(f"Name: {task_info.get('name', 'unknown')}")
+            click.echo(f"Type: {task_info.get('task_type', 'unknown')}")
+            click.echo(f"Status: {task_status}")
+            
+            if task_info.get('workspace_dir'):
+                click.echo(f"Workspace: {task_info['workspace_dir']}")
         
     except Exception as e:
-        logger.error(f"Error checking job status: {str(e)}")
+        logger.error(f"Error checking status: {str(e)}")
         sys.exit(1)
 
 # Capture command

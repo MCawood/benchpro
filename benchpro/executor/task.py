@@ -34,7 +34,8 @@ class Task:
                  config_component: ConfigComponent,
                  validation_component: ValidationComponent,
                  script_generation_component: ScriptGenerationComponent,
-                 execution_component: ExecutionComponent):
+                 execution_component: ExecutionComponent,
+                 registry_manager: Optional[RegistryManager] = None):
         """
         Initialize the Task with its component dependencies.
         
@@ -59,66 +60,14 @@ class Task:
         self.logger.debug(f"  Validation component: {type(validation_component).__name__}")
         self.logger.debug(f"  Script generation component: {type(script_generation_component).__name__}")
         self.logger.debug(f"  Execution component: {type(execution_component).__name__}")
+        
+        # Store registry manager for task lifecycle integration
+        self.registry_manager = registry_manager
+        if self.registry_manager:
+            self.logger.debug(f"  Registry manager: {type(self.registry_manager).__name__}")
+        else:
+            self.logger.debug("  Registry manager: None (manual registry creation will be used)")
     
-    def run(self, force_override: bool = False) -> Tuple[bool, Optional[str]]:
-        """
-        Run the task.
-        
-        Args:
-            force_override: Force override of validator checks if true.
-            
-        Returns:
-            A tuple containing:
-                - True if the task was submitted successfully, False otherwise.
-                - Job ID (if submitted, None otherwise).
-                
-        Raises:
-            ConfigError: If the configuration could not be loaded.
-            ValidationError: If the configuration is invalid and force_override is False.
-            TemplateError: If the script generation fails.
-            ExecutionError: If the task execution fails.
-        """
-        # Get the current configuration
-        try:
-            config = self.config_component.get_config()
-        except Exception as e:
-            self.logger.error(f"Error loading configuration: {str(e)}")
-            raise ConfigError(f"Failed to load configuration: {str(e)}")
-        
-        # Validate the configuration
-        if not force_override:
-            try:
-                is_valid, errors = self.validation_component.validate(config)
-                if not is_valid:
-                    self.logger.error(f"Configuration validation failed: {errors}")
-                    raise ValidationError(f"Configuration validation failed: {errors}")
-            except Exception as e:
-                self.logger.error(f"Error during validation: {str(e)}")
-                raise ValidationError(f"Error during validation: {str(e)}")
-        
-        # Generate script from template
-        try:
-            # Get template file and output paths from derived implementations
-            template_path, script_path = self._get_template_and_script_paths()
-            
-            # Generate the script
-            self.generate_script(template_path, script_path)
-        except Exception as e:
-            self.logger.error(f"Error generating script: {str(e)}")
-            raise TemplateError(f"Error generating script: {str(e)}")
-        
-        # Execute the script
-        try:
-            success, job_id = self.execution_component.execute(script_path)
-            if success:
-                self.logger.info(f"Task submitted successfully with job ID: {job_id}")
-            else:
-                self.logger.error("Task submission failed")
-            
-            return success, job_id
-        except Exception as e:
-            self.logger.error(f"Error executing task: {str(e)}")
-            raise ExecutionError(f"Error executing task: {str(e)}")
     
     def generate_script(self, template_path: str, output_path: str) -> str:
         """
@@ -162,19 +111,6 @@ class Task:
             self.logger.error(f"Failed to generate script: {str(e)}")
             raise TemplateError(f"Failed to generate script: {str(e)}")
     
-    def _get_template_and_script_paths(self) -> Tuple[str, str]:
-        """
-        Get the template and script paths for this task.
-        
-        This method should be implemented by derived classes.
-        
-        Returns:
-            A tuple containing the template path and script path.
-            
-        Raises:
-            NotImplementedError: If this method is not implemented by the derived class.
-        """
-        raise NotImplementedError("Derived classes must implement _get_template_and_script_paths")
 
     def prepare(self, profile_name: str, cli_overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -467,8 +403,12 @@ class Application(Task):
             The application ID if registration was successful, None otherwise.
         """
         try:
-            from benchpro.registry.registry_manager import RegistryManager
-            registry_manager = RegistryManager()
+            # Use injected registry manager if available, otherwise create one
+            if self.registry_manager:
+                registry_manager = self.registry_manager
+            else:
+                from benchpro.registry.registry_manager import RegistryManager
+                registry_manager = RegistryManager()
             
             # Register the application with the simplified approach
             app_id = registry_manager.register_application(
@@ -530,9 +470,9 @@ class Application(Task):
             self.logger.error(f"Failed to generate test script: {str(e)}")
             return None
     
-    def _get_template_and_script_paths(self) -> Tuple[str, str]:
         """
-        Get the template and script paths for the application task.
+        DEPRECATED: Get the template and script paths for the application task.
+        Use TaskOrchestrator for execution instead.
         
         Returns:
             A tuple containing the template path and script path.
@@ -545,9 +485,10 @@ class Application(Task):
         version = config.get("version", "unknown")
         
         template = config.get("build", {}).get("template", f"{name}.j2")
-        script_name = f"{name}-{version}_build.sh"
+        script_name = f"application_{name}.sh"
         
-        workspace_dir = config.get("workspace", {}).get("dir", ".")
+        # Use workspace_dir from the workspace configuration
+        workspace_dir = config.get("workspace", {}).get("workspace_dir", ".")
         script_path = os.path.join(workspace_dir, script_name)
         
         # Find template path
@@ -759,9 +700,27 @@ class Benchmark(Task):
             if "label" in requirements and requirements["label"]:
                 search_criteria["label"] = requirements["label"]
             
-            # Search the registry
-            registry_manager = RegistryManager()
-            matching_apps = registry_manager.find_applications(search_criteria)
+            # Search the registry using injected manager if available
+            if self.registry_manager:
+                registry_manager = self.registry_manager
+            else:
+                registry_manager = RegistryManager()
+            matching_apps = registry_manager.list_applications(status_filter=None)
+            
+            # Filter the results by search criteria
+            filtered_apps = []
+            for app in matching_apps:
+                if app.get('name') == search_criteria.get('name'):
+                    # Check version if specified
+                    if 'version' in search_criteria:
+                        if app.get('version') != search_criteria['version']:
+                            continue
+                    # Check label if specified (would be in metadata or tags)
+                    if 'label' in search_criteria:
+                        # Simplified label matching - could be enhanced
+                        pass
+                    filtered_apps.append(app)
+            matching_apps = filtered_apps
             
             # Handle search results
             if not matching_apps:
@@ -867,9 +826,11 @@ class Benchmark(Task):
         # as the application module will load its dependencies automatically
         self.logger.info(f"Application module {app_name}/{app_version} will load its dependencies automatically")
     
+    # DEPRECATED: Legacy method - TaskOrchestrator handles script generation now  
     def _get_template_and_script_paths(self) -> Tuple[str, str]:
         """
-        Get the template and script paths for the benchmark task.
+        DEPRECATED: Get the template and script paths for the benchmark task.
+        Use TaskOrchestrator for execution instead.
         
         Returns:
             A tuple containing the template path and script path.
@@ -882,8 +843,9 @@ class Benchmark(Task):
         version = config.get("version", "unknown")
         
         template = config.get("template", f"{name}.j2")
-        script_name = f"{name}-{version}_run.sh"
+        script_name = f"benchmark_{name}.sh"
         
+        # Use workspace_dir from the workspace configuration
         workspace_dir = config.get("workspace", {}).get("workspace_dir", ".")
         script_path = os.path.join(workspace_dir, script_name)
         

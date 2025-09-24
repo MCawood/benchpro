@@ -21,8 +21,20 @@ def test_application_build(standardized_test_env, monkeypatch):
 
     user_dir_manager = get_user_dir_manager(base_dir=standardized_test_env["temp_dir"])
     config_manager = ConfigManager(user_dir_manager=user_dir_manager)
+    
+    # Mock registry manager to avoid database dependency
+    from unittest.mock import MagicMock
+    mock_registry_manager = MagicMock()
+    mock_registry_manager.register_task_submission.return_value = "mock_task_id"
+    
+    from benchpro.workspace.workspace_manager import WorkspaceManager
+    workspace_manager = WorkspaceManager(user_dir_manager=user_dir_manager)
 
-    orchestrator = TaskOrchestrator(config_manager)
+    orchestrator = TaskOrchestrator(
+        config_manager=config_manager,
+        registry_manager=mock_registry_manager,
+        workspace_manager=workspace_manager
+    )
     success, job_id, script_path = orchestrator.execute("test_app", {}, dry_run=False)
 
     assert success is True
@@ -39,19 +51,23 @@ def test_benchmark_run(standardized_test_env, monkeypatch):
 
     user_dir_manager = get_user_dir_manager(base_dir=standardized_test_env["temp_dir"])
     config_manager = ConfigManager(user_dir_manager=user_dir_manager)
-    registry_manager = RegistryManager(user_dir_manager=user_dir_manager)
+    
+    # Mock registry manager to avoid database dependency
+    from unittest.mock import MagicMock
+    mock_registry_manager = MagicMock()
+    mock_registry_manager.register_task_submission.return_value = "mock_task_id"
+    mock_registry_manager.list_applications.return_value = [
+        {"name": "test_app", "version": "1.0", "binary_path": "/path/to/test_app"}
+    ]
+    
+    from benchpro.workspace.workspace_manager import WorkspaceManager
+    workspace_manager = WorkspaceManager(user_dir_manager=user_dir_manager)
 
-    # Register the required application for the benchmark
-    registry_manager.register_application({
-        "name": "test_app",
-        "version": "1.0",
-        "workspace_dir": standardized_test_env["temp_dir"],
-        "binary_path": os.path.join(standardized_test_env["outputs_dir"], "test_app"),
-        "build_parameters": {},
-        "metadata": {}
-    })
-
-    orchestrator = TaskOrchestrator(config_manager, registry_manager=registry_manager)
+    orchestrator = TaskOrchestrator(
+        config_manager=config_manager,
+        registry_manager=mock_registry_manager,
+        workspace_manager=workspace_manager
+    )
     success, job_id, script_path = orchestrator.execute("test_benchmark", {"task_type": "benchmark"}, dry_run=False)
 
     assert success is True
@@ -74,7 +90,19 @@ def test_cli_overrides(standardized_test_env, monkeypatch):
         "execution": {"type": "local"}  # Force local execution to avoid slurm dependency
     }
 
-    orchestrator = TaskOrchestrator(config_manager)
+    # Mock registry manager to avoid database dependency
+    from unittest.mock import MagicMock
+    mock_registry_manager = MagicMock()
+    mock_registry_manager.register_task_submission.return_value = "mock_task_id"
+    
+    from benchpro.workspace.workspace_manager import WorkspaceManager
+    workspace_manager = WorkspaceManager(user_dir_manager=user_dir_manager)
+
+    orchestrator = TaskOrchestrator(
+        config_manager=config_manager,
+        registry_manager=mock_registry_manager,
+        workspace_manager=workspace_manager
+    )
     success, job_id, script_path = orchestrator.execute("cli_test", cli_overrides, dry_run=False)
 
     assert success is True
@@ -96,9 +124,23 @@ def test_full_workflow(standardized_test_env, monkeypatch):
 
     user_dir_manager = get_user_dir_manager(base_dir=standardized_test_env["temp_dir"])
     config_manager = ConfigManager(user_dir_manager=user_dir_manager)
-    registry_manager = RegistryManager(user_dir_manager=user_dir_manager)
+    
+    # Mock registry manager to avoid database dependency
+    from unittest.mock import MagicMock
+    mock_registry_manager = MagicMock()
+    mock_registry_manager.register_task_submission.return_value = "mock_task_id"
+    mock_registry_manager.list_applications.return_value = [
+        {"name": "test_app", "version": "1.0", "binary_path": "/path/to/test_app"}
+    ]
+    
+    from benchpro.workspace.workspace_manager import WorkspaceManager
+    workspace_manager = WorkspaceManager(user_dir_manager=user_dir_manager)
 
-    orchestrator = TaskOrchestrator(config_manager, registry_manager=registry_manager)
+    orchestrator = TaskOrchestrator(
+        config_manager=config_manager,
+        registry_manager=mock_registry_manager,
+        workspace_manager=workspace_manager
+    )
 
     # Test application build
     app_success, app_job_id, _ = orchestrator.execute("test_app", {}, dry_run=False)
@@ -106,14 +148,13 @@ def test_full_workflow(standardized_test_env, monkeypatch):
     assert app_job_id == "test_job_id"
 
     # Register the application for the benchmark
-    registry_manager.register_application({
+    mock_registry_manager.register_task_submission({
         "name": "test_app",
         "version": "1.0",
-        "workspace_dir": standardized_test_env["temp_dir"],
         "binary_path": os.path.join(standardized_test_env["outputs_dir"], "test_app"),
         "build_parameters": {},
         "metadata": {}
-    })
+    }, standardized_test_env["temp_dir"])
 
     # Test benchmark run
     bench_success, bench_job_id, bench_script_path = orchestrator.execute(
