@@ -1,0 +1,658 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Reference &mdash; BenchPRO-NG 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="CLI Reference" href="cli.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            BenchPRO-NG
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Reference</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-benchpro.core.domain">Core Modules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#benchpro.core.domain.Build"><code class="docutils literal notranslate"><span class="pre">Build</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Build.activation_script"><code class="docutils literal notranslate"><span class="pre">Build.activation_script</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Build.build_id"><code class="docutils literal notranslate"><span class="pre">Build.build_id</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Build.build_label"><code class="docutils literal notranslate"><span class="pre">Build.build_label</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Build.build_timestamp"><code class="docutils literal notranslate"><span class="pre">Build.build_timestamp</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Build.code"><code class="docutils literal notranslate"><span class="pre">Build.code</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Build.compiler"><code class="docutils literal notranslate"><span class="pre">Build.compiler</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Build.flags"><code class="docutils literal notranslate"><span class="pre">Build.flags</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Build.model_config"><code class="docutils literal notranslate"><span class="pre">Build.model_config</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Build.mpi"><code class="docutils literal notranslate"><span class="pre">Build.mpi</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Build.system"><code class="docutils literal notranslate"><span class="pre">Build.system</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Build.version"><code class="docutils literal notranslate"><span class="pre">Build.version</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#benchpro.core.domain.Job"><code class="docutils literal notranslate"><span class="pre">Job</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Job.job_id"><code class="docutils literal notranslate"><span class="pre">Job.job_id</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Job.model_config"><code class="docutils literal notranslate"><span class="pre">Job.model_config</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Job.scheduler_job_id"><code class="docutils literal notranslate"><span class="pre">Job.scheduler_job_id</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Job.script_content"><code class="docutils literal notranslate"><span class="pre">Job.script_content</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Job.status"><code class="docutils literal notranslate"><span class="pre">Job.status</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Job.tasks"><code class="docutils literal notranslate"><span class="pre">Job.tasks</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#benchpro.core.domain.ResourceRequest"><code class="docutils literal notranslate"><span class="pre">ResourceRequest</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.ResourceRequest.account"><code class="docutils literal notranslate"><span class="pre">ResourceRequest.account</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.ResourceRequest.gpus"><code class="docutils literal notranslate"><span class="pre">ResourceRequest.gpus</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.ResourceRequest.mode"><code class="docutils literal notranslate"><span class="pre">ResourceRequest.mode</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.ResourceRequest.model_config"><code class="docutils literal notranslate"><span class="pre">ResourceRequest.model_config</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.ResourceRequest.nodes"><code class="docutils literal notranslate"><span class="pre">ResourceRequest.nodes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.ResourceRequest.partition"><code class="docutils literal notranslate"><span class="pre">ResourceRequest.partition</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.ResourceRequest.qos"><code class="docutils literal notranslate"><span class="pre">ResourceRequest.qos</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.ResourceRequest.ranks_per_node"><code class="docutils literal notranslate"><span class="pre">ResourceRequest.ranks_per_node</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.ResourceRequest.reservation"><code class="docutils literal notranslate"><span class="pre">ResourceRequest.reservation</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.ResourceRequest.threads"><code class="docutils literal notranslate"><span class="pre">ResourceRequest.threads</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.ResourceRequest.time"><code class="docutils literal notranslate"><span class="pre">ResourceRequest.time</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#benchpro.core.domain.Suite"><code class="docutils literal notranslate"><span class="pre">Suite</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Suite.metadata"><code class="docutils literal notranslate"><span class="pre">Suite.metadata</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Suite.model_config"><code class="docutils literal notranslate"><span class="pre">Suite.model_config</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Suite.name"><code class="docutils literal notranslate"><span class="pre">Suite.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Suite.suite_id"><code class="docutils literal notranslate"><span class="pre">Suite.suite_id</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Suite.tasks"><code class="docutils literal notranslate"><span class="pre">Suite.tasks</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#benchpro.core.domain.Task"><code class="docutils literal notranslate"><span class="pre">Task</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Task.command"><code class="docutils literal notranslate"><span class="pre">Task.command</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Task.duration_ms"><code class="docutils literal notranslate"><span class="pre">Task.duration_ms</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Task.env"><code class="docutils literal notranslate"><span class="pre">Task.env</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Task.exit_code"><code class="docutils literal notranslate"><span class="pre">Task.exit_code</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Task.job_id"><code class="docutils literal notranslate"><span class="pre">Task.job_id</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Task.model_config"><code class="docutils literal notranslate"><span class="pre">Task.model_config</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Task.parameters"><code class="docutils literal notranslate"><span class="pre">Task.parameters</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Task.requirements"><code class="docutils literal notranslate"><span class="pre">Task.requirements</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Task.resources"><code class="docutils literal notranslate"><span class="pre">Task.resources</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Task.status"><code class="docutils literal notranslate"><span class="pre">Task.status</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Task.suite_id"><code class="docutils literal notranslate"><span class="pre">Task.suite_id</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.Task.task_id"><code class="docutils literal notranslate"><span class="pre">Task.task_id</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#benchpro.core.domain.TaskStatus"><code class="docutils literal notranslate"><span class="pre">TaskStatus</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.TaskStatus.CANCELLED"><code class="docutils literal notranslate"><span class="pre">TaskStatus.CANCELLED</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.TaskStatus.COMPLETED"><code class="docutils literal notranslate"><span class="pre">TaskStatus.COMPLETED</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.TaskStatus.FAILED"><code class="docutils literal notranslate"><span class="pre">TaskStatus.FAILED</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.TaskStatus.PENDING"><code class="docutils literal notranslate"><span class="pre">TaskStatus.PENDING</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.domain.TaskStatus.RUNNING"><code class="docutils literal notranslate"><span class="pre">TaskStatus.RUNNING</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#benchpro.core.planner.Planner"><code class="docutils literal notranslate"><span class="pre">Planner</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.planner.Planner.expand_matrix"><code class="docutils literal notranslate"><span class="pre">Planner.expand_matrix()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#benchpro.core.executor.Executor"><code class="docutils literal notranslate"><span class="pre">Executor</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.executor.Executor.run_tasks"><code class="docutils literal notranslate"><span class="pre">Executor.run_tasks()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#benchpro.core.resolver.Resolver"><code class="docutils literal notranslate"><span class="pre">Resolver</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.resolver.Resolver.resolve"><code class="docutils literal notranslate"><span class="pre">Resolver.resolve()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#benchpro.core.results.ResultStore"><code class="docutils literal notranslate"><span class="pre">ResultStore</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.results.ResultStore.get_builds"><code class="docutils literal notranslate"><span class="pre">ResultStore.get_builds()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.results.ResultStore.get_run_tasks"><code class="docutils literal notranslate"><span class="pre">ResultStore.get_run_tasks()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.results.ResultStore.get_runs"><code class="docutils literal notranslate"><span class="pre">ResultStore.get_runs()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.results.ResultStore.save_build"><code class="docutils literal notranslate"><span class="pre">ResultStore.save_build()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.results.ResultStore.save_run"><code class="docutils literal notranslate"><span class="pre">ResultStore.save_run()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.results.ResultStore.save_task"><code class="docutils literal notranslate"><span class="pre">ResultStore.save_task()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#benchpro.core.config.Config"><code class="docutils literal notranslate"><span class="pre">Config</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.config.Config.defaults"><code class="docutils literal notranslate"><span class="pre">Config.defaults</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.config.Config.load"><code class="docutils literal notranslate"><span class="pre">Config.load()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.config.Config.model_config"><code class="docutils literal notranslate"><span class="pre">Config.model_config</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.config.Config.system"><code class="docutils literal notranslate"><span class="pre">Config.system</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#benchpro.core.config.SystemConfig"><code class="docutils literal notranslate"><span class="pre">SystemConfig</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.config.SystemConfig.default_walltime"><code class="docutils literal notranslate"><span class="pre">SystemConfig.default_walltime</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.config.SystemConfig.max_local_tasks"><code class="docutils literal notranslate"><span class="pre">SystemConfig.max_local_tasks</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.config.SystemConfig.max_walltime"><code class="docutils literal notranslate"><span class="pre">SystemConfig.max_walltime</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.config.SystemConfig.model_config"><code class="docutils literal notranslate"><span class="pre">SystemConfig.model_config</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchpro.core.config.SystemConfig.name"><code class="docutils literal notranslate"><span class="pre">SystemConfig.name</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">BenchPRO-NG</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">API Reference</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/api.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h1>
+<section id="module-benchpro.core.domain">
+<span id="core-modules"></span><h2>Core Modules<a class="headerlink" href="#module-benchpro.core.domain" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="benchpro.core.domain.Build">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">benchpro.core.domain.</span></span><span class="sig-name descname"><span class="pre">Build</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">build_id:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">code:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">build_label:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">build_timestamp:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activation_script:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compiler:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mpi:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flags:</span> <span class="pre">~typing.List[str]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/benchpro/core/domain.html#Build"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.domain.Build" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Build.activation_script">
+<span class="sig-name descname"><span class="pre">activation_script</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#benchpro.core.domain.Build.activation_script" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Build.build_id">
+<span class="sig-name descname"><span class="pre">build_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#benchpro.core.domain.Build.build_id" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Build.build_label">
+<span class="sig-name descname"><span class="pre">build_label</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#benchpro.core.domain.Build.build_label" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Build.build_timestamp">
+<span class="sig-name descname"><span class="pre">build_timestamp</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#benchpro.core.domain.Build.build_timestamp" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Build.code">
+<span class="sig-name descname"><span class="pre">code</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#benchpro.core.domain.Build.code" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Build.compiler">
+<span class="sig-name descname"><span class="pre">compiler</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#benchpro.core.domain.Build.compiler" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Build.flags">
+<span class="sig-name descname"><span class="pre">flags</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#benchpro.core.domain.Build.flags" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Build.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">ConfigDict</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></em><a class="headerlink" href="#benchpro.core.domain.Build.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Build.mpi">
+<span class="sig-name descname"><span class="pre">mpi</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#benchpro.core.domain.Build.mpi" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Build.system">
+<span class="sig-name descname"><span class="pre">system</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#benchpro.core.domain.Build.system" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Build.version">
+<span class="sig-name descname"><span class="pre">version</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#benchpro.core.domain.Build.version" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="benchpro.core.domain.Job">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">benchpro.core.domain.</span></span><span class="sig-name descname"><span class="pre">Job</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">job_id:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scheduler_job_id:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tasks:</span> <span class="pre">~typing.List[str]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">script_content:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">status:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'pending'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/benchpro/core/domain.html#Job"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.domain.Job" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Job.job_id">
+<span class="sig-name descname"><span class="pre">job_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#benchpro.core.domain.Job.job_id" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Job.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">ConfigDict</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></em><a class="headerlink" href="#benchpro.core.domain.Job.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Job.scheduler_job_id">
+<span class="sig-name descname"><span class="pre">scheduler_job_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#benchpro.core.domain.Job.scheduler_job_id" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Job.script_content">
+<span class="sig-name descname"><span class="pre">script_content</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#benchpro.core.domain.Job.script_content" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Job.status">
+<span class="sig-name descname"><span class="pre">status</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#benchpro.core.domain.Job.status" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Job.tasks">
+<span class="sig-name descname"><span class="pre">tasks</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#benchpro.core.domain.Job.tasks" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="benchpro.core.domain.ResourceRequest">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">benchpro.core.domain.</span></span><span class="sig-name descname"><span class="pre">ResourceRequest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">nodes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ranks_per_node</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threads</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpus</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">partition</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">account</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reservation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'mpi'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/benchpro/core/domain.html#ResourceRequest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.domain.ResourceRequest" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.ResourceRequest.account">
+<span class="sig-name descname"><span class="pre">account</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#benchpro.core.domain.ResourceRequest.account" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.ResourceRequest.gpus">
+<span class="sig-name descname"><span class="pre">gpus</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#benchpro.core.domain.ResourceRequest.gpus" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.ResourceRequest.mode">
+<span class="sig-name descname"><span class="pre">mode</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#benchpro.core.domain.ResourceRequest.mode" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.ResourceRequest.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">ConfigDict</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></em><a class="headerlink" href="#benchpro.core.domain.ResourceRequest.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.ResourceRequest.nodes">
+<span class="sig-name descname"><span class="pre">nodes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#benchpro.core.domain.ResourceRequest.nodes" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.ResourceRequest.partition">
+<span class="sig-name descname"><span class="pre">partition</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#benchpro.core.domain.ResourceRequest.partition" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.ResourceRequest.qos">
+<span class="sig-name descname"><span class="pre">qos</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#benchpro.core.domain.ResourceRequest.qos" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.ResourceRequest.ranks_per_node">
+<span class="sig-name descname"><span class="pre">ranks_per_node</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#benchpro.core.domain.ResourceRequest.ranks_per_node" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.ResourceRequest.reservation">
+<span class="sig-name descname"><span class="pre">reservation</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#benchpro.core.domain.ResourceRequest.reservation" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.ResourceRequest.threads">
+<span class="sig-name descname"><span class="pre">threads</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#benchpro.core.domain.ResourceRequest.threads" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.ResourceRequest.time">
+<span class="sig-name descname"><span class="pre">time</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#benchpro.core.domain.ResourceRequest.time" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="benchpro.core.domain.Suite">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">benchpro.core.domain.</span></span><span class="sig-name descname"><span class="pre">Suite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suite_id:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tasks:</span> <span class="pre">~typing.List[~benchpro.core.domain.Task]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata:</span> <span class="pre">~typing.Dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">~typing.Any]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/benchpro/core/domain.html#Suite"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.domain.Suite" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Suite.metadata">
+<span class="sig-name descname"><span class="pre">metadata</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#benchpro.core.domain.Suite.metadata" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Suite.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">ConfigDict</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></em><a class="headerlink" href="#benchpro.core.domain.Suite.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Suite.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#benchpro.core.domain.Suite.name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Suite.suite_id">
+<span class="sig-name descname"><span class="pre">suite_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#benchpro.core.domain.Suite.suite_id" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Suite.tasks">
+<span class="sig-name descname"><span class="pre">tasks</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#benchpro.core.domain.Task" title="benchpro.core.domain.Task"><span class="pre">Task</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#benchpro.core.domain.Suite.tasks" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="benchpro.core.domain.Task">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">benchpro.core.domain.</span></span><span class="sig-name descname"><span class="pre">Task</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_id:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suite_id:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameters:</span> <span class="pre">~typing.Dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">~typing.Any]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resources:</span> <span class="pre">~benchpro.core.domain.ResourceRequest</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">command:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env:</span> <span class="pre">~typing.Dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">str]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">requirements:</span> <span class="pre">~typing.Dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">str]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">status:</span> <span class="pre">~benchpro.core.domain.TaskStatus</span> <span class="pre">=</span> <span class="pre">TaskStatus.PENDING</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">job_id:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exit_code:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration_ms:</span> <span class="pre">float</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/benchpro/core/domain.html#Task"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.domain.Task" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Task.command">
+<span class="sig-name descname"><span class="pre">command</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#benchpro.core.domain.Task.command" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Task.duration_ms">
+<span class="sig-name descname"><span class="pre">duration_ms</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#benchpro.core.domain.Task.duration_ms" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Task.env">
+<span class="sig-name descname"><span class="pre">env</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#benchpro.core.domain.Task.env" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Task.exit_code">
+<span class="sig-name descname"><span class="pre">exit_code</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#benchpro.core.domain.Task.exit_code" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Task.job_id">
+<span class="sig-name descname"><span class="pre">job_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#benchpro.core.domain.Task.job_id" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Task.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">ConfigDict</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></em><a class="headerlink" href="#benchpro.core.domain.Task.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Task.parameters">
+<span class="sig-name descname"><span class="pre">parameters</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#benchpro.core.domain.Task.parameters" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Task.requirements">
+<span class="sig-name descname"><span class="pre">requirements</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#benchpro.core.domain.Task.requirements" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Task.resources">
+<span class="sig-name descname"><span class="pre">resources</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#benchpro.core.domain.ResourceRequest" title="benchpro.core.domain.ResourceRequest"><span class="pre">ResourceRequest</span></a></em><a class="headerlink" href="#benchpro.core.domain.Task.resources" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Task.status">
+<span class="sig-name descname"><span class="pre">status</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#benchpro.core.domain.TaskStatus" title="benchpro.core.domain.TaskStatus"><span class="pre">TaskStatus</span></a></em><a class="headerlink" href="#benchpro.core.domain.Task.status" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Task.suite_id">
+<span class="sig-name descname"><span class="pre">suite_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#benchpro.core.domain.Task.suite_id" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.Task.task_id">
+<span class="sig-name descname"><span class="pre">task_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#benchpro.core.domain.Task.task_id" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="benchpro.core.domain.TaskStatus">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">benchpro.core.domain.</span></span><span class="sig-name descname"><span class="pre">TaskStatus</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/benchpro/core/domain.html#TaskStatus"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.domain.TaskStatus" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.TaskStatus.CANCELLED">
+<span class="sig-name descname"><span class="pre">CANCELLED</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'cancelled'</span></em><a class="headerlink" href="#benchpro.core.domain.TaskStatus.CANCELLED" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.TaskStatus.COMPLETED">
+<span class="sig-name descname"><span class="pre">COMPLETED</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'completed'</span></em><a class="headerlink" href="#benchpro.core.domain.TaskStatus.COMPLETED" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.TaskStatus.FAILED">
+<span class="sig-name descname"><span class="pre">FAILED</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'failed'</span></em><a class="headerlink" href="#benchpro.core.domain.TaskStatus.FAILED" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.TaskStatus.PENDING">
+<span class="sig-name descname"><span class="pre">PENDING</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'pending'</span></em><a class="headerlink" href="#benchpro.core.domain.TaskStatus.PENDING" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.domain.TaskStatus.RUNNING">
+<span class="sig-name descname"><span class="pre">RUNNING</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'running'</span></em><a class="headerlink" href="#benchpro.core.domain.TaskStatus.RUNNING" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class" id="module-benchpro.core.planner">
+<dt class="sig sig-object py" id="benchpro.core.planner.Planner">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">benchpro.core.planner.</span></span><span class="sig-name descname"><span class="pre">Planner</span></span><a class="reference internal" href="_modules/benchpro/core/planner.html#Planner"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.planner.Planner" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.planner.Planner.expand_matrix">
+<em class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">expand_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">suite_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">matrix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_resources</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">command_template</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">requirements</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#benchpro.core.domain.Task" title="benchpro.core.domain.Task"><span class="pre">Task</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/benchpro/core/planner.html#Planner.expand_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.planner.Planner.expand_matrix" title="Link to this definition"></a></dt>
+<dd><p>Expand a matrix of parameters into a list of Tasks.
+Follows the expansion order: nodes -&gt; ranks_per_node -&gt; threads -&gt; gpus -&gt; named_params</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class" id="module-benchpro.core.executor">
+<dt class="sig sig-object py" id="benchpro.core.executor.Executor">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">benchpro.core.executor.</span></span><span class="sig-name descname"><span class="pre">Executor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">backend</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'local'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_concurrent</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">result_store</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#benchpro.core.results.ResultStore" title="benchpro.core.results.ResultStore"><span class="pre">ResultStore</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/benchpro/core/executor.html#Executor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.executor.Executor" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.executor.Executor.run_tasks">
+<em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">run_tasks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tasks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#benchpro.core.domain.Task" title="benchpro.core.domain.Task"><span class="pre">Task</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suite_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'unknown'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/benchpro/core/executor.html#Executor.run_tasks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.executor.Executor.run_tasks" title="Link to this definition"></a></dt>
+<dd><p>Run a list of tasks.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class" id="module-benchpro.core.resolver">
+<dt class="sig sig-object py" id="benchpro.core.resolver.Resolver">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">benchpro.core.resolver.</span></span><span class="sig-name descname"><span class="pre">Resolver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">builds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#benchpro.core.domain.Build" title="benchpro.core.domain.Build"><span class="pre">Build</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/benchpro/core/resolver.html#Resolver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.resolver.Resolver" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.resolver.Resolver.resolve">
+<span class="sig-name descname"><span class="pre">resolve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">build_label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#benchpro.core.domain.Build" title="benchpro.core.domain.Build"><span class="pre">Build</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="_modules/benchpro/core/resolver.html#Resolver.resolve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.resolver.Resolver.resolve" title="Link to this definition"></a></dt>
+<dd><p>Select the best matching build based on constraints.
+Ordering:
+1. code (must match)
+2. version (exact &gt; wildcard/unspecified)
+3. system (exact &gt; unspecified)
+4. build_label (exact &gt; unspecified)
+5. build_timestamp (newest first)</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class" id="module-benchpro.core.results">
+<dt class="sig sig-object py" id="benchpro.core.results.ResultStore">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">benchpro.core.results.</span></span><span class="sig-name descname"><span class="pre">ResultStore</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">db_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/benchpro/core/results.html#ResultStore"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.results.ResultStore" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.results.ResultStore.get_builds">
+<span class="sig-name descname"><span class="pre">get_builds</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/benchpro/core/results.html#ResultStore.get_builds"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.results.ResultStore.get_builds" title="Link to this definition"></a></dt>
+<dd><p>Get all builds.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.results.ResultStore.get_run_tasks">
+<span class="sig-name descname"><span class="pre">get_run_tasks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/benchpro/core/results.html#ResultStore.get_run_tasks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.results.ResultStore.get_run_tasks" title="Link to this definition"></a></dt>
+<dd><p>Get tasks for a specific run.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.results.ResultStore.get_runs">
+<span class="sig-name descname"><span class="pre">get_runs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/benchpro/core/results.html#ResultStore.get_runs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.results.ResultStore.get_runs" title="Link to this definition"></a></dt>
+<dd><p>Get recent runs.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.results.ResultStore.save_build">
+<span class="sig-name descname"><span class="pre">save_build</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">build</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/benchpro/core/results.html#ResultStore.save_build"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.results.ResultStore.save_build" title="Link to this definition"></a></dt>
+<dd><p>Save a build to the database.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.results.ResultStore.save_run">
+<span class="sig-name descname"><span class="pre">save_run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suite_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'local'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/benchpro/core/results.html#ResultStore.save_run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.results.ResultStore.save_run" title="Link to this definition"></a></dt>
+<dd><p>Save a new run.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.results.ResultStore.save_task">
+<span class="sig-name descname"><span class="pre">save_task</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">task</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#benchpro.core.domain.Task" title="benchpro.core.domain.Task"><span class="pre">Task</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/benchpro/core/results.html#ResultStore.save_task"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.results.ResultStore.save_task" title="Link to this definition"></a></dt>
+<dd><p>Save or update a task result.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class" id="module-benchpro.core.config">
+<dt class="sig sig-object py" id="benchpro.core.config.Config">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">benchpro.core.config.</span></span><span class="sig-name descname"><span class="pre">Config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system:</span> <span class="pre">~benchpro.core.config.SystemConfig</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">defaults:</span> <span class="pre">~typing.Dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">~typing.Any]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/benchpro/core/config.html#Config"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.config.Config" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.config.Config.defaults">
+<span class="sig-name descname"><span class="pre">defaults</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#benchpro.core.config.Config.defaults" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="benchpro.core.config.Config.load">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_paths</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Path</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#benchpro.core.config.Config" title="benchpro.core.config.Config"><span class="pre">Config</span></a></span></span><a class="reference internal" href="_modules/benchpro/core/config.html#Config.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.config.Config.load" title="Link to this definition"></a></dt>
+<dd><p>Load configuration from multiple layers.
+Precedence: Defaults &lt; Site &lt; System &lt; User &lt; Local</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.config.Config.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">ConfigDict</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></em><a class="headerlink" href="#benchpro.core.config.Config.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.config.Config.system">
+<span class="sig-name descname"><span class="pre">system</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#benchpro.core.config.SystemConfig" title="benchpro.core.config.SystemConfig"><span class="pre">SystemConfig</span></a></em><a class="headerlink" href="#benchpro.core.config.Config.system" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="benchpro.core.config.SystemConfig">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">benchpro.core.config.</span></span><span class="sig-name descname"><span class="pre">SystemConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_walltime</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3600</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_walltime</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">86400</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_local_tasks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/benchpro/core/config.html#SystemConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#benchpro.core.config.SystemConfig" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.config.SystemConfig.default_walltime">
+<span class="sig-name descname"><span class="pre">default_walltime</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#benchpro.core.config.SystemConfig.default_walltime" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.config.SystemConfig.max_local_tasks">
+<span class="sig-name descname"><span class="pre">max_local_tasks</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#benchpro.core.config.SystemConfig.max_local_tasks" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.config.SystemConfig.max_walltime">
+<span class="sig-name descname"><span class="pre">max_walltime</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#benchpro.core.config.SystemConfig.max_walltime" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.config.SystemConfig.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">ConfigDict</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></em><a class="headerlink" href="#benchpro.core.config.SystemConfig.model_config" title="Link to this definition"></a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="benchpro.core.config.SystemConfig.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#benchpro.core.config.SystemConfig.name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="cli.html" class="btn btn-neutral float-left" title="CLI Reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, BenchPRO Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

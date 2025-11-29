@@ -1,0 +1,418 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CLI Reference &mdash; BenchPRO-NG 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Reference" href="api.html" />
+    <link rel="prev" title="User Guide" href="user_guide.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            BenchPRO-NG
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">CLI Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#bp">bp</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#bp-build-cli">build-cli</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#bp-build-cli-list">list</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#bp-build-cli-run">run</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#bp-completion-cli">completion-cli</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#bp-completion-cli-install">install</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#bp-config-cli">config-cli</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#bp-config-cli-show">show</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#bp-results-cli">results-cli</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#bp-results-cli-list">list</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#bp-results-cli-show">show</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#bp-suite-cli">suite-cli</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#bp-suite-cli-plan">plan</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#bp-suite-cli-run">run</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#bp-task-cli">task-cli</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#bp-task-cli-run">run</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#bp-version">version</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">BenchPRO-NG</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">CLI Reference</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/cli.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="cli-reference">
+<h1>CLI Reference<a class="headerlink" href="#cli-reference" title="Link to this heading"></a></h1>
+<section id="bp">
+<h2>bp<a class="headerlink" href="#bp" title="Link to this heading"></a></h2>
+<p>BenchPRO-NG: HPC Benchmark Orchestrator</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bp<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>COMMAND<span class="w"> </span><span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<section id="bp-build-cli">
+<h3>build-cli<a class="headerlink" href="#bp-build-cli" title="Link to this heading"></a></h3>
+<p>Manage application builds</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bp<span class="w"> </span>build-cli<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>COMMAND<span class="w"> </span><span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<section id="bp-build-cli-list">
+<h4>list<a class="headerlink" href="#bp-build-cli-list" title="Link to this heading"></a></h4>
+<p>List registered builds</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bp<span class="w"> </span>build-cli<span class="w"> </span>list<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+</section>
+<section id="bp-build-cli-run">
+<h4>run<a class="headerlink" href="#bp-build-cli-run" title="Link to this heading"></a></h4>
+<p>Build an application from a config file</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bp<span class="w"> </span>build-cli<span class="w"> </span>run<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>CONFIG_FILE
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-build-cli-run-dry-run">
+<span class="sig-name descname"><span class="pre">--dry-run</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-bp-build-cli-run-dry-run" title="Link to this definition"></a></dt>
+<dd><p>Simulate build</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-build-cli-run-arg-CONFIG_FILE">
+<span class="sig-name descname"><span class="pre">CONFIG_FILE</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-bp-build-cli-run-arg-CONFIG_FILE" title="Link to this definition"></a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</section>
+</section>
+<section id="bp-completion-cli">
+<h3>completion-cli<a class="headerlink" href="#bp-completion-cli" title="Link to this heading"></a></h3>
+<p>Manage shell completion</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bp<span class="w"> </span>completion-cli<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>COMMAND<span class="w"> </span><span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<section id="bp-completion-cli-install">
+<h4>install<a class="headerlink" href="#bp-completion-cli-install" title="Link to this heading"></a></h4>
+<p>Install shell completion</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bp<span class="w"> </span>completion-cli<span class="w"> </span>install<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-completion-cli-install-shell">
+<span class="sig-name descname"><span class="pre">--shell</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;shell&gt;</span></span><a class="headerlink" href="#cmdoption-bp-completion-cli-install-shell" title="Link to this definition"></a></dt>
+<dd><p>Shell to install completion for</p>
+<dl class="field-list simple">
+<dt class="field-odd">Options<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bash | zsh | fish</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<section id="bp-config-cli">
+<h3>config-cli<a class="headerlink" href="#bp-config-cli" title="Link to this heading"></a></h3>
+<p>Manage configuration</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bp<span class="w"> </span>config-cli<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>COMMAND<span class="w"> </span><span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<section id="bp-config-cli-show">
+<h4>show<a class="headerlink" href="#bp-config-cli-show" title="Link to this heading"></a></h4>
+<p>Show current configuration</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bp<span class="w"> </span>config-cli<span class="w"> </span>show<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-config-cli-show-resolved">
+<span class="sig-name descname"><span class="pre">--resolved</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-bp-config-cli-show-resolved" title="Link to this definition"></a></dt>
+<dd><p>Show fully resolved config</p>
+</dd></dl>
+
+</section>
+</section>
+<section id="bp-results-cli">
+<h3>results-cli<a class="headerlink" href="#bp-results-cli" title="Link to this heading"></a></h3>
+<p>Manage results</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bp<span class="w"> </span>results-cli<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>COMMAND<span class="w"> </span><span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<section id="bp-results-cli-list">
+<h4>list<a class="headerlink" href="#bp-results-cli-list" title="Link to this heading"></a></h4>
+<p>List recent runs</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bp<span class="w"> </span>results-cli<span class="w"> </span>list<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-results-cli-list-l">
+<span id="cmdoption-bp-results-cli-list-limit"></span><span class="sig-name descname"><span class="pre">-l</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--limit</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;limit&gt;</span></span><a class="headerlink" href="#cmdoption-bp-results-cli-list-l" title="Link to this definition"></a></dt>
+<dd><p>Limit number of runs</p>
+</dd></dl>
+
+</section>
+<section id="bp-results-cli-show">
+<h4>show<a class="headerlink" href="#bp-results-cli-show" title="Link to this heading"></a></h4>
+<p>Show details for a specific run</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bp<span class="w"> </span>results-cli<span class="w"> </span>show<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>RUN_ID
+</pre></div>
+</div>
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-results-cli-show-arg-RUN_ID">
+<span class="sig-name descname"><span class="pre">RUN_ID</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-bp-results-cli-show-arg-RUN_ID" title="Link to this definition"></a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</section>
+</section>
+<section id="bp-suite-cli">
+<h3>suite-cli<a class="headerlink" href="#bp-suite-cli" title="Link to this heading"></a></h3>
+<p>Manage benchmark suites</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bp<span class="w"> </span>suite-cli<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>COMMAND<span class="w"> </span><span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<section id="bp-suite-cli-plan">
+<h4>plan<a class="headerlink" href="#bp-suite-cli-plan" title="Link to this heading"></a></h4>
+<p>Plan a suite execution</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bp<span class="w"> </span>suite-cli<span class="w"> </span>plan<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>SUITE_FILE
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-suite-cli-plan-N">
+<span id="cmdoption-bp-suite-cli-plan-nodes"></span><span class="sig-name descname"><span class="pre">-N</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--nodes</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;nodes&gt;</span></span><a class="headerlink" href="#cmdoption-bp-suite-cli-plan-N" title="Link to this definition"></a></dt>
+<dd><p>Override nodes</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-suite-cli-plan-n">
+<span id="cmdoption-bp-suite-cli-plan-ranks-per-node"></span><span class="sig-name descname"><span class="pre">-n</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--ranks-per-node</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;ranks_per_node&gt;</span></span><a class="headerlink" href="#cmdoption-bp-suite-cli-plan-n" title="Link to this definition"></a></dt>
+<dd><p>Override ranks per node</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-suite-cli-plan-c">
+<span id="cmdoption-bp-suite-cli-plan-threads"></span><span class="sig-name descname"><span class="pre">-c</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--threads</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;threads&gt;</span></span><a class="headerlink" href="#cmdoption-bp-suite-cli-plan-c" title="Link to this definition"></a></dt>
+<dd><p>Override threads per rank</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-suite-cli-plan-g">
+<span id="cmdoption-bp-suite-cli-plan-gpus"></span><span class="sig-name descname"><span class="pre">-g</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--gpus</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;gpus&gt;</span></span><a class="headerlink" href="#cmdoption-bp-suite-cli-plan-g" title="Link to this definition"></a></dt>
+<dd><p>Override GPUs per node</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-suite-cli-plan-json">
+<span class="sig-name descname"><span class="pre">--json</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-bp-suite-cli-plan-json" title="Link to this definition"></a></dt>
+<dd><p>Output plan as JSON</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-suite-cli-plan-arg-SUITE_FILE">
+<span class="sig-name descname"><span class="pre">SUITE_FILE</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-bp-suite-cli-plan-arg-SUITE_FILE" title="Link to this definition"></a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</section>
+<section id="bp-suite-cli-run">
+<h4>run<a class="headerlink" href="#bp-suite-cli-run" title="Link to this heading"></a></h4>
+<p>Run a benchmark suite</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bp<span class="w"> </span>suite-cli<span class="w"> </span>run<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>SUITE_FILE
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-suite-cli-run-dry-run">
+<span class="sig-name descname"><span class="pre">--dry-run</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-bp-suite-cli-run-dry-run" title="Link to this definition"></a></dt>
+<dd><p>Simulate execution</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-suite-cli-run-arg-SUITE_FILE">
+<span class="sig-name descname"><span class="pre">SUITE_FILE</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-bp-suite-cli-run-arg-SUITE_FILE" title="Link to this definition"></a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</section>
+</section>
+<section id="bp-task-cli">
+<h3>task-cli<a class="headerlink" href="#bp-task-cli" title="Link to this heading"></a></h3>
+<p>Manage individual tasks</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bp<span class="w"> </span>task-cli<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>COMMAND<span class="w"> </span><span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<section id="bp-task-cli-run">
+<h4>run<a class="headerlink" href="#bp-task-cli-run" title="Link to this heading"></a></h4>
+<p>Run a single task immediately</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bp<span class="w"> </span>task-cli<span class="w"> </span>run<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>COMMAND
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-task-cli-run-nodes">
+<span class="sig-name descname"><span class="pre">--nodes</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;nodes&gt;</span></span><a class="headerlink" href="#cmdoption-bp-task-cli-run-nodes" title="Link to this definition"></a></dt>
+<dd><p>Number of nodes</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-task-cli-run-ranks">
+<span class="sig-name descname"><span class="pre">--ranks</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;ranks&gt;</span></span><a class="headerlink" href="#cmdoption-bp-task-cli-run-ranks" title="Link to this definition"></a></dt>
+<dd><p>Ranks per node</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-task-cli-run-threads">
+<span class="sig-name descname"><span class="pre">--threads</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;threads&gt;</span></span><a class="headerlink" href="#cmdoption-bp-task-cli-run-threads" title="Link to this definition"></a></dt>
+<dd><p>Threads per rank</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-task-cli-run-gpus">
+<span class="sig-name descname"><span class="pre">--gpus</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;gpus&gt;</span></span><a class="headerlink" href="#cmdoption-bp-task-cli-run-gpus" title="Link to this definition"></a></dt>
+<dd><p>GPUs per node</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-task-cli-run-build-code">
+<span class="sig-name descname"><span class="pre">--build-code</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;build_code&gt;</span></span><a class="headerlink" href="#cmdoption-bp-task-cli-run-build-code" title="Link to this definition"></a></dt>
+<dd><p>Application code to bind</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-task-cli-run-build-version">
+<span class="sig-name descname"><span class="pre">--build-version</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;build_version&gt;</span></span><a class="headerlink" href="#cmdoption-bp-task-cli-run-build-version" title="Link to this definition"></a></dt>
+<dd><p>Application version to bind</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-task-cli-run-build-label">
+<span class="sig-name descname"><span class="pre">--build-label</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;build_label&gt;</span></span><a class="headerlink" href="#cmdoption-bp-task-cli-run-build-label" title="Link to this definition"></a></dt>
+<dd><p>Build label to bind</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-task-cli-run-dry-run">
+<span class="sig-name descname"><span class="pre">--dry-run</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-bp-task-cli-run-dry-run" title="Link to this definition"></a></dt>
+<dd><p>Simulate execution</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-bp-task-cli-run-arg-COMMAND">
+<span class="sig-name descname"><span class="pre">COMMAND</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-bp-task-cli-run-arg-COMMAND" title="Link to this definition"></a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</section>
+</section>
+<section id="bp-version">
+<h3>version<a class="headerlink" href="#bp-version" title="Link to this heading"></a></h3>
+<p>Show version info</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>bp<span class="w"> </span>version<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="user_guide.html" class="btn btn-neutral float-left" title="User Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="api.html" class="btn btn-neutral float-right" title="API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, BenchPRO Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

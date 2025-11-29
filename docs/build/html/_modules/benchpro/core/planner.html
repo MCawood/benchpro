@@ -1,0 +1,220 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>benchpro.core.planner &mdash; BenchPRO-NG 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            BenchPRO-NG
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cli.html">CLI Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">BenchPRO-NG</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">benchpro.core.planner</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for benchpro.core.planner</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">benchpro.core.domain</span><span class="w"> </span><span class="kn">import</span> <span class="n">Task</span><span class="p">,</span> <span class="n">ResourceRequest</span><span class="p">,</span> <span class="n">TaskStatus</span><span class="p">,</span> <span class="n">Build</span>
+
+<div class="viewcode-block" id="Planner">
+<a class="viewcode-back" href="../../../api.html#benchpro.core.planner.Planner">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Planner</span><span class="p">:</span>
+<div class="viewcode-block" id="Planner.expand_matrix">
+<a class="viewcode-back" href="../../../api.html#benchpro.core.planner.Planner.expand_matrix">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">expand_matrix</span><span class="p">(</span><span class="n">suite_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">matrix</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]],</span> <span class="n">base_resources</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">command_template</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">requirements</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Task</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Expand a matrix of parameters into a list of Tasks.</span>
+<span class="sd">        Follows the expansion order: nodes -&gt; ranks_per_node -&gt; threads -&gt; gpus -&gt; named_params</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">benchpro.core.templating</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemplateEngine</span>
+        
+        <span class="c1"># Extract dimensions with defaults if missing</span>
+        <span class="n">nodes</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;nodes&quot;</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">ranks</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ranks_per_node&quot;</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">threads</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;threads&quot;</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">gpus</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gpus&quot;</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        
+        <span class="c1"># Extract arbitrary params</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;params&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">param_keys</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">param_values</span> <span class="o">=</span> <span class="p">[</span><span class="n">params</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">param_keys</span><span class="p">]</span>
+        
+        <span class="n">tasks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">task_idx</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="c1"># Cartesian product</span>
+        <span class="c1"># Order: nodes, ranks, threads, gpus, *params</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">ranks</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">threads</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">gpus</span><span class="p">:</span>
+                        <span class="c1"># For params, we need another product if there are any</span>
+                        <span class="k">if</span> <span class="n">param_values</span><span class="p">:</span>
+                            <span class="n">param_product</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="o">*</span><span class="n">param_values</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">param_product</span> <span class="o">=</span> <span class="p">[()]</span>
+                            
+                        <span class="k">for</span> <span class="n">p_vals</span> <span class="ow">in</span> <span class="n">param_product</span><span class="p">:</span>
+                            <span class="c1"># Construct task</span>
+                            <span class="n">task_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">suite_id</span><span class="si">}</span><span class="s2">_task_</span><span class="si">{</span><span class="n">task_idx</span><span class="si">}</span><span class="s2">&quot;</span>
+                            
+                            <span class="c1"># Build param dict</span>
+                            <span class="n">current_params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">param_keys</span><span class="p">,</span> <span class="n">p_vals</span><span class="p">))</span>
+                            
+                            <span class="c1"># Build resources</span>
+                            <span class="c1"># Start with base resources</span>
+                            <span class="n">res_args</span> <span class="o">=</span> <span class="n">base_resources</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                            <span class="c1"># Override with matrix values</span>
+                            <span class="n">res_args</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
+                                <span class="s2">&quot;nodes&quot;</span><span class="p">:</span> <span class="n">n</span><span class="p">,</span>
+                                <span class="s2">&quot;ranks_per_node&quot;</span><span class="p">:</span> <span class="n">r</span><span class="p">,</span>
+                                <span class="s2">&quot;threads&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">,</span>
+                                <span class="s2">&quot;gpus&quot;</span><span class="p">:</span> <span class="n">g</span>
+                            <span class="p">})</span>
+                            
+                            <span class="n">res</span> <span class="o">=</span> <span class="n">ResourceRequest</span><span class="p">(</span><span class="o">**</span><span class="n">res_args</span><span class="p">)</span>
+                            
+                            <span class="c1"># Resolve build if requirements provided</span>
+                            <span class="n">activation_cmd</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+                            <span class="k">if</span> <span class="n">requirements</span><span class="p">:</span>
+                                <span class="kn">from</span><span class="w"> </span><span class="nn">benchpro.core.resolver</span><span class="w"> </span><span class="kn">import</span> <span class="n">Resolver</span>
+                                <span class="kn">from</span><span class="w"> </span><span class="nn">benchpro.core.results</span><span class="w"> </span><span class="kn">import</span> <span class="n">ResultStore</span>
+                                
+                                <span class="n">store</span> <span class="o">=</span> <span class="n">ResultStore</span><span class="p">()</span>
+                                <span class="n">builds</span> <span class="o">=</span> <span class="p">[</span><span class="n">Build</span><span class="p">(</span><span class="o">**</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">store</span><span class="o">.</span><span class="n">get_builds</span><span class="p">()]</span>
+                                <span class="n">resolver</span> <span class="o">=</span> <span class="n">Resolver</span><span class="p">(</span><span class="n">builds</span><span class="p">)</span>
+                                
+                                <span class="n">build</span> <span class="o">=</span> <span class="n">resolver</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span>
+                                    <span class="n">code</span><span class="o">=</span><span class="n">requirements</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;code&quot;</span><span class="p">),</span>
+                                    <span class="n">version</span><span class="o">=</span><span class="n">requirements</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">),</span>
+                                    <span class="n">system</span><span class="o">=</span><span class="n">requirements</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;system&quot;</span><span class="p">),</span>
+                                    <span class="n">build_label</span><span class="o">=</span><span class="n">requirements</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;build_label&quot;</span><span class="p">)</span>
+                                <span class="p">)</span>
+                                
+                                <span class="k">if</span> <span class="n">build</span><span class="p">:</span>
+                                    <span class="n">activation_cmd</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">build</span><span class="o">.</span><span class="n">activation_script</span><span class="si">}</span><span class="s2"> &amp;&amp; &quot;</span>
+                                <span class="k">else</span><span class="p">:</span>
+                                    <span class="c1"># TODO: Handle missing build (fail or warn)</span>
+                                    <span class="c1"># For now, just warn in command</span>
+                                    <span class="n">activation_cmd</span> <span class="o">=</span> <span class="s2">&quot;echo &#39;WARNING: Build not found&#39; &amp;&amp; &quot;</span>
+
+                            <span class="c1"># Generate command</span>
+                            <span class="k">if</span> <span class="n">command_template</span><span class="p">:</span>
+                                <span class="c1"># Create context for templating</span>
+                                <span class="n">context</span> <span class="o">=</span> <span class="p">{</span>
+                                    <span class="s2">&quot;task_id&quot;</span><span class="p">:</span> <span class="n">task_id</span><span class="p">,</span>
+                                    <span class="s2">&quot;nodes&quot;</span><span class="p">:</span> <span class="n">n</span><span class="p">,</span>
+                                    <span class="s2">&quot;ranks_per_node&quot;</span><span class="p">:</span> <span class="n">r</span><span class="p">,</span>
+                                    <span class="s2">&quot;threads&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">,</span>
+                                    <span class="s2">&quot;gpus&quot;</span><span class="p">:</span> <span class="n">g</span><span class="p">,</span>
+                                    <span class="o">**</span><span class="n">current_params</span>
+                                <span class="p">}</span>
+                                <span class="n">engine</span> <span class="o">=</span> <span class="n">TemplateEngine</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+                                <span class="n">command</span> <span class="o">=</span> <span class="n">activation_cmd</span> <span class="o">+</span> <span class="n">engine</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">command_template</span><span class="p">)</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">command</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">activation_cmd</span><span class="si">}</span><span class="s2">echo &#39;Running </span><span class="si">{</span><span class="n">task_id</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+
+                            <span class="n">task</span> <span class="o">=</span> <span class="n">Task</span><span class="p">(</span>
+                                <span class="n">task_id</span><span class="o">=</span><span class="n">task_id</span><span class="p">,</span>
+                                <span class="n">suite_id</span><span class="o">=</span><span class="n">suite_id</span><span class="p">,</span>
+                                <span class="n">parameters</span><span class="o">=</span><span class="n">current_params</span><span class="p">,</span>
+                                <span class="n">resources</span><span class="o">=</span><span class="n">res</span><span class="p">,</span>
+                                <span class="n">command</span><span class="o">=</span><span class="n">command</span><span class="p">,</span>
+                                <span class="n">status</span><span class="o">=</span><span class="n">TaskStatus</span><span class="o">.</span><span class="n">PENDING</span>
+                            <span class="p">)</span>
+                            <span class="n">tasks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>
+                            <span class="n">task_idx</span> <span class="o">+=</span> <span class="mi">1</span>
+                            
+        <span class="k">return</span> <span class="n">tasks</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, BenchPRO Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

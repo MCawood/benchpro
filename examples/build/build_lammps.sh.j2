@@ -1,0 +1,42 @@
+#!/bin/bash
+set -e
+
+echo "Building ${name} version ${version}"
+echo "Source: ${source}"
+
+# Create build directory structure
+mkdir -p src
+mkdir -p install
+
+# Download
+echo "Downloading source..."
+curl -L -o lammps.tar.gz ${source}
+
+# Extract
+echo "Extracting..."
+tar -xzf lammps.tar.gz -C src --strip-components=1
+
+# Build
+echo "Configuring with CMake..."
+cd src
+mkdir -p build
+cd build
+
+cmake ../cmake \
+    -D CMAKE_INSTALL_PREFIX=../../install \
+    -D CMAKE_CXX_COMPILER=${compiler} \
+    ${variables.cmake_flags}
+
+echo "Compiling..."
+make -j4
+
+echo "Installing..."
+make install
+
+# Verify
+if [ -f ../../install/bin/lmp ]; then
+    echo "Build successful"
+else
+    echo "Build failed: Executable not found"
+    exit 1
+fi

@@ -1,0 +1,13 @@
+#!/bin/bash
+echo "Building ${name} version ${version}"
+echo "Source: ${source}"
+echo "Compiler: ${compiler}"
+echo "Flags: ${variables.cflags}"
+
+# Simulate build
+mkdir -p install/bin
+echo "#!/bin/bash" > install/bin/dummy_app
+echo "echo 'Hello from dummy app 1.0'" >> install/bin/dummy_app
+chmod +x install/bin/dummy_app
+
+echo "Build complete"

@@ -1,0 +1,7 @@
+name: dummy_app
+version: "1.0"
+source: "https://example.com/dummy.tar.gz"
+build_template: "build.sh.j2"
+build_label: "test_build"
+variables:
+  cflags: "-O2"
