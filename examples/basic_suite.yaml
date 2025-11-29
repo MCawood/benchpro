@@ -1,0 +1,10 @@
+name: test_suite
+resources:
+  partition: debug
+  time: "00:10:00"
+
+matrix:
+  nodes: [1, 2]
+  ranks_per_node: [4]
+  params:
+    input_size: ["small", "medium"]
