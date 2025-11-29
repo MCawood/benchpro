@@ -13,6 +13,11 @@ setup(
         "click>=8.0.0",
         "jinja2>=3.0.0",
         "pyyaml>=6.0",
+        "pydantic>=2.0.0",
+        "tabulate>=0.9.0",
+        "jsonschema>=4.0.0",
+        "sqlalchemy>=2.0.0",
+        "alembic>=1.12.0",
     ],
     entry_points={
         "console_scripts": [

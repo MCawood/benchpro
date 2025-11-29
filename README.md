@@ -24,6 +24,9 @@ pip install -r requirements.txt
 
 # Install in development mode
 pip install -e .
+
+# Set up the database (required before first use)
+python scripts/setup_database.py
 ```
 
 ## Quick Start
@@ -31,13 +34,13 @@ pip install -e .
 ### Building an Application
 
 ```bash
-bp build hello_world_app
+bp build hello_world
 ```
 
 ### Running a Benchmark
 
 ```bash
-bp bench hello_world_bench
+bp bench hello_world
 ```
 
 ### Enabling Shell Completion
