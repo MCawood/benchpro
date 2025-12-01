@@ -50,6 +50,13 @@ class ResultStore:
             )
         """)
         
+        # Migrate existing tasks table if needed (add metric_definitions column)
+        try:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN metric_definitions JSON")
+        except sqlite3.OperationalError:
+            # Column already exists, ignore
+            pass
+        
         # Builds table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS builds (
@@ -226,6 +233,30 @@ class ResultStore:
             
         conn.close()
         return builds
+
+    def delete_build(self, build_id: str) -> bool:
+        """Delete a build by build_id. Returns True if deleted, False if not found."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("DELETE FROM builds WHERE build_id = ?", (build_id,))
+        deleted = cursor.rowcount > 0
+        
+        conn.commit()
+        conn.close()
+        return deleted
+
+    def delete_builds_by_code(self, code: str) -> int:
+        """Delete all builds for a given code. Returns number of builds deleted."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("DELETE FROM builds WHERE code = ?", (code,))
+        deleted_count = cursor.rowcount
+        
+        conn.commit()
+        conn.close()
+        return deleted_count
 
     def get_runs(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Get recent runs."""

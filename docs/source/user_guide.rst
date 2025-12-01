@@ -9,7 +9,7 @@ Workflows
 ---------
 
 1. **Ad-hoc Tasks**: Use ``bp task run`` for quick experiments.
-2. **Application Building**: Use ``bp build run`` to compile software from source.
+2. **Application Building**: Use ``bp app build`` to compile software from source.
 3. **Benchmark Suites**: Use ``bp suite run`` to execute complex parameter sweeps.
 
 Configuration

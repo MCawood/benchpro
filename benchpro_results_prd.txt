@@ -1,0 +1,875 @@
+BenchPRO 2.0 – Results Collection & Visualization Component
+Product Requirements Document (PRD)
+
+Version: 0.1 (Draft)
+Date: TBD
+Owner: BenchPRO maintainers
+
+----------------------------------------
+1. Overview
+----------------------------------------
+
+1.1 Purpose
+
+This document specifies the requirements for the “Results Collection & Visualization” component of BenchPRO 2.0.
+
+BenchPRO 2.0 is a modern Python-based benchmark automation framework for HPC systems. This component provides:
+
+- A server-side results store and API that accepts completed benchmark tasks from BenchPRO clients.
+- A web portal for users and stakeholders to explore benchmark results, tables, and graphs.
+- Robust provenance capture to support future reproducibility features (including a possible “Redo” capability).
+
+This PRD is intended to be implementation-ready and suitable for use by an LLM or development team to build the component.
+
+
+1.2 Goals
+
+- Provide a reliable, extensible storage system for BenchPRO benchmark results and provenance.
+- Expose a clear, stable client–server contract for submitting completed tasks from BenchPRO clients.
+- Offer a modern web portal for:
+  - Filtering/searching results.
+  - Tabular exploration.
+  - Visualizing Figures of Merit (FoMs) as graphs.
+  - Inspecting detailed provenance (stdout, modules, environment, scheduler info, etc.).
+- Enable long-term extensibility without frequent schema or API version changes.
+
+
+1.3 Non-goals (for initial iteration)
+
+The following are explicitly out of scope for the first implementation:
+
+- Full “Redo” workflow (re-submitting tasks from the portal and orchestrating re-runs).
+- Advanced role-based access control beyond “user” and “admin” roles.
+- Automated data deduplication, archiving, or retention policies.
+- Complex dashboarding (multiple charts per page, alerting) beyond basic saved views.
+- External object storage for artifacts (e.g. S3/MinIO) and deduplication.
+- Production-grade multi-region high availability.
+
+
+1.4 Stakeholders
+
+- HPC performance engineers running BenchPRO on internal systems.
+- HPC system administrators and architects reviewing benchmark trends and regressions.
+- BenchPRO maintainers and developers.
+
+
+----------------------------------------
+2. System Context & High-Level Architecture
+----------------------------------------
+
+2.1 Actors
+
+- BenchPRO Client
+  - Command-line tool run by individual users on HPC systems.
+  - Executes benchmark tasks and submits completed task results to the server.
+
+- Results Server
+  - Python backend serving:
+    - REST APIs for task submission and queries.
+    - Authentication and authorization.
+    - Storage and retrieval from PostgreSQL.
+
+- Web Portal
+  - SvelteKit-based UI used by humans to:
+    - Explore results.
+    - Visualize FoMs.
+    - Inspect provenance.
+    - Save and share views.
+
+- Identity Provider (IdP)
+  - Institutional SSO / OIDC provider for authenticating portal users.
+
+
+2.2 Environments
+
+- Local Development
+  - All components (PostgreSQL, backend API, Svelte UI) run on a developer laptop, typically via docker-compose.
+  - BenchPRO client configured to point at `http://localhost` or equivalent.
+
+- Internal Deployment (VM)
+  - Results server and Postgres deployed on an internal VM within a secure network.
+  - Accessible over HTTPS from HPC login/compute nodes and users’ browsers.
+  - Initially no general outbound internet access (except for IdP if needed).
+
+
+2.3 High-Level Data Flow
+
+1. User runs BenchPRO on an HPC system.
+2. BenchPRO executes a benchmark task, collects FoMs and provenance (logs, environment, etc.).
+3. Upon completion, the BenchPRO client:
+   - Assembles a TaskRun submission payload (Task, Application, BenchmarkDefinition, FoMs, provenance metadata and artifacts).
+   - Sends the payload to `POST /api/v1/task_runs` on the Results Server using a personal access token (PAT).
+4. The Results Server authenticates the request, validates the submission, and stores:
+   - Core entities in PostgreSQL (TaskRun, Application, BenchmarkDefinition, FoMs).
+   - Provenance metadata and artifacts.
+5. Users access the Web Portal to:
+   - Filter and explore TaskRuns.
+   - Inspect FoMs and provenance.
+   - View charts of FoMs.
+   - Save and share views of filtered data.
+
+
+----------------------------------------
+3. Data Model
+----------------------------------------
+
+3.1 Design Principles
+
+- Extensibility: Core tables have `extra` JSONB fields, and generic metadata tables are used for arbitrary key–value data. This allows adding new fields without requiring frequent schema or API version changes.
+- Normalization: Separate entities for Application, BenchmarkDefinition, and TaskRun to capture relationships between application builds and benchmark tasks.
+- Provenance as first-class: Provenance metadata and artifacts are stored explicitly to support reproducibility and, in the future, a full “Redo” capability.
+
+
+3.2 Core Entities
+
+3.2.1 User
+
+Represents a human user authenticated via SSO, and is the owner of PATs and Saved Views.
+
+Key fields:
+- id
+- external_id   (IdP subject / username)
+- display_name
+- email
+- role          (enum: "user", "admin")
+
+
+3.2.2 API Token
+
+Represents a Personal Access Token used by BenchPRO clients for API calls.
+
+Key fields:
+- id
+- user_id       (FK → User)
+- name          (label for this token, e.g. “Laptop dev”, “Stampede3 login1”)
+- token_hash    (hashed token value)
+- created_at
+- revoked_at    (nullable)
+
+
+3.2.3 Application
+
+Represents a particular built instance of an application used in one or more benchmark runs.
+
+Key fields:
+- id
+- label         (e.g. "lammps")
+- version       (e.g. "23Jun2022")
+- system        (e.g. "stampede3")
+- architecture  (e.g. "intel_spr")
+- modules       (JSONB; list of module names)
+- benchpro_version
+- build_user
+- build_time
+- extra         (JSONB for future extension)
+
+
+3.2.4 BenchmarkDefinition
+
+Represents the conceptual benchmark configuration independent of individual runs.
+
+Key fields:
+- id
+- label                     (e.g. "lammps_ljmelt")
+- application_id            (FK → Application, nullable)
+- description
+- default_primary_fom_name  (e.g. "tau_day")
+- fom_schema                (JSONB; descriptions of FoMs for this benchmark)
+- extra                     (JSONB)
+
+
+3.2.5 TaskRun
+
+Represents a single execution of a benchmark task submitted by a BenchPRO client.
+
+Key fields:
+- id
+- user_id              (FK → User who submitted)
+- task_uuid            (client-generated UUID; unique per user)
+- label
+- benchmark_definition_id  (FK → BenchmarkDefinition, nullable)
+- application_id       (FK → Application, nullable)
+- system
+- architecture
+- node_count
+- runtime_seconds      (nullable)
+- status               (e.g. "completed", "failed", "partial")
+- submit_time
+- start_time
+- end_time
+- benchpro_version
+- extra                (JSONB)
+
+
+3.2.6 FigureOfMerit
+
+Represents a single FoM associated with a TaskRun. Supports numeric and string-based FoMs.
+
+Key fields:
+- id
+- task_run_id          (FK → TaskRun)
+- name                 (e.g. "tau_day", "bandwidth", "status")
+- unit                 (nullable; e.g. "tau/day", "MB/s", "ms")
+- value_numeric        (nullable double precision)
+- value_text           (nullable text)
+- value_type           (enum: "numeric", "string")
+- is_primary           (bool)
+
+Rules:
+- Numeric FoM: value_type = "numeric"; value_numeric set; value_text optional.
+- String FoM: value_type = "string"; value_text set; value_numeric NULL.
+- A BenchmarkDefinition defines a default primary FoM name; a TaskRun may mark one FoM as primary.
+
+
+3.2.7 TaskProvenanceMetadata
+
+Represents structured key–value provenance data for a TaskRun.
+
+Key fields:
+- id
+- task_run_id        (FK → TaskRun)
+- key                (string)
+- value_text         (nullable text)
+- value_json         (nullable JSONB)
+
+Examples:
+- ("git_commit", "abc123", NULL)
+- ("scheduler", NULL, {"type":"slurm","queue":"normal","nodes":4})
+- ("environment", NULL, {"TACC_SYSTEM":"stampede3","OMP_NUM_THREADS":"4"})
+
+
+3.2.8 ProvenanceArtifact
+
+Represents a single named provenance file associated with a TaskRun (stdout, modules, job script, logs, etc.).
+
+Key fields:
+- id
+- task_run_id        (FK → TaskRun)
+- name               (e.g. "stdout", "stderr", "modules.txt", "job_script.sh", "hw_counters.log.gz")
+- content_type       (e.g. "text/plain", "application/json")
+- encoding           (e.g. "raw", "gzip")
+- size_bytes
+- data               (bytea; compressed or raw data)
+- created_at
+
+
+3.2.9 SavedView
+
+Represents a saved configuration of filters and display options in the Results Explorer.
+
+Key fields:
+- id
+- owner_user_id      (FK → User)
+- name
+- description
+- config             (JSONB; includes filters, primary FoM, table and chart configuration)
+- visibility         (enum: "private", "public")
+- created_at
+- updated_at
+
+
+3.3 Extensibility
+
+- All core entities (Application, BenchmarkDefinition, TaskRun) contain `extra` JSONB for future fields.
+- Arbitrary provenance data can be stored as TaskProvenanceMetadata entries.
+- When a field becomes important for frequent querying, it can be promoted to a dedicated column via schema migration and backfilled from metadata.
+
+
+----------------------------------------
+4. Security & Submission Pipeline
+----------------------------------------
+
+4.1 Authentication & Authorization
+
+- Web Portal:
+  - Users authenticate via institutional SSO / OIDC.
+  - On first login, the system creates a User record linked to the IdP identity (external_id).
+
+- BenchPRO Clients:
+  - Use Personal Access Tokens (PATs) for API calls.
+  - PATs are created and managed in the Web Portal by the user.
+  - PAT format: long random string, stored only as a secure hash in the database.
+  - Clients send PATs in the HTTP header:
+    - Authorization: Bearer <token>
+
+- Roles:
+  - "user":
+    - Access to all benchmark results.
+    - Manage own PATs.
+    - Manage own Saved Views; can mark views as public.
+  - "admin":
+    - All user privileges plus access to admin features (future: system settings, cleanup, etc.).
+
+
+4.2 Transport Security
+
+- All APIs must be served over HTTPS.
+- If HTTP is exposed, it must redirect to HTTPS.
+- TLS termination via reverse proxy (e.g. Nginx/Traefik) or directly by the backend.
+
+
+4.3 Submission Pipeline (Client → Server)
+
+Endpoint:
+- POST /api/v1/task_runs
+
+Headers:
+- Authorization: Bearer <PAT>
+- Content-Type: application/json
+- Content-Encoding: gzip (optional)
+
+Body:
+- A TaskRunSubmission object containing:
+  - client (benchpro_version, task_uuid)
+  - task
+  - application
+  - benchmark_definition
+  - figures_of_merit
+  - provenance (metadata + artifacts)
+
+Idempotency:
+- The client provides a stable task_uuid per TaskRun.
+- The server enforces uniqueness (user_id, task_uuid).
+- Retried submissions with the same (user_id, task_uuid) do not create duplicates and return a response indicating duplication.
+
+Validation:
+- The server validates:
+  - Required fields (e.g. task label, system, architecture, node_count, status).
+  - FoM entries (name, type, basic consistency).
+  - Provenance artifact sizes against configured limits.
+- On error, returns HTTP 400 with structured validation details.
+
+Atomicity:
+- All inserts/updates (Application, BenchmarkDefinition, TaskRun, FoMs, provenance metadata, artifacts) occur within a single transaction.
+- On failure, nothing is persisted.
+
+
+4.4 Rate Limiting
+
+- The server may enforce simple rate limits per PAT:
+  - e.g. N submissions per minute.
+- On exceeding limits, the server returns:
+  - HTTP 429 Too Many Requests.
+  - Retry-After header with a suggested delay.
+- BenchPRO client should implement exponential backoff and respect Retry-After.
+
+
+4.5 Provenance Artifact Handling
+
+- Clients are encouraged to submit logical individual artifacts (stdout, modules, env.json, job_script.sh, logs).
+- Clients may submit a tarball artifact; the server (or a background worker) extracts it once at ingest time into separate ProvenanceArtifact records.
+- Key files (stdout, modules, env, scheduler info) are parsed into TaskProvenanceMetadata and/or Application fields for structured querying and display.
+- Query-time tar extraction is explicitly not used; artifacts are always stored individually for direct access.
+
+
+----------------------------------------
+5. Storage & Persistence
+----------------------------------------
+
+5.1 Database
+
+- Database: PostgreSQL only (no SQLite).
+- Used for all environments (dev and internal deployment).
+- Managed via standard migration tooling (e.g. Alembic).
+
+
+5.2 Storage Expectations
+
+- Scale targets:
+  - ≤ 100 clients.
+  - ~ 1,000 TaskRuns per month.
+  - Each TaskRun generally ≤ 10 MB of provenance data (post compression).
+- Approximate worst-case storage:
+  - ≈ 10 GB / month of provenance artifacts at the extreme.
+- The system should comfortably support at least 50,000 TaskRuns and associated data on a single PostgreSQL instance with standard tuning.
+
+
+5.3 Indexing & Query Patterns
+
+TaskRun:
+- Indexes to support typical filters:
+  - benchmark_definition_id
+  - system
+  - architecture
+  - node_count
+  - submit_time
+  - status
+- Unique constraint: (user_id, task_uuid).
+
+FigureOfMerit:
+- Indexes:
+  - (task_run_id)
+  - (name)
+  - (name, value_numeric)
+  - (name, value_type)
+- Enables sorting and filtering by FoM name and numeric value.
+
+TaskProvenanceMetadata:
+- Indexes:
+  - (task_run_id)
+  - (key)
+  - Optional GIN on value_json for advanced queries.
+
+Applications and BenchmarkDefinitions:
+- Indexes on label, system, and version to support dropdowns and filters.
+
+
+5.4 Retention & Archiving
+
+- v1: No automatic deletion or archival.
+- All TaskRuns and artifacts persist until manually deleted via admin mechanisms (future).
+- Future enhancements (out-of-scope for initial implementation) may add:
+  - Configurable retention policies.
+  - Archival to object storage.
+  - Deduplication of common artifacts.
+
+
+----------------------------------------
+6. Web Portal & Visualization
+----------------------------------------
+
+6.1 Frontend Technology
+
+- Framework: SvelteKit (SPA with server-side rendering).
+- Styling: TailwindCSS.
+- Charts: A modern JavaScript charting library that supports animated transitions (e.g. ECharts, Plotly, or similar).
+- Auth integration: Uses institutional SSO/OIDC; obtains a session or token for API calls.
+
+
+6.2 Main Navigation
+
+- Dashboard (optional, phase 2).
+- Results Explorer (core).
+- Saved Views.
+- Admin (admin-only).
+- User menu (profile, PAT management, logout).
+
+
+6.3 Results Explorer (MVP)
+
+The Results Explorer is the primary UI for browsing and visualizing results.
+
+6.3.1 Filters
+
+Users can filter TaskRuns by:
+
+- System (multi-select).
+- Architecture.
+- Benchmark label (BenchmarkDefinition.label).
+- Node count (range).
+- Date range (submit_time).
+- Status (completed, failed, etc.).
+- User (optional).
+
+6.3.2 FoM Selection
+
+- Users select a primary FoM by name (must be numeric for charts).
+- Additional FoMs may be shown as extra columns in the table.
+
+6.3.3 Table View
+
+- Default view under Results Explorer.
+- Columns (configurable, initial set):
+  - Benchmark label.
+  - System.
+  - Architecture.
+  - Node count.
+  - Primary FoM (value + unit).
+  - Runtime.
+  - Submit time.
+  - User.
+- Features:
+  - Sorting by any column.
+  - Pagination (default 50 rows per page; configurable).
+  - Column visibility toggles (nice-to-have or phase 2).
+  - Export current filtered results as CSV.
+
+6.3.4 Chart View
+
+- Chart tab uses the same filtered TaskRuns.
+- User selects:
+  - Chart type: line, scatter, or bar.
+  - X-axis: one of submit_time, node_count, system, architecture, or other supported fields.
+  - Y-axis: primary numeric FoM.
+- Behaviour:
+  - Animated transitions when filters or FoM selections change.
+  - Tooltips showing FoM, system, node_count, benchmark label, and submit time.
+
+MVP requirement:
+- The Results Explorer MUST support basic line, scatter, and bar charts for a selected numeric FoM.
+
+
+6.4 Task Detail View
+
+Accessible by clicking a row in the Results Explorer table.
+
+Sections:
+
+1. Summary
+   - Benchmark label.
+   - System, architecture, node count.
+   - Runtime.
+   - Status.
+   - Submit, start, end times.
+   - User.
+   - Links to Application and BenchmarkDefinition.
+
+2. Figures of Merit
+   - Table of all FoMs for this TaskRun:
+     - name, value, unit, type, primary flag.
+   - Primary FoM highlighted.
+
+3. Provenance Tab
+   - Structured provenance:
+     - Parsed modules (list/table).
+     - Scheduler info (queue, account, partition, nodes, job ID).
+     - Environment snapshot (key variables).
+   - Artifact listing:
+     - For each artifact: name, size, content_type, encoding.
+     - Actions:
+       - View (for text artifacts).
+       - Download (all artifacts).
+
+4. Redo (Future)
+   - Placeholder for future “Redo” integration; disabled or hidden in MVP.
+
+
+6.5 Provenance Access in the UI
+
+- Users can view stdout and other text artifacts inline.
+- For large artifacts, the UI may show truncated content (e.g. last N lines or up to a max size) with a link to download the full file.
+- Modules and environment information are displayed in a structured way, parsed from provenance metadata.
+
+
+6.6 Saved Views & Sharing
+
+6.6.1 Saved Views
+
+- A Saved View is a named configuration of:
+  - Filters (system, architecture, benchmark label, node_count range, date range, status, user, etc.).
+  - Primary FoM.
+  - Table configuration (columns).
+  - Chart configuration (type, axes, etc.).
+
+- Users can:
+  - Save the current configuration as a Saved View.
+  - Provide name, description, and visibility.
+  - List their own views and public views.
+  - Load a Saved View and restore filters/table/chart.
+  - Delete their own views.
+
+Data model:
+- SavedView includes:
+  - owner_user_id
+  - name
+  - description
+  - config (JSONB)
+  - visibility ("private", "public")
+
+6.6.2 Sharing
+
+- Visibility options:
+  - private: only the owner can see and use the view.
+  - public: visible to all authenticated portal users.
+- No per-user or group-level sharing in MVP.
+
+
+6.7 Roles & Permissions in the UI
+
+- user:
+  - Access Results Explorer, Saved Views, Task Details, Provenance.
+  - Manage own PATs.
+  - Manage own Saved Views; mark them public or private.
+- admin:
+  - All user capabilities.
+  - Additional admin views (future) for system configuration and maintenance.
+
+
+----------------------------------------
+7. API Endpoints (v1 Overview)
+----------------------------------------
+
+Base URL (internal):
+- https://<host>/api/v1
+
+7.1 Health
+
+- GET /health
+  - Returns server status and version.
+  - May be unauthenticated.
+
+7.2 Task Submission
+
+- POST /task_runs
+  - Auth: Bearer PAT.
+  - Body: TaskRunSubmission JSON (as defined in Section 4.3).
+  - Responses:
+    - 201/200 with:
+      - status: "ok"
+      - task_run_id
+      - duplicate: boolean
+    - 400 for validation errors.
+    - 401/403 for auth errors.
+    - 429 for rate limiting.
+    - 500 for internal errors.
+
+
+7.3 Task Queries
+
+- GET /task_runs
+  - Auth: required.
+  - Query params (filters):
+    - system (multi)
+    - architecture
+    - benchmark_label
+    - node_count_min
+    - node_count_max
+    - status
+    - user
+    - submitted_after
+    - submitted_before
+    - primary_fom_name (optional)
+    - page, per_page
+  - Returns:
+    - Paginated list of TaskRun summaries, each optionally including the selected primary FoM.
+
+- GET /task_runs/{id}
+  - Auth: required.
+  - Returns detailed TaskRun information:
+    - TaskRun fields.
+    - BenchmarkDefinition summary.
+    - Application summary.
+    - All FoMs.
+    - Core provenance metadata (git commit, scheduler, environment, etc.).
+
+
+7.4 Provenance
+
+- GET /task_runs/{id}/provenance
+  - Auth: required.
+  - Returns:
+    - artifacts: list of ProvenanceArtifact metadata (id, name, size, content_type, encoding, created_at).
+    - metadata: key structured provenance values for display.
+
+- GET /provenance_artifacts/{artifact_id}
+  - Auth: required.
+  - Query params:
+    - mode: "text" or "raw".
+    - max_bytes (optional; for truncating large text).
+  - Behaviour:
+    - mode=text: returns JSON with text content (possibly truncated).
+    - mode=raw: returns artifact as binary stream with appropriate Content-Type and Content-Disposition.
+
+
+7.5 Benchmark & Application Metadata
+
+- GET /benchmark_definitions
+  - Auth: required.
+  - Query params:
+    - q (optional search string).
+    - page, per_page.
+  - Returns list of benchmark definitions (id, label, description, default_primary_fom_name).
+
+- GET /applications
+  - Auth: required.
+  - Query params:
+    - q (optional), page, per_page.
+  - Returns list of applications (id, label, version, system, architecture).
+
+
+7.6 Saved Views
+
+- GET /saved_views
+  - Auth: required.
+  - Query params:
+    - scope: "mine", "shared", or "all" (default).
+  - Returns list of SavedViews (no full config; enough to show in list).
+
+- POST /saved_views
+  - Auth: required.
+  - Body: name, description, visibility, config.
+  - Creates a new SavedView owned by current user.
+  - Returns id and status.
+
+- GET /saved_views/{id}
+  - Auth: required.
+  - Returns full SavedView including config.
+
+- PUT /saved_views/{id}
+  - Auth: required; owner or admin.
+  - Updates name/description/visibility/config.
+
+- DELETE /saved_views/{id}
+  - Auth: required; owner or admin.
+  - Deletes the view.
+
+
+7.7 API Token Management
+
+- GET /api_tokens
+  - Auth: required.
+  - Lists PATs owned by the current user (id, name, created_at, revoked_at).
+
+- POST /api_tokens
+  - Auth: required.
+  - Body: name.
+  - Creates a new token and returns:
+    - id
+    - name
+    - token (plain-text, shown once)
+    - created_at
+
+- DELETE /api_tokens/{id}
+  - Auth: required; owner or admin.
+  - Revokes the token.
+
+
+7.8 Error Response Format
+
+All errors return a JSON body with:
+
+- error: short machine-readable code (e.g. "validation_error", "unauthorized", "rate_limited", "internal_error").
+- message: human-readable message.
+- details: optional structured field describing validation issues, etc.
+
+
+----------------------------------------
+8. Non-Functional Requirements
+----------------------------------------
+
+8.1 Performance
+
+- API:
+  - Common GET queries:
+    - 95th percentile latency ≤ 1 second under expected load.
+  - Task submission (≤ 10 MB payload):
+    - 95th percentile latency ≤ 3 seconds.
+
+- UI:
+  - Explorer and pagination:
+    - Must remain responsive with up to 10,000 TaskRuns in a query (via pagination).
+  - Charts:
+    - Must render up to 1,000 points without noticeable lag.
+  - Provenance text views:
+    - Must load typical stdout/modules artifacts within 1–2 seconds, including decompression and truncation.
+
+
+8.2 Reliability & Atomicity
+
+- Task submissions are atomic:
+  - Either complete or rollback fully.
+- Idempotency via (user_id, task_uuid), as described in Section 4.3.
+- In case of server errors, clients can safely retry submissions.
+
+
+8.3 Logging & Observability
+
+- Application logs:
+  - Log all incoming API requests with method, path, status, and latency.
+  - Log validation errors and server errors with sufficient context (user, task_uuid) but without leaking secrets.
+- Database:
+  - Enable slow query logging (threshold configurable).
+- Future metric endpoints (e.g. Prometheus) may be added without changing existing API contracts.
+
+
+8.4 Security
+
+- All non-health endpoints require authentication.
+- PATs are stored only as secure hashes (bcrypt/argon2).
+- Basic OWASP protections:
+  - No SQL injection (use parameterized queries/ORM).
+  - XSS prevention (proper escaping in templates).
+  - CSRF protection if cookies are used.
+- Artifact content must never be rendered as HTML without sanitization; default behaviour is plain-text display.
+
+
+8.5 Configuration & Deployment
+
+- Configuration:
+  - Use environment variables or config files for:
+    - Database DSN.
+    - HTTP bind address/port.
+    - TLS/proxy details.
+    - OIDC/SSO configuration.
+    - Logging level.
+    - Rate limit thresholds.
+- Deployment:
+  - Provide container images or services for:
+    - Backend API.
+    - Web frontend.
+    - Database (for dev/demo; prod DB may be separate).
+  - Schema migrations must run via a designated command during deployment.
+
+- Local development:
+  - A docker-compose (or equivalent) must allow developers to:
+    - Start PostgreSQL, backend API, and frontend with a single command.
+    - Seed example data to exercise core features quickly.
+
+
+8.6 Testing & Quality
+
+- Unit tests:
+  - Validate:
+    - TaskRun submission mapping to DB.
+    - FoM handling (numeric/string, primary FoM).
+    - Provenance metadata extraction for key artifacts.
+- Integration tests:
+  - End-to-end:
+    - Submit TaskRun.
+    - Query via /task_runs and /task_runs/{id}.
+    - Inspect provenance via /task_runs/{id}/provenance.
+    - Exercise Saved Views lifecycle.
+- UI tests:
+  - At least smoke tests:
+    - Login.
+    - Load Results Explorer and apply basic filters.
+    - Open Task detail and provenance.
+- Load testing (lightweight):
+  - Simulate burst of ~200 TaskRun submissions from a single client.
+  - Confirm stability, reasonable performance, and correct rate limiting behaviour.
+
+
+----------------------------------------
+9. MVP Acceptance Criteria
+----------------------------------------
+
+The Results Collection & Visualization component is considered complete for the MVP when:
+
+1. BenchPRO client can submit TaskRuns via POST /api/v1/task_runs, and:
+   - TaskRun, FoMs, Application, BenchmarkDefinition, provenance metadata, and artifacts are correctly stored in PostgreSQL.
+   - Idempotency via (user_id, task_uuid) works as designed.
+
+2. Authenticated users can:
+   - Access the Results Explorer.
+   - Filter TaskRuns by system, architecture, benchmark label, node count range, date range, and status.
+   - View paginated, sortable tables of results.
+   - Export current filtered results as CSV.
+   - Visualize a selected numeric FoM as a line, scatter, or bar chart with animated transitions.
+
+3. Task detail view:
+   - Shows TaskRun summary.
+   - Lists all FoMs clearly.
+   - Provides a Provenance tab that:
+     - Lists artifacts.
+     - Allows inline viewing of at least stdout and modules.
+     - Allows downloading any artifact.
+
+4. Saved Views:
+   - Users can create, list, load, update, and delete their own Saved Views.
+   - Users can mark views as private or public.
+   - Public views are visible to all authenticated users.
+
+5. Security:
+   - Web portal authentication via SSO/OIDC is functional.
+   - Users can create, list, and revoke PATs.
+   - PATs can be used from the BenchPRO client for submissions.
+
+6. Local development:
+   - A documented, single-command method exists to run DB + API + UI on a laptop.
+   - Seed data is available for demoing core features.
+
+7. Testing:
+   - A basic but meaningful automated test suite (unit + integration) exists.
+   - Tests run successfully in CI and in local dev.
+
+Once these criteria are met, the system is ready for internal adoption and further enhancements (e.g. Redo, dashboards, archival).

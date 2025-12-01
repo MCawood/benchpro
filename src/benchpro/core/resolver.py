@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any
 from benchpro.core.config import Config
 from benchpro.core.domain import Build
+from benchpro.core.env import get_dev_profiles_path
 
 class Resolver:
     def __init__(self, builds: List[Build]):
@@ -44,9 +45,46 @@ class Resolver:
         candidates.sort(key=lambda b: b.build_timestamp, reverse=True)
         
         return candidates[0]
-        candidates.sort(key=lambda b: b.build_timestamp, reverse=True)
+
+    @staticmethod
+    def get_profile_search_paths() -> List[Path]:
+        """
+        Get all profile search paths in order of precedence.
+        Returns list of directories to search for profiles.
         
-        return candidates[0]
+        Search order:
+        1. Project-local profiles (.benchpro/profiles)
+        2. User profiles (~/.config/benchpro/profiles)
+        3. Site profiles ($BENCHPRO_SITE_PROFILES) - production
+        4. Development profiles (examples/build) - fallback if site profiles not set
+        """
+        search_paths = []
+        
+        # Project-local profiles (highest precedence)
+        project_profiles = Path.cwd() / ".benchpro" / "profiles"
+        if project_profiles.exists():
+            search_paths.append(project_profiles)
+        
+        # User profiles
+        if os.environ.get("BENCHPRO_CONFIG_DIR"):
+            user_profiles = Path(os.environ.get("BENCHPRO_CONFIG_DIR")) / "profiles"
+        else:
+            user_profiles = Path.home() / ".config/benchpro/profiles"
+        if user_profiles.exists():
+            search_paths.append(user_profiles)
+        
+        # Site profiles (production)
+        if os.environ.get("BENCHPRO_SITE_PROFILES"):
+            site_profiles = Path(os.environ.get("BENCHPRO_SITE_PROFILES"))
+            if site_profiles.exists():
+                search_paths.append(site_profiles)
+        else:
+            # Development fallback: use examples/build if available
+            dev_profiles = get_dev_profiles_path()
+            if dev_profiles:
+                search_paths.append(dev_profiles)
+        
+        return search_paths
 
     @staticmethod
     def resolve_profile(name: str) -> Optional[Path]:
@@ -54,8 +92,9 @@ class Resolver:
         Resolve a profile by name.
         Search order:
         1. Local file (if name is a path)
-        2. User profiles
-        3. Site profiles
+        2. Project profiles (.benchpro/profiles)
+        3. User profiles
+        4. Site profiles
         """
         # 1. Check if it's a direct path
         path = Path(name)
@@ -65,25 +104,9 @@ class Resolver:
         # If no extension, add .yaml
         if not name.endswith(".yaml"):
             name += ".yaml"
-            
-        # Get search paths from Config
-        # We instantiate Config to get the resolved paths
-        config = Config.load()
         
-        search_paths = []
-        
-        # User profiles
-        # We need to reconstruct the user config dir logic or expose it in Config
-        # For now, let's rely on the env vars or default
-        if os.environ.get("BENCHPRO_CONFIG_DIR"):
-            user_profiles = Path(os.environ.get("BENCHPRO_CONFIG_DIR")) / "profiles"
-        else:
-            user_profiles = Path.home() / ".config/benchpro/profiles"
-        search_paths.append(user_profiles)
-        
-        # Site profiles
-        if os.environ.get("BENCHPRO_SITE_PROFILES"):
-            search_paths.append(Path(os.environ.get("BENCHPRO_SITE_PROFILES")))
+        # Get search paths
+        search_paths = Resolver.get_profile_search_paths()
         
         # Search
         for base in search_paths:
@@ -92,3 +115,23 @@ class Resolver:
                 return candidate
                 
         return None
+
+    @staticmethod
+    def list_available_profiles() -> Dict[str, List[Path]]:
+        """
+        List all available profiles from all search paths.
+        Returns a dictionary mapping search path to list of profile files found there.
+        """
+        available = {}
+        search_paths = Resolver.get_profile_search_paths()
+        
+        for search_path in search_paths:
+            profiles = []
+            if search_path.exists() and search_path.is_dir():
+                for profile_file in sorted(search_path.glob("*.yaml")):
+                    if profile_file.is_file():
+                        profiles.append(profile_file)
+                if profiles:
+                    available[str(search_path)] = profiles
+        
+        return available

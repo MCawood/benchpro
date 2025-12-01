@@ -352,7 +352,7 @@ E2E tests: build → suite plan → run → watch → export for LAMMPS, WRF, HP
 
 bp init
 bp config show|set|edit [--resolved --source-map]
-bp build plan|run|list
+bp app build|list|delete
 bp task  new|plan|run
 bp suite plan|run|list  [--pack array|steps|sequential|binpack --nodes ... --ranks-per-node ... --threads ... --gpus ...]
 bp pack  plan|apply

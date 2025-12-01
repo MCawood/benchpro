@@ -18,23 +18,27 @@ from benchpro.core.resolver import Resolver
 console = Console()
 
 @click.group()
-def build_cli():
-    """Manage application builds"""
+def app_cli():
+    """Manage applications"""
     pass
 
-@build_cli.command(name="run")
-@click.argument("config_file", type=click.Path(exists=True))
+@app_cli.command(name="build")
+@click.argument("config_file")
 @click.option("--dry-run", is_flag=True, help="Simulate build")
 @click.pass_context
-def run_build(ctx, config_file, dry_run):
+def build_app(ctx, config_file, dry_run):
     """Build an application from a config file"""
     try:
         # Get config
         config = ctx.obj['config']
-        # Resolve config file
+        # Resolve config file (can be a path or profile name)
         config_path = Resolver.resolve_profile(config_file)
         if not config_path:
              raise FileNotFoundError(f"Profile not found: {config_file}")
+        
+        # Verify the resolved path exists
+        if not config_path.exists():
+             raise FileNotFoundError(f"Resolved profile path does not exist: {config_path}")
 
         # Load config
         with open(config_path, "r") as f:
@@ -42,14 +46,14 @@ def run_build(ctx, config_file, dry_run):
         
         app_config = AppConfig(**config_data)
         
-        # Load template
+        # Load template - look relative to where the config file was found
         template_path = Path(app_config.build_template)
-        if not template_path.exists():
-            # Try relative to config file
-            template_path = Path(config_file).parent / app_config.build_template
+        if not template_path.is_absolute() and not template_path.exists():
+            # Try relative to the resolved config file location
+            template_path = config_path.parent / app_config.build_template
             
         if not template_path.exists():
-            raise FileNotFoundError(f"Template not found: {app_config.build_template}")
+            raise FileNotFoundError(f"Template not found: {app_config.build_template} (searched relative to {config_path.parent})")
             
         with open(template_path, "r") as f:
             template_content = f.read()
@@ -189,7 +193,35 @@ def run_build(ctx, config_file, dry_run):
         # import traceback
         # traceback.print_exc()
 
-@build_cli.command(name="list")
+@app_cli.command(name="avail")
+def list_available_apps():
+    """List available application profiles from all search directories"""
+    available = Resolver.list_available_profiles()
+    
+    if not available:
+        console.print("[yellow]No application profiles found in search directories[/yellow]")
+        console.print("\nSearch directories:")
+        search_paths = Resolver.get_profile_search_paths()
+        for path in search_paths:
+            console.print(f"  - {path}")
+        return
+    
+    # Show profiles grouped by search path
+    for search_path, profiles in available.items():
+        console.print(f"\n[bold cyan]{search_path}[/bold cyan]")
+        for profile in profiles:
+            profile_name = profile.stem  # Remove .yaml extension
+            console.print(f"  • {profile_name}")
+    
+    # Also show search paths that don't have profiles
+    all_search_paths = Resolver.get_profile_search_paths()
+    empty_paths = [str(p) for p in all_search_paths if str(p) not in available]
+    if empty_paths:
+        console.print(f"\n[yellow]Empty search directories:[/yellow]")
+        for path in empty_paths:
+            console.print(f"  - {path}")
+
+@app_cli.command(name="list")
 def list_builds():
     """List registered builds"""
     store = ResultStore()
@@ -212,5 +244,32 @@ def list_builds():
             b["build_label"],
             b["build_timestamp"]
         )
-        
+    
     console.print(table)
+
+@app_cli.command(name="delete")
+@click.argument("build_id", required=False)
+@click.option("--code", help="Delete all builds for a given code")
+@click.option("--all", is_flag=True, help="Delete all builds")
+@click.confirmation_option(prompt="Are you sure you want to delete these builds?")
+def delete_build(build_id, code, all):
+    """Delete registered builds"""
+    store = ResultStore()
+    
+    if all:
+        builds = store.get_builds()
+        deleted_count = 0
+        for b in builds:
+            if store.delete_build(b["build_id"]):
+                deleted_count += 1
+        console.print(f"[green]Deleted {deleted_count} build(s)[/green]")
+    elif code:
+        deleted_count = store.delete_builds_by_code(code)
+        console.print(f"[green]Deleted {deleted_count} build(s) for code '{code}'[/green]")
+    elif build_id:
+        if store.delete_build(build_id):
+            console.print(f"[green]Deleted build {build_id}[/green]")
+        else:
+            console.print(f"[red]Build {build_id} not found[/red]")
+    else:
+        console.print("[red]Must specify --build-id, --code, or --all[/red]")

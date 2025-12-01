@@ -1,0 +1,283 @@
+BenchPRO 2.0 – Results Collection & Visualization Component
+Schema Addendum (PostgreSQL)
+
+Version: 0.1 (Draft)
+Note: This addendum complements the BenchPRO Results PRD and defines a concrete initial schema.
+Migrations and minor adjustments are expected during implementation.
+
+----------------------------------------
+1. Conventions
+----------------------------------------
+
+- Database: PostgreSQL
+- Primary keys: BIGSERIAL surrogate keys named "id"
+- Timestamps: TIMESTAMPTZ (UTC recommended)
+- JSON payloads: JSONB
+- Text: TEXT unless length constraints are clearly beneficial
+- Enums: Implemented as PostgreSQL ENUM types or VARCHAR with CHECK constraints.
+  Below, they are shown as ENUMs for clarity.
+
+Suggested enum types:
+
+  CREATE TYPE user_role_enum AS ENUM ('user', 'admin');
+
+  CREATE TYPE fom_value_type_enum AS ENUM ('numeric', 'string');
+
+  CREATE TYPE task_status_enum AS ENUM ('completed', 'failed', 'partial');
+
+  CREATE TYPE saved_view_visibility_enum AS ENUM ('private', 'public');
+
+  CREATE TYPE artifact_encoding_enum AS ENUM ('raw', 'gzip');
+
+
+----------------------------------------
+2. users
+----------------------------------------
+
+Represents portal users (from SSO/IdP).
+
+CREATE TABLE users (
+    id              BIGSERIAL PRIMARY KEY,
+    external_id     TEXT NOT NULL UNIQUE,  -- IdP subject / username
+    display_name    TEXT,
+    email           TEXT,
+    role            user_role_enum NOT NULL DEFAULT 'user',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+Indexes:
+- UNIQUE (external_id)
+
+
+----------------------------------------
+3. api_tokens
+----------------------------------------
+
+Personal access tokens for BenchPRO clients, owned by users.
+
+CREATE TABLE api_tokens (
+    id              BIGSERIAL PRIMARY KEY,
+    user_id         BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name            TEXT NOT NULL,          -- human-readable label
+    token_hash      TEXT NOT NULL,          -- hashed token (e.g., bcrypt/argon2)
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    revoked_at      TIMESTAMPTZ
+);
+
+Indexes:
+- CREATE INDEX idx_api_tokens_user_id ON api_tokens(user_id);
+
+
+----------------------------------------
+4. applications
+----------------------------------------
+
+Represents a built application instance reused across multiple benchmark runs.
+
+CREATE TABLE applications (
+    id              BIGSERIAL PRIMARY KEY,
+    label           TEXT NOT NULL,          -- e.g. "lammps"
+    version         TEXT,                   -- e.g. "23Jun2022"
+    system          TEXT,                   -- e.g. "stampede3"
+    architecture    TEXT,                   -- e.g. "intel_spr"
+    modules         JSONB,                  -- list of module names
+    benchpro_version TEXT,
+    build_user      TEXT,
+    build_time      TIMESTAMPTZ,
+    extra           JSONB,                  -- extensible metadata
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+Indexes:
+- CREATE INDEX idx_applications_label ON applications(label);
+- CREATE INDEX idx_applications_system ON applications(system);
+- CREATE INDEX idx_applications_architecture ON applications(architecture);
+- CREATE INDEX idx_applications_label_system_version
+    ON applications(label, system, version);
+
+
+----------------------------------------
+5. benchmark_definitions
+----------------------------------------
+
+Conceptual benchmark definition, independent of individual runs.
+
+CREATE TABLE benchmark_definitions (
+    id                       BIGSERIAL PRIMARY KEY,
+    label                    TEXT NOT NULL,       -- e.g. "lammps_ljmelt"
+    application_id           BIGINT REFERENCES applications(id) ON DELETE SET NULL,
+    description              TEXT,
+    default_primary_fom_name TEXT,               -- e.g. "tau_day"
+    fom_schema               JSONB,              -- FoM metadata schema
+    extra                    JSONB,
+    created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+Indexes:
+- CREATE UNIQUE INDEX idx_benchdefs_label ON benchmark_definitions(label);
+- CREATE INDEX idx_benchdefs_app_id ON benchmark_definitions(application_id);
+
+
+----------------------------------------
+6. task_runs
+----------------------------------------
+
+Single execution of a benchmark task.
+
+CREATE TABLE task_runs (
+    id                       BIGSERIAL PRIMARY KEY,
+    user_id                  BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    task_uuid                UUID NOT NULL,      -- client-generated, unique per user
+    label                    TEXT NOT NULL,
+    benchmark_definition_id  BIGINT REFERENCES benchmark_definitions(id) ON DELETE SET NULL,
+    application_id           BIGINT REFERENCES applications(id) ON DELETE SET NULL,
+    system                   TEXT NOT NULL,
+    architecture             TEXT,
+    node_count               INTEGER,
+    runtime_seconds          DOUBLE PRECISION,
+    status                   task_status_enum NOT NULL DEFAULT 'completed',
+    submit_time              TIMESTAMPTZ NOT NULL,
+    start_time               TIMESTAMPTZ,
+    end_time                 TIMESTAMPTZ,
+    benchpro_version         TEXT,
+    extra                    JSONB,
+    created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_task_runs_user_taskuuid UNIQUE (user_id, task_uuid)
+);
+
+Indexes:
+- CREATE INDEX idx_task_runs_benchdef_id ON task_runs(benchmark_definition_id);
+- CREATE INDEX idx_task_runs_system ON task_runs(system);
+- CREATE INDEX idx_task_runs_architecture ON task_runs(architecture);
+- CREATE INDEX idx_task_runs_node_count ON task_runs(node_count);
+- CREATE INDEX idx_task_runs_submit_time ON task_runs(submit_time);
+- CREATE INDEX idx_task_runs_status ON task_runs(status);
+
+
+----------------------------------------
+7. figures_of_merit
+----------------------------------------
+
+FoMs associated with TaskRuns (supports numeric and string values).
+
+CREATE TABLE figures_of_merit (
+    id             BIGSERIAL PRIMARY KEY,
+    task_run_id    BIGINT NOT NULL REFERENCES task_runs(id) ON DELETE CASCADE,
+    name           TEXT NOT NULL,                -- e.g. "tau_day", "bandwidth"
+    unit           TEXT,                         -- e.g. "tau/day", "MB/s"
+    value_numeric  DOUBLE PRECISION,             -- nullable
+    value_text     TEXT,                         -- nullable
+    value_type     fom_value_type_enum NOT NULL, -- "numeric" or "string"
+    is_primary     BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+Indexes:
+- CREATE INDEX idx_foms_task_run_id ON figures_of_merit(task_run_id);
+- CREATE INDEX idx_foms_name ON figures_of_merit(name);
+- CREATE INDEX idx_foms_name_numeric ON figures_of_merit(name, value_numeric);
+- CREATE INDEX idx_foms_name_type ON figures_of_merit(name, value_type);
+
+Constraints / Considerations:
+- For value_type = 'numeric': value_numeric should be non-NULL (enforced by application logic or CHECK).
+- For value_type = 'string': value_text should be non-NULL (enforced by application logic or CHECK).
+
+
+----------------------------------------
+8. task_provenance_metadata
+----------------------------------------
+
+Structured key–value provenance metadata for TaskRuns.
+
+CREATE TABLE task_provenance_metadata (
+    id          BIGSERIAL PRIMARY KEY,
+    task_run_id BIGINT NOT NULL REFERENCES task_runs(id) ON DELETE CASCADE,
+    key         TEXT NOT NULL,
+    value_text  TEXT,
+    value_json  JSONB
+);
+
+Indexes:
+- CREATE INDEX idx_task_prov_meta_task_run_id ON task_provenance_metadata(task_run_id);
+- CREATE INDEX idx_task_prov_meta_key ON task_provenance_metadata(key);
+-- Optional JSONB index for value_json if needed:
+-- CREATE INDEX idx_task_prov_meta_value_json ON task_provenance_metadata USING GIN (value_json);
+
+
+----------------------------------------
+9. provenance_artifacts
+----------------------------------------
+
+Named provenance files associated with TaskRuns (stdout, logs, etc.).
+
+CREATE TABLE provenance_artifacts (
+    id            BIGSERIAL PRIMARY KEY,
+    task_run_id   BIGINT NOT NULL REFERENCES task_runs(id) ON DELETE CASCADE,
+    name          TEXT NOT NULL,        -- e.g. "stdout", "modules.txt"
+    content_type  TEXT NOT NULL,        -- e.g. "text/plain"
+    encoding      artifact_encoding_enum NOT NULL DEFAULT 'raw',
+    size_bytes    BIGINT NOT NULL,
+    data          BYTEA NOT NULL,       -- compressed or raw file content
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+Indexes:
+- CREATE INDEX idx_prov_artifacts_task_run_id ON provenance_artifacts(task_run_id);
+- CREATE INDEX idx_prov_artifacts_name ON provenance_artifacts(name);
+
+
+----------------------------------------
+10. saved_views
+----------------------------------------
+
+Saved Explorer configurations (filters + table + chart settings).
+
+CREATE TABLE saved_views (
+    id              BIGSERIAL PRIMARY KEY,
+    owner_user_id   BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name            TEXT NOT NULL,
+    description     TEXT,
+    config          JSONB NOT NULL,              -- serialized filters + display config
+    visibility      saved_view_visibility_enum NOT NULL DEFAULT 'private',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+Indexes:
+- CREATE INDEX idx_saved_views_owner ON saved_views(owner_user_id);
+- CREATE INDEX idx_saved_views_visibility ON saved_views(visibility);
+
+
+----------------------------------------
+11. Suggested Seed / Reference Data
+----------------------------------------
+
+For local development and testing, provide seed data:
+
+- One or more users (e.g., "dev_user") with role = 'admin'.
+- A few applications (e.g. LAMMPS, HPL).
+- A few benchmark_definitions (e.g. "lammps_ljmelt").
+- ~10–50 TaskRuns with:
+  - Figures_of_merit (numeric + string).
+  - Basic provenance metadata (git_commit, scheduler, environment).
+  - Sample provenance_artifacts (stdout, modules.txt, job_script.sh, hw_counters.log.gz).
+- A few saved_views to exercise the Results Explorer and sharing.
+
+These seeds are not enforced schema, but strongly recommended to validate the implementation and UI.
+
+
+----------------------------------------
+12. Migration & Evolution Notes
+----------------------------------------
+
+- All schema changes must be applied via migrations (e.g., Alembic).
+- New logical fields should initially be captured in:
+  - extra JSONB fields, or
+  - task_provenance_metadata (key/value_json).
+- When a field becomes operationally important (frequent filters or joins), it can be promoted to a dedicated column:
+  - Add column via migration.
+  - Backfill from JSONB/metadata where possible.
+  - Update application logic to write both the explicit column and/or metadata if needed.

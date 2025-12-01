@@ -2,6 +2,7 @@ import os
 import shutil
 import re
 import socket
+import platform
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -12,6 +13,7 @@ from pydantic import BaseModel, Field
 class SystemConfig(BaseModel):
     name: str = "default"
     host_patterns: List[str] = Field(default_factory=list)
+    platform_patterns: List[str] = Field(default_factory=list)
     scheduler: str = "local"
     default_walltime: int = 3600
     max_walltime: int = 86400
@@ -106,7 +108,18 @@ class Config(BaseModel):
         if env_system and env_system in config.systems:
             active_system = config.systems[env_system]
         
-        # 2. Check hostname matching
+        # 2. Check platform/OS matching
+        if not active_system:
+            current_platform = platform.system().lower()  # e.g., "darwin", "linux", "windows"
+            for sys_name, sys_cfg in config.systems.items():
+                for pattern in sys_cfg.platform_patterns:
+                    if re.match(pattern, current_platform, re.IGNORECASE):
+                        active_system = sys_cfg
+                        break
+                if active_system:
+                    break
+        
+        # 3. Check hostname matching
         if not active_system:
             hostname = socket.getfqdn()
             for sys_name, sys_cfg in config.systems.items():
@@ -117,7 +130,7 @@ class Config(BaseModel):
                 if active_system:
                     break
         
-        # 3. Fallback to existing 'system' field or default
+        # 4. Fallback to existing 'system' field or default
         if active_system:
             # Merge active system into the main 'system' field
             # This allows code to just access config.system
@@ -160,12 +173,22 @@ class Config(BaseModel):
              # For now, let's write a minimal default
              pass
         
-        # Write minimal default
+        # Write minimal default with darwin system profile
         with open(config_path, "w") as f:
             yaml.dump({
                 "system": {
                     "name": "default",
                     "scheduler": "local"
+                },
+                "systems": {
+                    "darwin": {
+                        "name": "darwin",
+                        "platform_patterns": ["darwin"],
+                        "scheduler": "local",
+                        "default_walltime": 3600,
+                        "max_walltime": 86400,
+                        "max_local_tasks": 4
+                    }
                 },
                 "defaults": {
                     "root_dir": str(Path.home() / "benchpro")
