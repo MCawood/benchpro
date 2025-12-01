@@ -25,9 +25,12 @@ def build_cli():
 @build_cli.command(name="run")
 @click.argument("config_file", type=click.Path(exists=True))
 @click.option("--dry-run", is_flag=True, help="Simulate build")
-def run_build(config_file, dry_run):
+@click.pass_context
+def run_build(ctx, config_file, dry_run):
     """Build an application from a config file"""
     try:
+        # Get config
+        config = ctx.obj['config']
         # Resolve config file
         config_path = Resolver.resolve_profile(config_file)
         if not config_path:
@@ -105,7 +108,9 @@ def run_build(config_file, dry_run):
         task_id = f"build_{app_config.name}_{app_config.version}_{int(datetime.now().timestamp())}"
         
         # Create a temporary script file
-        build_dir = Path.cwd() / "builds" / task_id
+        # Use configured root_dir for workspaces
+        root_dir = Path(config.defaults.get("root_dir", Path.cwd() / "benchpro"))
+        build_dir = root_dir / "workspaces" / task_id
         build_dir.mkdir(parents=True, exist_ok=True)
         script_path = build_dir / "build.sh"
         
