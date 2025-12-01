@@ -7,6 +7,7 @@ from benchpro.core.domain import Task, ResourceRequest, TaskStatus, Build
 from benchpro.core.executor import Executor
 from benchpro.core.resolver import Resolver
 from benchpro.core.results import ResultStore
+from benchpro.core.config import Config
 
 console = Console()
 
@@ -25,7 +26,8 @@ def task_cli():
 @click.option("--build-version", help="Application version to bind")
 @click.option("--build-label", help="Build label to bind")
 @click.option("--dry-run", is_flag=True, help="Simulate execution")
-def run_task(command, nodes, ranks, threads, gpus, build_code, build_version, build_label, dry_run):
+@click.option("--system", help="System configuration to use")
+def run_task(command, nodes, ranks, threads, gpus, build_code, build_version, build_label, dry_run, system):
     """Run a single task immediately"""
     try:
         # Create resources
@@ -76,7 +78,24 @@ def run_task(command, nodes, ranks, threads, gpus, build_code, build_version, bu
 
         # Execute
         console.print(f"Starting task {task_id}...")
-        executor = Executor(backend="local")
+        
+        # Load config
+        config = Config.load()
+        if system:
+            if system in config.systems:
+                # Override active system
+                active_system = config.systems[system]
+                merged_system = config.system.model_dump()
+                merged_system.update(active_system.model_dump(exclude_unset=True))
+                # Update config.system
+                from benchpro.core.config import SystemConfig
+                config.system = SystemConfig(**merged_system)
+            else:
+                console.print(f"[yellow]Warning: System '{system}' not found in configuration. Using detected defaults.[/yellow]")
+            
+        backend = config.system.scheduler
+        
+        executor = Executor(backend=backend, config=config)
         asyncio.run(executor.run_tasks([task], suite_id="ad_hoc"))
         
         if task.status == TaskStatus.COMPLETED:

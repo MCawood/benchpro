@@ -1,17 +1,21 @@
-name: lammps_melt
+name: lammps_ljmelt
 requirements:
   code: lammps
   version: "2023.08.02"
   build_label: "cmake_mpi"
 
 matrix:
-  params:
-    x: [10, 20]
-    y: [10, 20]
-    z: [10]
+  nodes: [1]
+  ranks_per_node: [4]
 
 resources:
   threads: 1
+  gpus: 0
+  time: "00:10:00"
 
-# Copy input script to task dir and run
-command: "cp /Users/mcawood/dev/benchpro_antigravity/examples/build/in.melt . && lmp -in in.melt -var x ${x} -var y ${y} -var z ${z}"
+command: "lmp -in in.melt"
+
+metrics:
+  - name: "performance"
+    regex: "Performance:\\s+([\\d\\.]+)\\s+tau/day"
+    unit: "tau/day"

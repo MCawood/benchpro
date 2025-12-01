@@ -1,0 +1,26 @@
+mvapich2:
+  aliases: [mvapich2]
+  versions:
+    - range: "*"
+      env:
+        MPICC: mpicc
+        MPICXX: mpicxx
+        MPIFC: mpif90
+
+impi:
+  aliases: [impi, intel-mpi]
+  versions:
+    - range: "*"
+      env:
+        MPICC: mpiicc
+        MPICXX: mpiicpc
+        MPIFC: mpiifort
+
+openmpi:
+  aliases: [openmpi]
+  versions:
+    - range: "*"
+      env:
+        MPICC: mpicc
+        MPICXX: mpicxx
+        MPIFC: mpif90

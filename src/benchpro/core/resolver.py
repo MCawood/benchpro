@@ -1,4 +1,7 @@
+import os
+from pathlib import Path
 from typing import List, Optional, Dict, Any
+from benchpro.core.config import Config
 from benchpro.core.domain import Build
 
 class Resolver:
@@ -41,3 +44,51 @@ class Resolver:
         candidates.sort(key=lambda b: b.build_timestamp, reverse=True)
         
         return candidates[0]
+        candidates.sort(key=lambda b: b.build_timestamp, reverse=True)
+        
+        return candidates[0]
+
+    @staticmethod
+    def resolve_profile(name: str) -> Optional[Path]:
+        """
+        Resolve a profile by name.
+        Search order:
+        1. Local file (if name is a path)
+        2. User profiles
+        3. Site profiles
+        """
+        # 1. Check if it's a direct path
+        path = Path(name)
+        if path.exists():
+            return path
+            
+        # If no extension, add .yaml
+        if not name.endswith(".yaml"):
+            name += ".yaml"
+            
+        # Get search paths from Config
+        # We instantiate Config to get the resolved paths
+        config = Config.load()
+        
+        search_paths = []
+        
+        # User profiles
+        # We need to reconstruct the user config dir logic or expose it in Config
+        # For now, let's rely on the env vars or default
+        if os.environ.get("BENCHPRO_CONFIG_DIR"):
+            user_profiles = Path(os.environ.get("BENCHPRO_CONFIG_DIR")) / "profiles"
+        else:
+            user_profiles = Path.home() / ".config/benchpro/profiles"
+        search_paths.append(user_profiles)
+        
+        # Site profiles
+        if os.environ.get("BENCHPRO_SITE_PROFILES"):
+            search_paths.append(Path(os.environ.get("BENCHPRO_SITE_PROFILES")))
+        
+        # Search
+        for base in search_paths:
+            candidate = base / name
+            if candidate.exists():
+                return candidate
+                
+        return None

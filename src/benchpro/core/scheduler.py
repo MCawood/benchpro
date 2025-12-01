@@ -15,6 +15,11 @@ class SchedulerBackend(abc.ABC):
         """Cancel a job."""
         pass
 
+    @abc.abstractmethod
+    def query_job_status(self, job_ids: List[str]) -> Dict[str, str]:
+        """Query the status of multiple jobs. Returns a dict mapping job_id to status."""
+        pass
+
 class SlurmBackend(SchedulerBackend):
     def submit_job(self, job: Job) -> str:
         """Submit a job via sbatch."""
@@ -52,6 +57,47 @@ class SlurmBackend(SchedulerBackend):
         except (subprocess.CalledProcessError, FileNotFoundError):
             return False
 
+    def query_job_status(self, job_ids: List[str]) -> Dict[str, str]:
+        """Query job status using sacct."""
+        if not job_ids:
+            return {}
+            
+        # Join job IDs for the command
+        job_list = ",".join(job_ids)
+        
+        # We use sacct to get the state
+        # Format: JobID,State
+        # -n: no header
+        # -P: parsable (| separator)
+        cmd = ["sacct", "-n", "-P", "--format=JobID,State", "-j", job_list]
+        
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            output = result.stdout.strip()
+            
+            status_map = {}
+            for line in output.split("\n"):
+                if not line:
+                    continue
+                parts = line.split("|")
+                if len(parts) >= 2:
+                    jid = parts[0]
+                    state = parts[1].split()[0] # Take first word (e.g. CANCELLED by ...)
+                    
+                    # Handle job steps (123.batch, 123.0) - we only care about the main job
+                    if "." in jid:
+                        continue
+                        
+                    # Map Slurm state to BenchPRO state
+                    # PENDING, RUNNING, COMPLETED, FAILED, TIMEOUT, CANCELLED, NODE_FAIL
+                    status_map[jid] = state
+            
+            return status_map
+            
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Fallback or error
+            return {}
+
 class LocalBackend(SchedulerBackend):
     def submit_job(self, job: Job) -> str:
         # Local execution is handled differently (direct process spawning)
@@ -60,3 +106,8 @@ class LocalBackend(SchedulerBackend):
 
     def cancel_job(self, job_id: str) -> bool:
         return True
+
+    def query_job_status(self, job_ids: List[str]) -> Dict[str, str]:
+        # Local jobs are instantaneous in this MVP, so we don't really query them async
+        # But if we did, we'd check process IDs
+        return {}

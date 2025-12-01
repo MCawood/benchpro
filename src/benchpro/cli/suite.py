@@ -11,6 +11,8 @@ from rich.table import Table
 from benchpro.core.domain import ResourceRequest, Task
 from benchpro.core.planner import Planner
 from benchpro.core.executor import Executor
+from benchpro.core.config import Config
+from benchpro.core.resolver import Resolver
 
 console = Console()
 
@@ -30,7 +32,12 @@ def suite_cli():
 def plan_suite(ctx, suite_file, nodes, ranks_per_node, threads, gpus, json_out):
     """Plan a suite execution"""
     try:
-        with open(suite_file, "r") as f:
+        # Resolve suite file
+        suite_path = Resolver.resolve_profile(suite_file)
+        if not suite_path:
+             raise FileNotFoundError(f"Suite not found: {suite_file}")
+
+        with open(suite_path, "r") as f:
             suite_data = yaml.safe_load(f)
             
         suite_id = suite_data.get("name", "unknown_suite")
@@ -84,13 +91,19 @@ def plan_suite(ctx, suite_file, nodes, ranks_per_node, threads, gpus, json_out):
 @suite_cli.command(name="run")
 @click.argument("suite_file", type=click.Path(exists=True))
 @click.option("--dry-run", is_flag=True, help="Simulate execution")
+@click.option("--system", help="System configuration to use")
 @click.pass_context
-def run_suite(ctx, suite_file, dry_run):
+def run_suite(ctx, suite_file, dry_run, system):
     """Run a benchmark suite"""
     # For now, just re-plan and run. In future, we might load a plan file.
     # This duplicates some logic from plan, but that's okay for now.
     try:
-        with open(suite_file, "r") as f:
+        # Resolve suite file
+        suite_path = Resolver.resolve_profile(suite_file)
+        if not suite_path:
+             raise FileNotFoundError(f"Suite not found: {suite_file}")
+
+        with open(suite_path, "r") as f:
             suite_data = yaml.safe_load(f)
             
         suite_id = suite_data.get("name", "unknown_suite")
@@ -99,16 +112,33 @@ def run_suite(ctx, suite_file, dry_run):
         
         command_template = suite_data.get("command")
         requirements = suite_data.get("requirements")
-        tasks = Planner.expand_matrix(suite_id, matrix, base_res, command_template, requirements)
+        metrics = suite_data.get("metrics")
+        tasks = Planner.expand_matrix(suite_id, matrix, base_res, command_template, requirements, metrics)
         
+        # Load config
+        config = Config.load()
+        if system:
+            if system in config.systems:
+                # Override active system
+                active_system = config.systems[system]
+                merged_system = config.system.model_dump()
+                merged_system.update(active_system.model_dump(exclude_unset=True))
+                # Update config.system
+                from benchpro.core.config import SystemConfig
+                config.system = SystemConfig(**merged_system)
+            else:
+                console.print(f"[yellow]Warning: System '{system}' not found in configuration. Using detected defaults.[/yellow]")
+
+        # Determine backend
+        backend = config.system.scheduler
         if dry_run:
-            console.print("[yellow]Dry run enabled. Tasks that would run:[/yellow]")
+            console.print(f"[yellow]Dry run enabled. System: {config.system.name}, Backend: {backend}[/yellow]")
+            console.print("[yellow]Tasks that would run:[/yellow]")
             for t in tasks:
                 console.print(f"  {t.task_id}: {t.command}")
             return
 
-        # Default to local for now, could expose via flag
-        executor = Executor(backend="local")
+        executor = Executor(backend=backend, config=config)
         import asyncio
         asyncio.run(executor.run_tasks(tasks, suite_id=suite_id))
         

@@ -11,6 +11,9 @@ from benchpro.core.executor import Executor
 from benchpro.core.build_config import AppConfig
 from benchpro.core.templating import TemplateEngine
 from benchpro.core.results import ResultStore
+from benchpro.core.modules import ModuleHandler
+from benchpro.core.env_config import EnvConfigLoader
+from benchpro.core.resolver import Resolver
 
 console = Console()
 
@@ -25,8 +28,13 @@ def build_cli():
 def run_build(config_file, dry_run):
     """Build an application from a config file"""
     try:
+        # Resolve config file
+        config_path = Resolver.resolve_profile(config_file)
+        if not config_path:
+             raise FileNotFoundError(f"Profile not found: {config_file}")
+
         # Load config
-        with open(config_file, "r") as f:
+        with open(config_path, "r") as f:
             config_data = yaml.safe_load(f)
         
         app_config = AppConfig(**config_data)
@@ -45,6 +53,51 @@ def run_build(config_file, dry_run):
             
         # Render build script
         context = app_config.model_dump()
+        
+        # Initialize handlers
+        module_handler = ModuleHandler()
+        config_dir = Path(__file__).parent.parent / "config"
+        env_loader = EnvConfigLoader(config_dir)
+        
+        # Auto-infer modules from compiler and MPI
+        modules_to_load = []
+        if app_config.compiler and app_config.compiler.lower() not in ["system", "none"]:
+            modules_to_load.append(app_config.compiler)
+        if app_config.mpi and app_config.mpi.lower() not in ["system", "none"]:
+            modules_to_load.append(app_config.mpi)
+            
+        # Add user-defined modules
+        if app_config.modules:
+            modules_to_load.extend(app_config.modules)
+            
+        # Validate modules
+        if modules_to_load:
+            # Check if modules exist (skip validation if dry-run? maybe not)
+            # For now, just warn if validation fails
+            if not module_handler.validate_modules(modules_to_load):
+                console.print("[yellow]Warning: Some requested modules may not exist[/yellow]")
+                
+            # Resolve defaults
+            resolved_modules = module_handler.resolve_defaults(modules_to_load)
+            # Update config modules for consistency, though we use resolved_modules for generation
+            app_config.modules = resolved_modules 
+            context["modules"] = resolved_modules
+            
+        # Resolve environment
+        env_vars = app_config.env.copy()
+        
+        # Compiler env
+        compiler_env = env_loader.resolve_env(app_config.compiler, None, "compiler")
+        if compiler_env:
+            env_vars.update(compiler_env)
+            
+        # MPI env
+        mpi_env = env_loader.resolve_env(app_config.mpi, None, "mpi")
+        if mpi_env:
+            env_vars.update(mpi_env)
+            
+        context["env"] = env_vars
+        
         engine = TemplateEngine(context)
         build_script = engine.render(template_content)
         
@@ -101,6 +154,23 @@ def run_build(config_file, dry_run):
                 compiler=app_config.compiler,
                 mpi=app_config.mpi
             )
+            
+            # Generate module file
+            module_content = module_handler.generate_module_file(
+                name=app_config.name,
+                version=app_config.version,
+                modules=app_config.modules,
+                paths=[f"{install_dir}/bin"],
+                env_vars=env_vars
+            )
+            
+            module_file = build_dir / f"{app_config.name}.lua"
+            with open(module_file, "w") as f:
+                f.write(module_content)
+                
+            # Update activation script to use module
+            # We use 'module use' to add the build dir to module path
+            build.activation_script = f"module use {build_dir} && module load {app_config.name}"
             
             store = ResultStore()
             store.save_build(build)

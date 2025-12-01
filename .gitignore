@@ -11,7 +11,10 @@ dist/
 .coverage
 htmlcov/
 .pytest_cache/
-.benchpro/
+
+
 builds/
 install/
 .DS_Store
+*.log
+slurm-*.out

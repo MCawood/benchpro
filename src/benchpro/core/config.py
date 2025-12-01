@@ -1,4 +1,7 @@
 import os
+import shutil
+import re
+import socket
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -8,13 +11,18 @@ from pydantic import BaseModel, Field
 
 class SystemConfig(BaseModel):
     name: str = "default"
+    host_patterns: List[str] = Field(default_factory=list)
+    scheduler: str = "local"
     default_walltime: int = 3600
     max_walltime: int = 86400
     max_local_tasks: int = 8
+    account: Optional[str] = None
+    partition: Optional[str] = None
 
 
 class Config(BaseModel):
     system: SystemConfig = Field(default_factory=SystemConfig)
+    systems: Dict[str, SystemConfig] = Field(default_factory=dict)
     defaults: Dict[str, Any] = Field(default_factory=dict)
     
     @classmethod
@@ -35,12 +43,28 @@ class Config(BaseModel):
             if env_path:
                 config_paths.append(Path(env_path))
             
-            # Standard paths
-            config_paths.extend([
-                Path("/etc/benchpro/config.yaml"),
-                Path.home() / ".config/benchpro/config.yaml",
-                Path.cwd() / ".benchpro/config.yaml",
-            ])
+            # Site config
+            site_config = os.environ.get("BENCHPRO_SITE_CONFIG")
+            if site_config:
+                config_paths.append(Path(site_config))
+            else:
+                config_paths.append(Path("/etc/benchpro/config.yaml"))
+
+            # User config
+            config_dir = os.environ.get("BENCHPRO_CONFIG_DIR")
+            if config_dir:
+                user_config_dir = Path(config_dir)
+            else:
+                user_config_dir = Path.home() / ".config/benchpro"
+            
+            user_config_path = user_config_dir / "config.yaml"
+            
+            # Auto-init if missing
+            if not user_config_path.exists():
+                cls._init_user_config(user_config_dir)
+
+            config_paths.append(user_config_path)
+            config_paths.append(Path.cwd() / ".benchpro/config.yaml")
             
         # Load and merge
         # Merge all layers
@@ -56,41 +80,53 @@ class Config(BaseModel):
         
         # Interpolate variables
         # We construct a context from the merged config itself
-        # This allows ${system.name} to be used elsewhere
         from benchpro.core.templating import TemplateEngine
         
         # Add env vars to context
         env_context = {k: v for k, v in os.environ.items()}
         
-        # Ensure system defaults are present in context
-        # We instantiate SystemConfig with the raw data to get defaults
-        raw_system = config_data.get("system", {})
-        system_defaults = cls.model_fields["system"].default_factory().model_dump()
-        # Update defaults with raw data
-        # Note: We can't use SystemConfig(**raw_system) directly if raw_system contains variables
-        # that would cause validation errors (e.g. int field having "${var}").
-        # But SystemConfig fields are mostly simple types. 
-        # For now, let's just use the default factory and merge raw on top for the context.
-        # Actually, if we want ${system.max_walltime} to resolve to the default 86400 if not set,
-        # we need that value in the context.
-        
-        system_context = system_defaults.copy()
-        system_context.update(raw_system)
-        
         # Initial context with config data and env
+        # We need to resolve systems first to detect the active one
         context = {
             "env": env_context,
             **config_data,
-            "system": system_context # Override system with defaults included
         }
         
-        # Render the config against itself
-        # We might need multiple passes if variables reference other variables
-        # For now, single pass
         engine = TemplateEngine(context)
         resolved_data = engine.render(config_data)
-                    
-        return cls(**resolved_data)
+        
+        # Create instance to parse systems
+        config = cls(**resolved_data)
+        
+        # Detect System
+        active_system = None
+        
+        # 1. Check env var override
+        env_system = os.environ.get("BENCHPRO_SYSTEM")
+        if env_system and env_system in config.systems:
+            active_system = config.systems[env_system]
+        
+        # 2. Check hostname matching
+        if not active_system:
+            hostname = socket.getfqdn()
+            for sys_name, sys_cfg in config.systems.items():
+                for pattern in sys_cfg.host_patterns:
+                    if re.match(pattern, hostname):
+                        active_system = sys_cfg
+                        break
+                if active_system:
+                    break
+        
+        # 3. Fallback to existing 'system' field or default
+        if active_system:
+            # Merge active system into the main 'system' field
+            # This allows code to just access config.system
+            # We merge the active system ON TOP of the existing default system
+            merged_system = config.system.model_dump()
+            merged_system.update(active_system.model_dump(exclude_unset=True))
+            config.system = SystemConfig(**merged_system)
+            
+        return config
 
     @staticmethod
     def _deep_merge(base: Dict[str, Any], update: Dict[str, Any]) -> Dict[str, Any]:
@@ -104,3 +140,34 @@ class Config(BaseModel):
             else:
                 result[key] = value
         return result
+
+    @staticmethod
+    def _init_user_config(config_dir: Path):
+        """
+        Initialize user configuration directory.
+        """
+        print(f"First run detected. Initializing configuration in {config_dir}")
+        config_dir.mkdir(parents=True, exist_ok=True)
+        (config_dir / "profiles").mkdir(exist_ok=True)
+        
+        # Create default config
+        config_path = config_dir / "config.yaml"
+        
+        # Check for site config to copy from
+        site_config = os.environ.get("BENCHPRO_SITE_CONFIG")
+        if site_config and os.path.exists(site_config):
+             # We could copy site config as a base, but usually we want a minimal user config
+             # For now, let's write a minimal default
+             pass
+        
+        # Write minimal default
+        with open(config_path, "w") as f:
+            yaml.dump({
+                "system": {
+                    "name": "default",
+                    "scheduler": "local"
+                },
+                "defaults": {
+                    "root_dir": str(Path.home() / "benchpro")
+                }
+            }, f)

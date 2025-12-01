@@ -13,6 +13,12 @@ class TaskStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
+class MetricDefinition(BaseModel):
+    name: str
+    regex: str
+    unit: Optional[str] = None
+
+
 class ResourceRequest(BaseModel):
     nodes: int = 1
     ranks_per_node: int = 1
@@ -34,6 +40,7 @@ class Task(BaseModel):
     command: str
     env: Dict[str, str] = Field(default_factory=dict)
     requirements: Optional[Dict[str, str]] = None # code, version, etc.
+    metrics: List[MetricDefinition] = Field(default_factory=list)
     status: TaskStatus = TaskStatus.PENDING
     
     # Provenance

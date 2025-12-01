@@ -11,6 +11,7 @@ class AppConfig(BaseModel):
     compiler: str = "gcc"
     mpi: str = "openmpi"
     modules: List[str] = Field(default_factory=list)
+    module_use: List[str] = Field(default_factory=list)
     env: Dict[str, str] = Field(default_factory=dict)
     
     # Build options

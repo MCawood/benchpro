@@ -3,6 +3,7 @@ version: "2023.08.02"
 source: "https://github.com/lammps/lammps/archive/refs/tags/stable_2Aug2023_update2.tar.gz"
 build_template: "build_lammps.sh.j2"
 build_label: "cmake_mpi"
-compiler: "mpicxx"
+compiler: "gcc"
+mpi: "openmpi"
 variables:
   cmake_flags: "-D PKG_MOLECULE=yes -D PKG_RIGID=yes -D BUILD_MPI=yes"

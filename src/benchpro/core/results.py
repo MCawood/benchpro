@@ -45,6 +45,7 @@ class ResultStore:
                 job_id TEXT,
                 parameters JSON,
                 resources JSON,
+                metric_definitions JSON,
                 FOREIGN KEY(run_id) REFERENCES runs(run_id)
             )
         """)
@@ -100,12 +101,13 @@ class ResultStore:
         
         params_json = json.dumps(task.parameters)
         resources_json = task.resources.model_dump_json()
+        metric_defs_json = json.dumps([m.model_dump() for m in task.metrics])
         
         cursor.execute(
             """
             INSERT OR REPLACE INTO tasks 
-            (task_id, run_id, suite_id, status, exit_code, duration_ms, job_id, parameters, resources)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (task_id, run_id, suite_id, status, exit_code, duration_ms, job_id, parameters, resources, metric_definitions)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 task.task_id,
@@ -116,13 +118,58 @@ class ResultStore:
                 task.duration_ms,
                 task.job_id,
                 params_json,
-                resources_json
+                resources_json,
+                metric_defs_json
             )
         )
         
         conn.commit()
         conn.close()
+    def update_task_status(self, task_id: str, status: TaskStatus):
+        """Update the status of a task."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute(
+            "UPDATE tasks SET status = ? WHERE task_id = ?",
+            (status.value, task_id)
+        )
+        
+        conn.commit()
+        conn.close()
 
+    def save_metrics(self, task_id: str, metrics: Dict[str, Any]):
+        """Save extracted metrics."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        for name, data in metrics.items():
+            cursor.execute(
+                "INSERT OR REPLACE INTO metrics (task_id, name, value, unit) VALUES (?, ?, ?, ?)",
+                (task_id, name, data["value"], data.get("unit"))
+            )
+            
+        conn.commit()
+        conn.close()
+
+    def get_task_metrics(self, task_id: str) -> Dict[str, Any]:
+        """Get metrics for a task."""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM metrics WHERE task_id = ?", (task_id,))
+        rows = cursor.fetchall()
+        
+        metrics = {}
+        for row in rows:
+            metrics[row["name"]] = {
+                "value": row["value"],
+                "unit": row["unit"]
+            }
+            
+        conn.close()
+        return metrics
     def save_build(self, build: Any):
         """Save a build to the database."""
         # Avoid circular import
@@ -212,6 +259,10 @@ class ResultStore:
             task = dict(row)
             task["parameters"] = json.loads(task["parameters"])
             task["resources"] = json.loads(task["resources"])
+            if "metric_definitions" in task and task["metric_definitions"]:
+                task["metric_definitions"] = json.loads(task["metric_definitions"])
+            else:
+                task["metric_definitions"] = []
             tasks.append(task)
             
         conn.close()

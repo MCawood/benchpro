@@ -5,13 +5,15 @@ from typing import List, Optional
 from benchpro.core.domain import Task, TaskStatus, Job
 from benchpro.core.scheduler import SchedulerBackend, SlurmBackend, LocalBackend
 from benchpro.core.results import ResultStore
+from benchpro.core.config import Config
 
 class Executor:
-    def __init__(self, backend: str = "local", max_concurrent: int = 4, result_store: ResultStore = None):
+    def __init__(self, backend: str = "local", max_concurrent: int = 4, result_store: ResultStore = None, config: Config = None):
         self.backend_type = backend
         self.max_concurrent = max_concurrent
         self.semaphore = asyncio.Semaphore(max_concurrent)
         self.result_store = result_store or ResultStore()
+        self.config = config
         
         if backend == "slurm":
             self.scheduler = SlurmBackend()
@@ -93,8 +95,13 @@ class Executor:
             sb_lines.append(f"#SBATCH --time={task.resources.time}")
         if task.resources.partition:
             sb_lines.append(f"#SBATCH --partition={task.resources.partition}")
+        elif self.config and self.config.system.partition:
+            sb_lines.append(f"#SBATCH --partition={self.config.system.partition}")
+
         if task.resources.account:
             sb_lines.append(f"#SBATCH --account={task.resources.account}")
+        elif self.config and self.config.system.account:
+            sb_lines.append(f"#SBATCH --account={self.config.system.account}")
         if task.resources.qos:
             sb_lines.append(f"#SBATCH --qos={task.resources.qos}")
         if task.resources.gpus > 0:

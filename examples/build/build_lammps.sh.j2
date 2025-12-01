@@ -24,7 +24,7 @@ cd build
 
 cmake ../cmake \
     -D CMAKE_INSTALL_PREFIX=../../install \
-    -D CMAKE_CXX_COMPILER=${compiler} \
+    -D CMAKE_CXX_COMPILER={{ env.MPICXX or env.CXX }} \
     ${variables.cmake_flags}
 
 echo "Compiling..."

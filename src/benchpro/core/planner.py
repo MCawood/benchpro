@@ -1,10 +1,10 @@
 import itertools
 from typing import List, Dict, Any
-from benchpro.core.domain import Task, ResourceRequest, TaskStatus, Build
+from benchpro.core.domain import Task, ResourceRequest, TaskStatus, Build, MetricDefinition
 
 class Planner:
     @staticmethod
-    def expand_matrix(suite_id: str, matrix: Dict[str, List[Any]], base_resources: Dict[str, Any], command_template: str = None, requirements: Dict[str, str] = None) -> List[Task]:
+    def expand_matrix(suite_id: str, matrix: Dict[str, List[Any]], base_resources: Dict[str, Any], command_template: str = None, requirements: Dict[str, str] = None, metrics: List[Dict[str, str]] = None) -> List[Task]:
         """
         Expand a matrix of parameters into a list of Tasks.
         Follows the expansion order: nodes -> ranks_per_node -> threads -> gpus -> named_params
@@ -21,6 +21,12 @@ class Planner:
         params = matrix.get("params", {})
         param_keys = sorted(params.keys())
         param_values = [params[k] for k in param_keys]
+        
+        # Parse metrics
+        metric_defs = []
+        if metrics:
+            for m in metrics:
+                metric_defs.append(MetricDefinition(**m))
         
         tasks = []
         task_idx = 0
@@ -103,6 +109,7 @@ class Planner:
                                 parameters=current_params,
                                 resources=res,
                                 command=command,
+                                metrics=metric_defs,
                                 status=TaskStatus.PENDING
                             )
                             tasks.append(task)

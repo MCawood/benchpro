@@ -1,0 +1,31 @@
+gcc:
+  aliases: [gnu, gcc]
+  versions:
+    - range: "*"
+      env:
+        CC: gcc
+        CXX: g++
+        FC: gfortran
+
+nvidia:
+  aliases: [nvhpc, nvidia]
+  versions:
+    - range: "*"
+      env:
+        CC: nvc
+        CXX: nvc++
+        FC: nvfort
+
+intel:
+  aliases: [intel-oneapi, intel]
+  versions:
+    - range: "<2024"
+      env:
+        CC: icc
+        CXX: icpc
+        FC: ifort
+    - range: ">=2024"
+      env:
+        CC: icx
+        CXX: icpx
+        FC: ifx

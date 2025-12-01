@@ -23,6 +23,9 @@ class MockSchedulerBackend(SchedulerBackend):
         self.cancelled_jobs.append(job_id)
         return True
 
+    def query_job_status(self, job_id: str) -> str:
+        return "completed"
+
 # --- Fixtures ---
 
 @pytest.fixture
