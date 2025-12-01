@@ -9,7 +9,7 @@ class AppConfig(BaseModel):
     
     # Build environment
     compiler: str = "gcc"
-    mpi: str = "openmpi"
+    mpi: Optional[str] = None  # None means no MPI, "system" means use system MPI, or specify module name
     modules: List[str] = Field(default_factory=list)
     module_use: List[str] = Field(default_factory=list)
     env: Dict[str, str] = Field(default_factory=dict)

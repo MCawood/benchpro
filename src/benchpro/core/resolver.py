@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any
 from benchpro.core.config import Config
 from benchpro.core.domain import Build
-from benchpro.core.env import get_dev_profiles_path
+from benchpro.core.env import get_dev_apps_path, get_dev_suites_path
 
 class Resolver:
     def __init__(self, builds: List[Build]):
@@ -47,16 +47,16 @@ class Resolver:
         return candidates[0]
 
     @staticmethod
-    def get_profile_search_paths() -> List[Path]:
+    def get_app_search_paths() -> List[Path]:
         """
-        Get all profile search paths in order of precedence.
-        Returns list of directories to search for profiles.
+        Get all application profile search paths in order of precedence.
+        Returns list of directories to search for application profiles.
         
         Search order:
         1. Project-local profiles (.benchpro/profiles)
         2. User profiles (~/.config/benchpro/profiles)
         3. Site profiles ($BENCHPRO_SITE_PROFILES) - production
-        4. Development profiles (examples/build) - fallback if site profiles not set
+        4. Development apps (examples/apps) - fallback if site profiles not set
         """
         search_paths = []
         
@@ -79,22 +79,70 @@ class Resolver:
             if site_profiles.exists():
                 search_paths.append(site_profiles)
         else:
-            # Development fallback: use examples/build if available
-            dev_profiles = get_dev_profiles_path()
-            if dev_profiles:
-                search_paths.append(dev_profiles)
+            # Development fallback: use examples/apps if available
+            dev_apps = get_dev_apps_path()
+            if dev_apps:
+                search_paths.append(dev_apps)
         
         return search_paths
 
     @staticmethod
-    def resolve_profile(name: str) -> Optional[Path]:
+    def get_suite_search_paths() -> List[Path]:
         """
-        Resolve a profile by name.
+        Get all suite/benchmark profile search paths in order of precedence.
+        Returns list of directories to search for suite profiles.
+        
+        Search order:
+        1. Project-local profiles (.benchpro/profiles)
+        2. User profiles (~/.config/benchpro/profiles)
+        3. Site profiles ($BENCHPRO_SITE_PROFILES) - production
+        4. Development suites (examples/suites) - fallback if site profiles not set
+        """
+        search_paths = []
+        
+        # Project-local profiles (highest precedence)
+        project_profiles = Path.cwd() / ".benchpro" / "profiles"
+        if project_profiles.exists():
+            search_paths.append(project_profiles)
+        
+        # User profiles
+        if os.environ.get("BENCHPRO_CONFIG_DIR"):
+            user_profiles = Path(os.environ.get("BENCHPRO_CONFIG_DIR")) / "profiles"
+        else:
+            user_profiles = Path.home() / ".config/benchpro/profiles"
+        if user_profiles.exists():
+            search_paths.append(user_profiles)
+        
+        # Site profiles (production)
+        if os.environ.get("BENCHPRO_SITE_PROFILES"):
+            site_profiles = Path(os.environ.get("BENCHPRO_SITE_PROFILES"))
+            if site_profiles.exists():
+                search_paths.append(site_profiles)
+        else:
+            # Development fallback: use examples/suites if available
+            dev_suites = get_dev_suites_path()
+            if dev_suites:
+                search_paths.append(dev_suites)
+        
+        return search_paths
+
+    @staticmethod
+    def get_profile_search_paths() -> List[Path]:
+        """
+        Get all profile search paths (legacy method, combines apps and suites).
+        For backwards compatibility, returns app search paths.
+        """
+        return Resolver.get_app_search_paths()
+
+    @staticmethod
+    def resolve_app(name: str) -> Optional[Path]:
+        """
+        Resolve an application profile by name.
         Search order:
         1. Local file (if name is a path)
         2. Project profiles (.benchpro/profiles)
         3. User profiles
-        4. Site profiles
+        4. Site profiles or development apps
         """
         # 1. Check if it's a direct path
         path = Path(name)
@@ -106,7 +154,7 @@ class Resolver:
             name += ".yaml"
         
         # Get search paths
-        search_paths = Resolver.get_profile_search_paths()
+        search_paths = Resolver.get_app_search_paths()
         
         # Search
         for base in search_paths:
@@ -117,13 +165,58 @@ class Resolver:
         return None
 
     @staticmethod
+    def resolve_suite(name: str) -> Optional[Path]:
+        """
+        Resolve a suite/benchmark profile by name.
+        Search order:
+        1. Local file (if name is a path)
+        2. Project profiles (.benchpro/profiles)
+        3. User profiles
+        4. Site profiles or development suites
+        """
+        # 1. Check if it's a direct path
+        path = Path(name)
+        if path.exists():
+            return path
+            
+        # If no extension, add .yaml
+        if not name.endswith(".yaml"):
+            name += ".yaml"
+        
+        # Get search paths
+        search_paths = Resolver.get_suite_search_paths()
+        
+        # Search
+        for base in search_paths:
+            candidate = base / name
+            if candidate.exists():
+                return candidate
+                
+        return None
+
+    @staticmethod
+    def resolve_profile(name: str) -> Optional[Path]:
+        """
+        Resolve a profile by name (legacy method, tries apps first, then suites).
+        For backwards compatibility.
+        """
+        # Try app first
+        app_path = Resolver.resolve_app(name)
+        if app_path:
+            return app_path
+        
+        # Then try suite
+        return Resolver.resolve_suite(name)
+
+    @staticmethod
     def list_available_profiles() -> Dict[str, List[Path]]:
         """
         List all available profiles from all search paths.
         Returns a dictionary mapping search path to list of profile files found there.
         """
         available = {}
-        search_paths = Resolver.get_profile_search_paths()
+        # Combine app and suite search paths
+        search_paths = list(set(Resolver.get_app_search_paths() + Resolver.get_suite_search_paths()))
         
         for search_path in search_paths:
             profiles = []

@@ -22,7 +22,7 @@ def suite_cli():
     pass
 
 @suite_cli.command(name="plan")
-@click.argument("suite_file", type=click.Path(exists=True))
+@click.argument("suite_file")
 @click.option("--nodes", "-N", type=int, help="Override nodes")
 @click.option("--ranks-per-node", "-n", type=int, help="Override ranks per node")
 @click.option("--threads", "-c", type=int, help="Override threads per rank")
@@ -33,9 +33,13 @@ def plan_suite(ctx, suite_file, nodes, ranks_per_node, threads, gpus, json_out):
     """Plan a suite execution"""
     try:
         # Resolve suite file
-        suite_path = Resolver.resolve_profile(suite_file)
+        suite_path = Resolver.resolve_suite(suite_file)
         if not suite_path:
              raise FileNotFoundError(f"Suite not found: {suite_file}")
+        
+        # Verify the resolved path exists
+        if not suite_path.exists():
+             raise FileNotFoundError(f"Resolved suite path does not exist: {suite_path}")
 
         with open(suite_path, "r") as f:
             suite_data = yaml.safe_load(f)
@@ -89,7 +93,7 @@ def plan_suite(ctx, suite_file, nodes, ranks_per_node, threads, gpus, json_out):
             raise
 
 @suite_cli.command(name="run")
-@click.argument("suite_file", type=click.Path(exists=True))
+@click.argument("suite_file")
 @click.option("--dry-run", is_flag=True, help="Simulate execution")
 @click.option("--system", help="System configuration to use")
 @click.pass_context
@@ -99,9 +103,13 @@ def run_suite(ctx, suite_file, dry_run, system):
     # This duplicates some logic from plan, but that's okay for now.
     try:
         # Resolve suite file
-        suite_path = Resolver.resolve_profile(suite_file)
+        suite_path = Resolver.resolve_suite(suite_file)
         if not suite_path:
              raise FileNotFoundError(f"Suite not found: {suite_file}")
+        
+        # Verify the resolved path exists
+        if not suite_path.exists():
+             raise FileNotFoundError(f"Resolved suite path does not exist: {suite_path}")
 
         with open(suite_path, "r") as f:
             suite_data = yaml.safe_load(f)

@@ -1,0 +1,20 @@
+#!/bin/bash
+echo "Building ${name} version ${version}"
+
+# Setup install dir
+mkdir -p install/bin
+
+# Compile
+# Source is relative to config file
+cp ${source} .
+
+${compiler} ${variables.cflags} -o install/bin/pi_calc ${source}
+
+# Verify
+if [ -f install/bin/pi_calc ]; then
+    echo "Compilation successful"
+else
+    echo "Compilation failed"
+    exit 1
+fi
+

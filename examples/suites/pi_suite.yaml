@@ -12,3 +12,4 @@ resources:
   threads: 1
 
 command: "pi_calc ${iterations}"
+

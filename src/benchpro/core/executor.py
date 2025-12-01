@@ -48,8 +48,10 @@ class Executor:
                 import time
                 start_time = time.time()
                 
-                proc = await asyncio.create_subprocess_shell(
-                    task.command,
+                # Run in bash -l to ensure module commands work (Lmod requires login shell)
+                # Use create_subprocess_exec to properly handle command with bash -l -c
+                proc = await asyncio.create_subprocess_exec(
+                    'bash', '-l', '-c', task.command,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE
                 )

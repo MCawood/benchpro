@@ -4,15 +4,6 @@ set -e
 echo "Building ${name} version ${version}"
 echo "Source: ${source}"
 
-{% if modules %}
-# Load modules
-echo "Loading modules: {{ modules|join(' ') }}"
-module purge
-{% for mod in modules %}
-module load {{ mod }}
-{% endfor %}
-{% endif %}
-
 # Create build directory structure
 mkdir -p src
 mkdir -p install
@@ -49,3 +40,4 @@ else
     echo "Build failed: Executable not found"
     exit 1
 fi
+

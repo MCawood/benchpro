@@ -6,6 +6,23 @@ from typing import List, Optional
 class ModuleHandler:
     def __init__(self):
         self.lmod_cmd = shutil.which("module") or "module"
+    
+    def modules_available(self) -> bool:
+        """
+        Check if Lmod modules are available on this system.
+        Returns True if 'module' command works, False otherwise.
+        """
+        try:
+            # Try to run a simple module command
+            result = subprocess.run(
+                ["bash", "-l", "-c", "module --version"],
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+            return result.returncode == 0
+        except (subprocess.SubprocessError, FileNotFoundError, subprocess.TimeoutExpired):
+            return False
 
     def validate_modules(self, modules: List[str]) -> bool:
         """Check if modules exist using 'module avail'."""
@@ -88,12 +105,16 @@ class ModuleHandler:
             '',
             'whatis("Name: " .. myModuleName())',
             f'whatis("Version: {version}")',
-            '',
-            '-- Dependencies'
+            ''
         ]
         
-        for mod in modules:
-            lines.append(f'load("{mod}")')
+        # Only add dependencies section if there are modules to load
+        if modules:
+            lines.append('-- Dependencies')
+            for mod in modules:
+                # Use try_load to gracefully handle missing modules
+                lines.append(f'try_load("{mod}")')
+            lines.append('')
             
         lines.append('')
         lines.append('-- Paths')

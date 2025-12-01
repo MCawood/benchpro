@@ -7,3 +7,4 @@ compiler: "gcc"
 mpi: "openmpi"
 variables:
   cmake_flags: "-D PKG_MOLECULE=yes -D PKG_RIGID=yes -D BUILD_MPI=yes"
+

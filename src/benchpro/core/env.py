@@ -12,9 +12,8 @@ def get_source_root() -> Optional[Path]:
     Returns None if running from an installed package.
     
     Detection strategy:
-    1. Check if we're in a git repository (has .git directory)
-    2. Walk up from current file location to find examples/ directory
-    3. Check if examples/build/ directory exists (development indicator)
+    1. Walk up from current working directory to find examples/ directory
+    2. Check if examples/apps/ or examples/suites/ directory exists (development indicator)
     """
     # Start from the current working directory
     cwd = Path.cwd()
@@ -23,7 +22,7 @@ def get_source_root() -> Optional[Path]:
     current = cwd
     while current != current.parent:  # Stop at filesystem root
         examples_dir = current / "examples"
-        if examples_dir.exists() and (examples_dir / "build").exists():
+        if examples_dir.exists() and ((examples_dir / "apps").exists() or (examples_dir / "suites").exists()):
             return current
         current = current.parent
     
@@ -32,7 +31,7 @@ def get_source_root() -> Optional[Path]:
         import benchpro
         package_path = Path(benchpro.__file__).parent.parent.parent
         examples_dir = package_path / "examples"
-        if examples_dir.exists() and (examples_dir / "build").exists():
+        if examples_dir.exists() and ((examples_dir / "apps").exists() or (examples_dir / "suites").exists()):
             return package_path
     except (AttributeError, ImportError):
         pass
@@ -44,7 +43,7 @@ def is_development_mode() -> bool:
     """
     Check if we're running in development mode.
     Development mode is detected if:
-    - Running from source tree (examples/ directory exists)
+    - Running from source tree (examples/apps or examples/suites exists)
     - BENCHPRO_SITE_PROFILES is not set (production would set this)
     """
     source_root = get_source_root()
@@ -58,9 +57,9 @@ def is_development_mode() -> bool:
     return source_root is not None
 
 
-def get_dev_profiles_path() -> Optional[Path]:
+def get_dev_apps_path() -> Optional[Path]:
     """
-    Get the development profiles path (examples/build) if in development mode.
+    Get the development apps path (examples/apps) if in development mode.
     Returns None if not in development mode or path doesn't exist.
     """
     if not is_development_mode():
@@ -68,9 +67,26 @@ def get_dev_profiles_path() -> Optional[Path]:
     
     source_root = get_source_root()
     if source_root:
-        dev_profiles = source_root / "examples" / "build"
-        if dev_profiles.exists():
-            return dev_profiles
+        dev_apps = source_root / "examples" / "apps"
+        if dev_apps.exists():
+            return dev_apps
+    
+    return None
+
+
+def get_dev_suites_path() -> Optional[Path]:
+    """
+    Get the development suites path (examples/suites) if in development mode.
+    Returns None if not in development mode or path doesn't exist.
+    """
+    if not is_development_mode():
+        return None
+    
+    source_root = get_source_root()
+    if source_root:
+        dev_suites = source_root / "examples" / "suites"
+        if dev_suites.exists():
+            return dev_suites
     
     return None
 

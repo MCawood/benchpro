@@ -19,3 +19,4 @@ metrics:
   - name: "performance"
     regex: "Performance:\\s+([\\d\\.]+)\\s+tau/day"
     unit: "tau/day"
+
