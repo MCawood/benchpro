@@ -1,0 +1,28 @@
+#!/bin/bash
+#SBATCH --job-name={{ benchmark_id }}
+#SBATCH --nodes={{ nodes }}
+#SBATCH --ntasks-per-node={{ ranks_per_node }}
+#SBATCH --cpus-per-task={{ threads }}
+#SBATCH --time={{ time }}
+#SBATCH --output={{ benchmark_id }}.out
+#SBATCH --error={{ benchmark_id }}.err
+
+{% if partition %}
+#SBATCH --partition={{ partition }}
+{% endif %}
+
+{% if account %}
+#SBATCH --account={{ account }}
+{% endif %}
+
+echo "Running benchmark {{ benchmark_id }}"
+echo "Date: $(date)"
+echo "Host: $(hostname)"
+
+# Run tasks
+{% for task in tasks %}
+echo "Starting task {{ task.task_id }}"
+{{ task.command }}
+{% endfor %}
+
+echo "Done"

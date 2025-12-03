@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Load compiler
+{% if compiler_module %}
+module load {{ compiler_module }}
+{% endif %}
+
+# Compile
+{{ env.CC }} -o hello {{ source_path }}/hello.c
+
+# Install
+mkdir -p {{ install_prefix }}/bin
+cp hello {{ install_prefix }}/bin/

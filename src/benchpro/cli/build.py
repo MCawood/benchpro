@@ -13,7 +13,9 @@ from benchpro.core.templating import TemplateEngine
 from benchpro.core.results import ResultStore
 from benchpro.core.modules import ModuleHandler
 from benchpro.core.env_config import EnvConfigLoader
+from benchpro.core.env_config import EnvConfigLoader
 from benchpro.core.resolver import Resolver
+from benchpro.core.exceptions import BuildError, ValidationError, ConfigError
 
 console = Console()
 
@@ -22,23 +24,27 @@ def app_cli():
     """Manage applications"""
     pass
 
+from benchpro.cli.utils import get_valid_apps
+
 @app_cli.command(name="build")
-@click.argument("config_file")
+@click.argument("config_file", shell_complete=get_valid_apps)
 @click.option("--dry-run", is_flag=True, help="Simulate build")
+@click.option("--scheduler", help="Scheduler to use (e.g. local, slurm)")
 @click.pass_context
-def build_app(ctx, config_file, dry_run):
+def build_app(ctx, config_file, dry_run, scheduler):
     """Build an application from a config file"""
     try:
         # Get config
         config = ctx.obj['config']
         # Resolve config file (can be a path or profile name)
         config_path = Resolver.resolve_app(config_file)
+        config_path = Resolver.resolve_app(config_file)
         if not config_path:
-             raise FileNotFoundError(f"Profile not found: {config_file}")
+             raise ValidationError(f"Profile not found: {config_file}")
         
         # Verify the resolved path exists
         if not config_path.exists():
-             raise FileNotFoundError(f"Resolved profile path does not exist: {config_path}")
+             raise ValidationError(f"Resolved profile path does not exist: {config_path}")
 
         # Load config
         with open(config_path, "r") as f:
@@ -53,18 +59,20 @@ def build_app(ctx, config_file, dry_run):
             template_path = config_path.parent / app_config.build_template
             
         if not template_path.exists():
-            raise FileNotFoundError(f"Template not found: {app_config.build_template} (searched relative to {config_path.parent})")
+            raise BuildError(f"Template not found: {app_config.build_template} (searched relative to {config_path.parent})")
             
         with open(template_path, "r") as f:
             template_content = f.read()
             
         # Resolve source path relative to config file location
         source_path = Path(app_config.source)
-        if not source_path.is_absolute():
+        is_url = app_config.source.startswith(("http://", "https://", "ftp://"))
+        
+        if not is_url and not source_path.is_absolute():
             # Resolve relative to config file location
             source_path = config_path.parent / app_config.source
             if not source_path.exists():
-                raise FileNotFoundError(f"Source file not found: {app_config.source} (searched relative to {config_path.parent})")
+                raise BuildError(f"Source file not found: {app_config.source} (searched relative to {config_path.parent})")
         
         # Render build script
         context = app_config.model_dump()
@@ -80,9 +88,32 @@ def build_app(ctx, config_file, dry_run):
         # Auto-infer modules from compiler and MPI
         modules_to_load = []
         if app_config.compiler and app_config.compiler.lower() not in ["system", "none"]:
-            modules_to_load.append(app_config.compiler)
+            # Resolve compiler alias
+            compiler_aliases = env_loader.get_aliases(app_config.compiler, "compiler")
+            found_compiler = module_handler.find_available_module(compiler_aliases)
+            if found_compiler:
+                modules_to_load.append(found_compiler)
+                # Update config to use the found name for consistency
+                app_config.compiler = found_compiler
+                context["compiler"] = found_compiler
+                context["compiler_module"] = found_compiler
+            else:
+                # Fallback to original name if none found (will likely fail validation later)
+                modules_to_load.append(app_config.compiler)
+                context["compiler_module"] = app_config.compiler
+                
         if app_config.mpi and app_config.mpi.lower() not in ["system", "none"]:
-            modules_to_load.append(app_config.mpi)
+            # Resolve MPI alias
+            mpi_aliases = env_loader.get_aliases(app_config.mpi, "mpi")
+            found_mpi = module_handler.find_available_module(mpi_aliases)
+            if found_mpi:
+                modules_to_load.append(found_mpi)
+                app_config.mpi = found_mpi
+                context["mpi"] = found_mpi
+                context["mpi_module"] = found_mpi
+            else:
+                modules_to_load.append(app_config.mpi)
+                context["mpi_module"] = app_config.mpi
             
         # Add user-defined modules
         if app_config.modules:
@@ -137,6 +168,10 @@ def build_app(ctx, config_file, dry_run):
                 # Update source in context to just the filename (since it's now in build_dir)
                 context["source"] = source_path.name
         
+        # Add install_prefix to context
+        install_prefix = app_config.prefix or str(build_dir / "install")
+        context["install_prefix"] = install_prefix
+
         # Now render the template with updated context (after source file is copied)
         engine = TemplateEngine(context)
         build_script = engine.render(template_content)
@@ -150,9 +185,10 @@ def build_app(ctx, config_file, dry_run):
         task = Task(
             task_id=task_id,
             suite_id="build_process",
-            resources=ResourceRequest(nodes=1, threads=4), # Default build resources
+            resources=ResourceRequest(nodes=1, threads=4, time="01:00:00"), # Default build resources
             command=f"cd {build_dir} && {script_path}",
-            status=TaskStatus.PENDING
+            status=TaskStatus.PENDING,
+            working_directory=str(build_dir)
         )
         
         if dry_run:
@@ -163,9 +199,22 @@ def build_app(ctx, config_file, dry_run):
 
         # Execute
         console.print(f"Starting build {task_id}...")
-        executor = Executor(backend="local") # Builds usually run locally or on login nodes for now
+        
+        # Determine backend
+        backend = scheduler or config.system.scheduler
+        console.print(f"Using scheduler: {backend}")
+        
+        executor = Executor(backend=backend, config=config)
         import asyncio
-        asyncio.run(executor.run_tasks([task], suite_id="build_process"))
+        from benchpro.core.domain import Benchmark
+        
+        bench = Benchmark(
+            benchmark_id=task.task_id,
+            suite_id="build_process",
+            tasks=[task]
+        )
+        
+        asyncio.run(executor.run_benchmarks([bench], suite_id="build_process"))
         
         # Check result
         if task.status == TaskStatus.COMPLETED:
@@ -223,8 +272,10 @@ def build_app(ctx, config_file, dry_run):
         else:
             console.print(f"[red]Build failed with exit code {task.exit_code}[/red]")
             
+    except (ValidationError, BuildError, ConfigError):
+        raise
     except Exception as e:
-        console.print(f"[red]Error building app: {e}[/red]")
+        raise BuildError(f"Error building app: {e}")
         # import traceback
         # traceback.print_exc()
 

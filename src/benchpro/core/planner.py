@@ -4,7 +4,7 @@ from benchpro.core.domain import Task, ResourceRequest, TaskStatus, Build, Metri
 
 class Planner:
     @staticmethod
-    def expand_matrix(suite_id: str, matrix: Dict[str, List[Any]], base_resources: Dict[str, Any], command_template: str = None, requirements: Dict[str, str] = None, metrics: List[Dict[str, str]] = None) -> List[Task]:
+    def expand_matrix(suite_id: str, matrix: Dict[str, List[Any]], base_resources: Dict[str, Any], command_template: str = None, requirements: Dict[str, str] = None, metrics: List[Dict[str, str]] = None, template: str = None) -> List["Benchmark"]:
         """
         Expand a matrix of parameters into a list of Tasks.
         Follows the expansion order: nodes -> ranks_per_node -> threads -> gpus -> named_params
@@ -106,13 +106,25 @@ class Planner:
                             task = Task(
                                 task_id=task_id,
                                 suite_id=suite_id,
+                                benchmark_id=f"{suite_id}_bench_{task_idx}",
                                 parameters=current_params,
                                 resources=res,
                                 command=command,
                                 metrics=metric_defs,
                                 status=TaskStatus.PENDING
                             )
-                            tasks.append(task)
+                            
+                            # Create a Benchmark for this task
+                            # Default strategy: 1 Task per Benchmark
+                            from benchpro.core.domain import Benchmark
+                            bench = Benchmark(
+                                benchmark_id=f"{suite_id}_bench_{task_idx}",
+                                suite_id=suite_id,
+                                tasks=[task],
+                                template=template
+                            )
+                            
+                            tasks.append(bench)
                             task_idx += 1
                             
         return tasks

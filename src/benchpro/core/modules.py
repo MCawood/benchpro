@@ -44,6 +44,31 @@ class ModuleHandler:
         except subprocess.SubprocessError:
             return False
 
+    def find_available_module(self, candidates: List[str]) -> Optional[str]:
+        """
+        Find the first module from the list of candidates that exists on the system.
+        Returns the name of the found module, or None if none exist.
+        """
+        for candidate in candidates:
+            # Use validate_modules logic but for a single module
+            # We use 'module avail' check which is safer than load for discovery
+            # But validate_modules uses load... let's use a lighter check here
+            # 'module -t avail candidate'
+            try:
+                cmd = ["bash", "-l", "-c", f"module -t avail {candidate}"]
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                
+                # Check if output contains the module name
+                # Lmod output is tricky. If we search for 'gnu', it might show 'gnu/9.3.0'
+                # If we get any output that looks like a module, it's a match.
+                output = result.stderr.strip() + "\n" + result.stdout.strip()
+                if candidate in output or (output and not "No module" in output):
+                    return candidate
+            except subprocess.SubprocessError:
+                continue
+                
+        return None
+
     def resolve_defaults(self, modules: List[str]) -> List[str]:
         """
         Resolve default versions for modules without version specifiers.

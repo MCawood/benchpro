@@ -1,9 +1,0 @@
-name: pi_calc
-version: "1.0"
-source: "pi.c" # Relative to config
-build_template: "build_pi.sh.j2"
-build_label: "gcc_opt"
-compiler: "gcc"
-variables:
-  cflags: "-O3 -lm"
-

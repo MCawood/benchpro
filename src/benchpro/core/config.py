@@ -8,6 +8,10 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel, Field
+from benchpro.core.logger import get_logger
+from benchpro.core.exceptions import ConfigError
+
+logger = get_logger()
 
 
 class SystemConfig(BaseModel):
@@ -78,7 +82,9 @@ class Config(BaseModel):
                         if layer:
                             config_data = cls._deep_merge(config_data, layer)
                 except Exception as e:
-                    print(f"Warning: Failed to load config from {path}: {e}")
+                    # For config loading, we might want to be strict or lenient.
+                    # If a config file is malformed, it's probably better to fail early.
+                    raise ConfigError(f"Failed to load config from {path}: {e}")
         
         # Interpolate variables
         # We construct a context from the merged config itself
@@ -140,6 +146,66 @@ class Config(BaseModel):
             config.system = SystemConfig(**merged_system)
             
         return config
+
+    @classmethod
+    def inspect(cls, config_paths: List[Path] = None) -> tuple[Dict[str, Any], Dict[str, str]]:
+        """
+        Load configuration and track sources.
+        Returns (resolved_data, source_map)
+        """
+        config_data = {}
+        source_map = {}
+        
+        if config_paths is None:
+            config_paths = []
+            env_path = os.environ.get("BENCHPRO_CONFIG")
+            if env_path: config_paths.append(Path(env_path))
+            
+            site_config = os.environ.get("BENCHPRO_SITE_CONFIG")
+            if site_config: config_paths.append(Path(site_config))
+            else: config_paths.append(Path("/etc/benchpro/config.yaml"))
+
+            config_dir = os.environ.get("BENCHPRO_CONFIG_DIR")
+            if config_dir: user_config_dir = Path(config_dir)
+            else: user_config_dir = Path.home() / ".config/benchpro"
+            
+            user_config_path = user_config_dir / "config.yaml"
+            if not user_config_path.exists():
+                cls._init_user_config(user_config_dir)
+
+            config_paths.append(user_config_path)
+            config_paths.append(Path.cwd() / ".benchpro/config.yaml")
+            
+        for path in config_paths:
+            if path.exists():
+                try:
+                    with open(path, "r") as f:
+                        layer = yaml.safe_load(f)
+                        if layer:
+                            config_data = cls._deep_merge(config_data, layer)
+                            cls._update_source_map(source_map, layer, str(path))
+                except Exception:
+                    pass
+                    
+        # Interpolate variables
+        from benchpro.core.templating import TemplateEngine
+        env_context = {k: v for k, v in os.environ.items()}
+        context = {"env": env_context, **config_data}
+        engine = TemplateEngine(context)
+        resolved_data = engine.render(config_data)
+        
+        return resolved_data, source_map
+
+    @staticmethod
+    def _update_source_map(source_map: Dict[str, Any], layer: Dict[str, Any], source: str):
+        """Recursively update source map."""
+        for key, value in layer.items():
+            if isinstance(value, dict):
+                if key not in source_map or not isinstance(source_map[key], dict):
+                    source_map[key] = {}
+                Config._update_source_map(source_map[key], value, source)
+            else:
+                source_map[key] = source
 
     @staticmethod
     def _deep_merge(base: Dict[str, Any], update: Dict[str, Any]) -> Dict[str, Any]:

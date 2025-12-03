@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any
 from benchpro.core.config import Config
 from benchpro.core.domain import Build
-from benchpro.core.env import get_dev_apps_path, get_dev_suites_path
+from benchpro.core.env import get_dev_apps_path, get_dev_benchmarks_path
 
 class Resolver:
     def __init__(self, builds: List[Build]):
@@ -96,7 +96,7 @@ class Resolver:
         1. Project-local profiles (.benchpro/profiles)
         2. User profiles (~/.config/benchpro/profiles)
         3. Site profiles ($BENCHPRO_SITE_PROFILES) - production
-        4. Development suites (examples/suites) - fallback if site profiles not set
+        4. Development suites (examples/benchmarks) - fallback if site profiles not set
         """
         search_paths = []
         
@@ -119,10 +119,10 @@ class Resolver:
             if site_profiles.exists():
                 search_paths.append(site_profiles)
         else:
-            # Development fallback: use examples/suites if available
-            dev_suites = get_dev_suites_path()
-            if dev_suites:
-                search_paths.append(dev_suites)
+            # Development fallback: use examples/benchmarks if available
+            dev_benchmarks = get_dev_benchmarks_path()
+            if dev_benchmarks:
+                search_paths.append(dev_benchmarks)
         
         return search_paths
 

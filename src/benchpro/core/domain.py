@@ -35,6 +35,7 @@ class ResourceRequest(BaseModel):
 class Task(BaseModel):
     task_id: str
     suite_id: str
+    benchmark_id: Optional[str] = None
     parameters: Dict[str, Any] = Field(default_factory=dict)
     resources: ResourceRequest
     command: str
@@ -44,9 +45,16 @@ class Task(BaseModel):
     status: TaskStatus = TaskStatus.PENDING
     
     # Provenance
+    task_uuid: str = Field(default_factory=lambda: str(uuid4()))
+    working_directory: Optional[str] = None
     job_id: Optional[str] = None
     exit_code: Optional[int] = None
     duration_ms: Optional[float] = None
+    
+    # Files
+    script_file: Optional[str] = None
+    output_file: Optional[str] = None
+    error_file: Optional[str] = None
 
 
 class Job(BaseModel):
@@ -78,8 +86,17 @@ class Build(BaseModel):
         # Actually, let's just stick to standard comparison and handle sorting in Resolver.
         return self.build_timestamp < other.build_timestamp
 
+class Benchmark(BaseModel):
+    benchmark_id: str
+    suite_id: str
+    tasks: List[Task] = Field(default_factory=list)
+    job_id: Optional[str] = None
+    status: TaskStatus = TaskStatus.PENDING
+    template: Optional[str] = None
+
 class Suite(BaseModel):
     suite_id: str
     name: str
-    tasks: List[Task] = Field(default_factory=list)
+    benchmarks: List[Benchmark] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    template: Optional[str] = None

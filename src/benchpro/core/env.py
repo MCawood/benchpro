@@ -13,7 +13,7 @@ def get_source_root() -> Optional[Path]:
     
     Detection strategy:
     1. Walk up from current working directory to find examples/ directory
-    2. Check if examples/apps/ or examples/suites/ directory exists (development indicator)
+    2. Check if examples/apps/ or examples/benchmarks/ directory exists (development indicator)
     """
     # Start from the current working directory
     cwd = Path.cwd()
@@ -22,7 +22,7 @@ def get_source_root() -> Optional[Path]:
     current = cwd
     while current != current.parent:  # Stop at filesystem root
         examples_dir = current / "examples"
-        if examples_dir.exists() and ((examples_dir / "apps").exists() or (examples_dir / "suites").exists()):
+        if examples_dir.exists() and ((examples_dir / "apps").exists() or (examples_dir / "benchmarks").exists()):
             return current
         current = current.parent
     
@@ -31,7 +31,7 @@ def get_source_root() -> Optional[Path]:
         import benchpro
         package_path = Path(benchpro.__file__).parent.parent.parent
         examples_dir = package_path / "examples"
-        if examples_dir.exists() and ((examples_dir / "apps").exists() or (examples_dir / "suites").exists()):
+        if examples_dir.exists() and ((examples_dir / "apps").exists() or (examples_dir / "benchmarks").exists()):
             return package_path
     except (AttributeError, ImportError):
         pass
@@ -43,7 +43,7 @@ def is_development_mode() -> bool:
     """
     Check if we're running in development mode.
     Development mode is detected if:
-    - Running from source tree (examples/apps or examples/suites exists)
+    - Running from source tree (examples/apps or examples/benchmarks exists)
     - BENCHPRO_SITE_PROFILES is not set (production would set this)
     """
     source_root = get_source_root()
@@ -74,9 +74,9 @@ def get_dev_apps_path() -> Optional[Path]:
     return None
 
 
-def get_dev_suites_path() -> Optional[Path]:
+def get_dev_benchmarks_path() -> Optional[Path]:
     """
-    Get the development suites path (examples/suites) if in development mode.
+    Get the development benchmarks path (examples/benchmarks) if in development mode.
     Returns None if not in development mode or path doesn't exist.
     """
     if not is_development_mode():
@@ -84,9 +84,9 @@ def get_dev_suites_path() -> Optional[Path]:
     
     source_root = get_source_root()
     if source_root:
-        dev_suites = source_root / "examples" / "suites"
-        if dev_suites.exists():
-            return dev_suites
+        dev_benchmarks = source_root / "examples" / "benchmarks"
+        if dev_benchmarks.exists():
+            return dev_benchmarks
     
     return None
 

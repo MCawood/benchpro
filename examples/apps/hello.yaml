@@ -1,0 +1,6 @@
+name: hello
+version: "1.0"
+source: "." # Local source
+build_template: "hello.j2"
+compiler: "gcc"
+mpi: "none"

@@ -1,0 +1,22 @@
+name: hello_world
+requirements:
+  code: hello
+  version: "1.0"
+
+template: "hello.j2"
+
+matrix:
+  nodes: [1]
+
+resources:
+  ranks_per_node: 1
+  threads: 1
+  gpus: 0
+  time: "00:05:00"
+
+command: "hello"
+
+metrics:
+  - name: "output"
+    regex: "(Hello World)"
+    unit: "text"

@@ -46,15 +46,41 @@ class ResultStore:
                 parameters JSON,
                 resources JSON,
                 metric_definitions JSON,
+                working_directory TEXT,
+                task_uuid TEXT,
                 FOREIGN KEY(run_id) REFERENCES runs(run_id)
             )
         """)
         
-        # Migrate existing tasks table if needed (add metric_definitions column)
+        # Migrate existing tasks table if needed
         try:
             cursor.execute("ALTER TABLE tasks ADD COLUMN metric_definitions JSON")
         except sqlite3.OperationalError:
-            # Column already exists, ignore
+            pass
+            
+        try:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN working_directory TEXT")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN task_uuid TEXT")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN script_file TEXT")
+        except sqlite3.OperationalError:
+            pass
+            
+        try:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN output_file TEXT")
+        except sqlite3.OperationalError:
+            pass
+            
+        try:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN error_file TEXT")
+        except sqlite3.OperationalError:
             pass
         
         # Builds table
@@ -113,8 +139,8 @@ class ResultStore:
         cursor.execute(
             """
             INSERT OR REPLACE INTO tasks 
-            (task_id, run_id, suite_id, status, exit_code, duration_ms, job_id, parameters, resources, metric_definitions)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (task_id, run_id, suite_id, status, exit_code, duration_ms, job_id, parameters, resources, metric_definitions, working_directory, task_uuid, script_file, output_file, error_file)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 task.task_id,
@@ -126,7 +152,12 @@ class ResultStore:
                 task.job_id,
                 params_json,
                 resources_json,
-                metric_defs_json
+                metric_defs_json,
+                task.working_directory,
+                task.task_uuid,
+                task.script_file,
+                task.output_file,
+                task.error_file
             )
         )
         
@@ -298,3 +329,57 @@ class ResultStore:
             
         conn.close()
         return tasks
+
+    def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """Get a specific task by ID."""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM tasks WHERE task_id = ?", (task_id,))
+        row = cursor.fetchone()
+        
+        task = None
+        if row:
+            task = dict(row)
+            task["parameters"] = json.loads(task["parameters"])
+            task["resources"] = json.loads(task["resources"])
+            if "metric_definitions" in task and task["metric_definitions"]:
+                task["metric_definitions"] = json.loads(task["metric_definitions"])
+            else:
+                task["metric_definitions"] = []
+                
+        conn.close()
+        return task
+
+    def delete_run(self, run_id: str) -> bool:
+        """Delete a run and its tasks."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Delete tasks first (foreign key)
+        cursor.execute("DELETE FROM tasks WHERE run_id = ?", (run_id,))
+        cursor.execute("DELETE FROM runs WHERE run_id = ?", (run_id,))
+        
+        deleted = cursor.rowcount > 0
+        
+        conn.commit()
+        conn.close()
+        return deleted
+
+    def delete_empty_runs(self) -> int:
+        """Delete runs with no tasks."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Find runs with no tasks
+        cursor.execute("""
+            DELETE FROM runs 
+            WHERE run_id NOT IN (SELECT DISTINCT run_id FROM tasks)
+        """)
+        
+        deleted_count = cursor.rowcount
+        
+        conn.commit()
+        conn.close()
+        return deleted_count

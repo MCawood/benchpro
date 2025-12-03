@@ -44,6 +44,25 @@ class EnvConfigLoader:
                 
         return {}
 
+    def get_aliases(self, name: str, category: str) -> List[str]:
+        """
+        Get all aliases for a given software name.
+        category: 'compiler' or 'mpi'
+        """
+        config = self.compilers if category == "compiler" else self.mpi
+        
+        # Find matching entry
+        for key, data in config.items():
+            if key == name or name in data.get("aliases", []):
+                # Return all aliases plus the key itself
+                aliases = data.get("aliases", [])
+                if key not in aliases:
+                    aliases.append(key)
+                return aliases
+                
+        # If not found, return name itself as fallback
+        return [name]
+
     def _version_match(self, version: str, constraint: str) -> bool:
         """
         Check if version matches constraint.
