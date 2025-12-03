@@ -1,0 +1,57 @@
+@import 'tailwindcss';
+
+/* Custom fonts */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Custom theme variables */
+:root {
+  --color-bg: #020617;
+  --color-bg-secondary: #0f172a;
+  --color-bg-tertiary: #1e293b;
+  --color-text: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-border: #334155;
+  --color-primary: #22c55e;
+  --color-accent: #d946ef;
+}
+
+html {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+body {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Focus ring styling */
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Selection styling */
+::selection {
+  background-color: rgba(34, 197, 94, 0.3);
+}
