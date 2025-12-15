@@ -20,6 +20,7 @@ class MetricDefinition(BaseModel):
 
 
 class ResourceRequest(BaseModel):
+    scheduler: str = "slurm"
     nodes: int = 1
     ranks_per_node: int = 1
     threads: int = 1
@@ -30,6 +31,23 @@ class ResourceRequest(BaseModel):
     qos: Optional[str] = None
     reservation: Optional[str] = None
     mode: str = "mpi"  # mpi, openmp, hybrid, serial
+    
+    def signature_for_packing(self) -> tuple:
+        """
+        Used by packing strategies to decide if tasks can share a Job.
+        Strict equality over agreed fields.
+        """
+        return (
+            self.scheduler,
+            self.nodes,
+            self.ranks_per_node,
+            self.threads,
+            self.gpus,
+            self.partition,
+            self.account,
+            self.qos,
+            self.mode
+        )
 
 
 class Task(BaseModel):
@@ -38,10 +56,12 @@ class Task(BaseModel):
     benchmark_id: Optional[str] = None
     parameters: Dict[str, Any] = Field(default_factory=dict)
     resources: ResourceRequest
+    dependencies: List[str] = Field(default_factory=list) # Task IDs this task depends on
     command: str
     env: Dict[str, str] = Field(default_factory=dict)
     requirements: Optional[Dict[str, str]] = None # code, version, etc.
     metrics: List[MetricDefinition] = Field(default_factory=list)
+    scheduler_dependencies: List[str] = Field(default_factory=list) # External scheduler job IDs (e.g. build job)
     status: TaskStatus = TaskStatus.PENDING
     
     # Provenance
@@ -59,10 +79,17 @@ class Task(BaseModel):
 
 class Job(BaseModel):
     job_id: str
+    scheduler: str = "slurm"
+    tasks: List[Task] = Field(default_factory=list) # Tasks to run in this job
+    resources: ResourceRequest
+    job_dependencies: List[str] = Field(default_factory=list) # Scheduler dependency job_id list
+    scheduler_dependencies: List[str] = Field(default_factory=list) # External scheduler job IDs from tasks
+    
+    # Metadata
+    script_content: Optional[str] = None
     scheduler_job_id: Optional[str] = None
-    tasks: List[str] = Field(default_factory=list)  # List of task_ids
-    script_content: str
     status: str = "pending"
+    execution_plan: List[tuple] = Field(default_factory=list) # [("sequential", "task_id"), ...]
 
 
 class Build(BaseModel):
@@ -75,8 +102,11 @@ class Build(BaseModel):
     activation_script: str
     
     # Metadata
+    status: TaskStatus = TaskStatus.PENDING
+    job_id: Optional[str] = None
     compiler: Optional[str] = None
     mpi: Optional[str] = None
+    modules: List[str] = Field(default_factory=list)
     flags: List[str] = Field(default_factory=list)
     
     def __lt__(self, other):

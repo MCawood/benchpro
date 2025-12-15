@@ -7,6 +7,7 @@ from benchpro.cli.config import config_cli
 from benchpro.cli.bench import bench_cli
 from benchpro.cli.completion import completion_cli
 from benchpro.cli.build import app_cli
+from benchpro.cli.result import result_cli
 from benchpro.core.config import Config
 
 from benchpro.core.logger import setup_logging, get_logger
@@ -70,67 +71,101 @@ def cli(ctx, debug):
         logger.error(f"Error loading config: {e}")
         ctx.exit(1)
 
+# Register subcommands
 cli.add_command(config_cli, name="config")
 cli.add_command(bench_cli, name="bench")
 cli.add_command(completion_cli, name="completion")
 cli.add_command(app_cli, name="app")
+cli.add_command(result_cli)
+
+# Setup run shortcut
+from benchpro.cli.bench import run_bench
+# We can't easily re-use the command decorated by another group without some hacks.
+# But we can verify with `bench run`.
+# I will NOT add `run` to toplevel right now to avoid complexity.
+# Just ensuring imports are correct.
+
 
 @cli.command()
-@click.option("--force", is_flag=True, help="Overwrite existing project configuration")
+@click.option("--force", is_flag=True, help="Force re-initialization of user configuration")
 def init(force):
-    """Initialize a BenchPRO project workspace in the current directory"""
+    """Initialize BenchPRO environment"""
+    import os
     from benchpro.core.results import ResultStore
-    from benchpro.core.config import Config
+    from benchpro.core.config import Config, CONFIG_FILENAME
     
-    project_dir = Path.cwd()
-    benchpro_dir = project_dir / ".benchpro"
-    config_path = benchpro_dir / "config.yaml"
-    profiles_dir = benchpro_dir / "profiles"
+    # 1. Initialize User Config
+    user_config_dir = Config.resolve_user_config_dir()
+    config_path = user_config_dir / CONFIG_FILENAME
     
-    # Check if already initialized
-    if benchpro_dir.exists() and not force:
-        logger.warning(f"Project already initialized at {benchpro_dir}")
-        logger.info("Use --force to reinitialize")
-        return
-    
-    if force and benchpro_dir.exists():
-        logger.warning(f"Reinitializing project at {benchpro_dir}")
-    
-    # Create project directory structure
-    benchpro_dir.mkdir(exist_ok=True)
-    profiles_dir.mkdir(exist_ok=True)
-    
-    # Initialize user config if needed (this also creates ~/.config/benchpro)
-    user_config_dir = Path.home() / ".config/benchpro"
-    if not (user_config_dir / "config.yaml").exists():
-        Config._init_user_config(user_config_dir)
-        logger.info("Initialized user configuration")
-    
-    # Initialize database (ensures schema is up to date)
+    if force and config_path.exists():
+        logger.warning(f"Overwriting user configuration at {config_path}")
+        try:
+            config_path.unlink()
+        except Exception as e:
+            logger.error(f"Failed to remove existing config: {e}")
+            return
+
+    if not config_path.exists():
+        try:
+            Config._init_user_config(user_config_dir)
+            logger.info(f"Initialized user configuration at {user_config_dir}")
+        except Exception as e:
+            logger.error(f"Failed to create configuration: {e}")
+            return
+    else:
+        logger.info(f"User configuration found at {user_config_dir}")
+
+    # 2. Load Config to detect workspace and ensure it exists
+    try:
+        config = Config.load()
+        if config.system.workspace_dir:
+             workspace_path = Path(os.path.expandvars(config.system.workspace_dir)).expanduser()
+             if not workspace_path.exists():
+                 workspace_path.mkdir(parents=True, exist_ok=True)
+                 logger.info(f"Created workspace directory at {workspace_path}")
+             else:
+                 logger.info(f"Verified workspace at {workspace_path}")
+    except Exception as e:
+        logger.warning(f"Could not verify workspace: {e}")
+
+    # 3. Initialize Database
     try:
         store = ResultStore()
         logger.info(f"Initialized database at {store.db_path}")
     except Exception as e:
-        logger.warning(f"Failed to initialize database: {e}")
+        logger.error(f"Failed to initialize database: {e}")
+        return
+        
+    console.print(f"\n[bold green]✓ BenchPRO initialized successfully![/bold green]")
+    console.print(f"Configuration: {config_path}")
+    if 'store' in locals():
+         console.print(f"Database:      {store.db_path}")
+
+@cli.command()
+@click.option("--shell", default="bash", type=click.Choice(["bash", "zsh", "fish"]), help="Target shell language")
+def env(shell):
+    """Output environment variables for shell integration."""
+    from benchpro.core.config import Config, INSTALL_ROOT
     
-    # Create project config if it doesn't exist
-    if not config_path.exists() or force:
-        with open(config_path, "w") as f:
-            import yaml
-            yaml.dump({
-                "defaults": {
-                    "root_dir": str(project_dir / "benchpro")
-                }
-            }, f)
-        logger.info(f"Created project config at {config_path}")
+    # Resolve BP_HOME (User Config Dir)
+    bp_home = Config.resolve_user_config_dir()
     
-    console.print(f"\n[bold green]✓ Project initialized successfully![/bold green]")
-    console.print(f"\nProject directory: {benchpro_dir}")
-    console.print(f"Profiles directory: {profiles_dir}")
-    console.print(f"\nNext steps:")
-    console.print(f"  • Add application profiles to {profiles_dir}")
-    console.print(f"  • Run 'bp app avail' to see available applications")
-    console.print(f"  • Run 'bp app build <app>' to build an application")
+    # Resolve BP_SITE (Installation Root)
+    bp_site = INSTALL_ROOT
+    
+    # Define exports
+    exports = {
+        "BP_HOME": str(bp_home),
+        "BP_SITE": str(bp_site)
+    }
+    
+    # Format output based on shell
+    for var, val in exports.items():
+        if shell == "fish":
+            print(f"set -x {var} \"{val}\"")
+        else:
+            print(f"export {var}=\"{val}\"")
 
 @cli.command()
 def version():
@@ -139,6 +174,7 @@ def version():
     console.print(f"BenchPRO-NG v{__version__}") # Keep console.print for simple output like version
 
 # Wrap the CLI entry point to handle exceptions
+# This ensures that when installed as an entry point, exceptions are handled
 cli = handle_exception(cli)
 
 if __name__ == "__main__":

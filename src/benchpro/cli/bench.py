@@ -8,7 +8,7 @@ from datetime import datetime
 from rich.console import Console
 from rich.table import Table
 
-from benchpro.core.domain import Task, ResourceRequest, TaskStatus, Build, MetricDefinition
+from benchpro.core.domain import Task, ResourceRequest, TaskStatus, Build, MetricDefinition, Benchmark
 from benchpro.core.executor import Executor
 from benchpro.core.planner import Planner
 from benchpro.core.resolver import Resolver
@@ -16,7 +16,9 @@ from benchpro.core.results import ResultStore
 from benchpro.core.config import Config
 from benchpro.core.services.capture import CaptureService
 from benchpro.core.parser import ResultParser
+from benchpro.core.parser import ResultParser
 from benchpro.core.scheduler import SlurmBackend, LocalBackend
+from benchpro.core.services.status_checker import StatusChecker
 
 console = Console()
 
@@ -40,8 +42,9 @@ from benchpro.cli.utils import get_valid_suites
 @click.option("--dry-run", is_flag=True, help="Simulate execution")
 @click.option("--system", help="System configuration to use")
 @click.option("--scheduler", help="Scheduler to use (e.g. local, slurm)")
+@click.option("--strategy", default="one_to_one", help="Job building strategy")
 @click.pass_context
-def run_bench(ctx, suite_file, command, nodes, ranks, threads, gpus, build_code, build_version, build_label, dry_run, system, scheduler):
+def run_bench(ctx, suite_file, command, nodes, ranks, threads, gpus, build_code, build_version, build_label, dry_run, system, scheduler, strategy):
     """Run a benchmark suite or an ad-hoc task"""
     try:
         # Load config
@@ -105,7 +108,13 @@ def run_bench(ctx, suite_file, command, nodes, ranks, threads, gpus, build_code,
                 working_directory=os.getcwd()
             )
             
-            tasks = [task]
+            # Wrap in Benchmark
+            bench = Benchmark(
+                benchmark_id=f"bench_{task_id}",
+                suite_id="ad_hoc",
+                tasks=[task]
+            )
+            benchmarks = [bench]
             suite_id = "ad_hoc"
             
         # Case 2: Benchmark Suite (if suite_file is provided)
@@ -171,19 +180,26 @@ def run_bench(ctx, suite_file, command, nodes, ranks, threads, gpus, build_code,
 
         # Execute
         if dry_run:
-            console.print(f"[yellow]Dry run enabled. System: {config.system.name}, Backend: {backend}[/yellow]")
-            console.print(f"[yellow]Benchmarks that would run ({len(benchmarks)}):[/yellow]")
-            for b in benchmarks:
-                console.print(f"  Benchmark: {b.benchmark_id}")
-                for t in b.tasks:
-                    console.print(f"    Task: {t.task_id}")
-                    console.print(f"    Command: {t.command}")
-                    console.print(f"    Resources: {t.resources}")
+            console.print(f"[yellow]Dry run enabled. System: {config.system.name}, Backend: {backend}, Strategy: {strategy}[/yellow]")
+            console.print(f"Building jobs with strategy: {strategy}...")
+            
+            from benchpro.core.services.job_builder import JobBuilder
+            builder = JobBuilder(strategy)
+            jobs = builder.build(benchmarks)
+            
+            console.print(f"[yellow]Jobs that would run ({len(jobs)}):[/yellow]")
+            for job in jobs:
+                console.print(f"\n[bold cyan]Job: {job.job_id}[/bold cyan]")
+                console.print(f"  Resources: Nodes={job.resources.nodes} Tasks/Node={job.resources.ranks_per_node} Time={job.resources.time}")
+                console.print(f"  Dependencies: {job.job_dependencies}")
+                console.print("  Tasks:")
+                for task in job.tasks:
+                    console.print(f"    - {task.task_id} (Cmd: {task.command[:50]}...)")
             return
 
-        console.print(f"Starting execution of {len(benchmarks)} benchmark(s) for suite '{suite_id}'...")
+        console.print(f"Starting execution of {len(benchmarks)} benchmark(s) for suite '{suite_id}' using strategy '{strategy}'...")
         executor = Executor(backend=backend, config=config)
-        asyncio.run(executor.run_benchmarks(benchmarks, suite_id=suite_id))
+        asyncio.run(executor.run_benchmarks(benchmarks, suite_id=suite_id, strategy=strategy))
         
         # Summary
         if 'tasks' not in locals():
@@ -192,10 +208,17 @@ def run_bench(ctx, suite_file, command, nodes, ranks, threads, gpus, build_code,
                 tasks.extend(b.tasks)
                 
         success_count = sum(1 for t in tasks if t.status == TaskStatus.COMPLETED)
+        submitted_count = sum(1 for t in tasks if t.status in [TaskStatus.RUNNING, TaskStatus.PENDING])
+        
         if success_count == len(tasks):
             console.print(f"[green]All {len(tasks)} tasks completed successfully[/green]")
+        elif success_count + submitted_count == len(tasks) and backend == "slurm":
+            console.print(f"[green]All {len(tasks)} tasks submitted successfully[/green]")
         else:
-            console.print(f"[yellow]{success_count}/{len(tasks)} tasks completed successfully[/yellow]")
+            if backend == "slurm":
+                console.print(f"[yellow]{success_count} completed, {submitted_count} submitted, {len(tasks) - success_count - submitted_count} failed[/yellow]")
+            else:
+                console.print(f"[yellow]{success_count}/{len(tasks)} tasks completed successfully[/yellow]")
             
     except Exception as e:
         console.print(f"[red]Error running benchmark: {e}[/red]")
@@ -244,9 +267,19 @@ def list_results(limit):
     table.add_column("Result", justify="right")
     table.add_column("Timestamp", style="blue")
     
+    table.add_column("Timestamp", style="blue")
+    
+    # Sync status
+    # We want to sync all active tasks really, but for listing we might just sync all active.
+    # StatusChecker.sync_tasks() without IDs syncs all active tasks.
+    checker = StatusChecker(store)
+    checker.sync_tasks()
+
     for run in runs:
-        # Fetch tasks to get details
-        tasks = store.get_run_tasks(run["run_id"])
+        # Fetch tasks (use cache if available)
+        tasks = run.get("_tasks")
+        if tasks is None:
+             tasks = store.get_run_tasks(run["run_id"])
         
         # Determine nodes
         nodes = "-"
@@ -322,46 +355,15 @@ def show_run(run_id):
     table.add_column("Job ID", style="green")
     table.add_column("Exit Code")
     
-    # Check for running tasks and update status
-    tasks_to_check = []
-    for task in tasks:
-        if task["status"] in ["running", "pending", "submitted"] and task["job_id"]:
-            tasks_to_check.append(task)
-            
-    if tasks_to_check:
-        try:
-            config = Config.load()
-            scheduler = None
-            if config.system.scheduler == "slurm":
-                scheduler = SlurmBackend()
-            else:
-                scheduler = LocalBackend()
-                
-            job_ids = [t["job_id"] for t in tasks_to_check]
-            statuses = scheduler.query_job_status(job_ids)
-            
-            for task_data in tasks_to_check:
-                jid = task_data["job_id"]
-                if jid in statuses:
-                    new_state = statuses[jid]
-                    mapped_status = TaskStatus.RUNNING # Default
-                    if new_state == "COMPLETED":
-                        mapped_status = TaskStatus.COMPLETED
-                    elif new_state in ["FAILED", "TIMEOUT", "NODE_FAIL", "BOOT_FAIL"]:
-                        mapped_status = TaskStatus.FAILED
-                    elif new_state.startswith("CANCELLED"):
-                        mapped_status = TaskStatus.CANCELLED
-                    elif new_state == "PENDING":
-                        mapped_status = TaskStatus.PENDING
-                    elif new_state == "RUNNING":
-                        mapped_status = TaskStatus.RUNNING
-                        
-                    if mapped_status.value != task_data["status"]:
-                        store.update_task_status(task_data["task_id"], mapped_status)
-                        task_data["status"] = mapped_status.value
-                        
-        except Exception as e:
-            console.print(f"[yellow]Failed to update job status: {e}[/yellow]")
+    # Sync status for this run
+    if tasks:
+        # Sync tasks for this run
+        task_ids = [t["task_id"] for t in tasks if t["status"] in ["running", "pending", "submitted"]]
+        if task_ids:
+             checker = StatusChecker(store)
+             checker.sync_tasks(task_ids)
+             # Reload tasks
+             tasks = store.get_run_tasks(run_id)
 
     # Collect metrics for all tasks
     all_metrics = set()
@@ -643,17 +645,40 @@ def capture_results(task_id):
             console.print(f"[red]Error processing task {task_data['task_id']}: {e}[/red]")
 
 @bench_cli.command(name="log")
-@click.argument("task_id")
+@click.argument("id_or_run")
 @click.option("--error", "-e", is_flag=True, help="Show error log instead of output log")
-def show_log(task_id, error):
-    """Show the output log for a task"""
+def show_log(id_or_run, error):
+    """Show the output log for a task or single-task run"""
     store = ResultStore()
-    task = store.get_task(task_id)
     
+    # Try finding as task first
+    task = store.get_task(id_or_run)
     if not task:
-        console.print(f"[red]Task {task_id} not found[/red]")
+        # Try finding as run
+        tasks = store.get_run_tasks(id_or_run)
+        if tasks:
+            if len(tasks) == 1:
+                task = tasks[0]
+            else:
+                console.print(f"[yellow]Run {id_or_run} has {len(tasks)} tasks. Please specify a task ID:[/yellow]")
+                for t in tasks:
+                    console.print(f"  - {t['task_id']}")
+                return
+        
+        # Check if it's an empty run
+        if not tasks:
+            # We need to check if run exists in DB, but ResultStore doesn't expose get_run(id) directly well?
+            # It has get_runs() which lists all.
+            # Or we can query DB directly?
+            # Actually get_runs() is expensive.
+            # Let's assume if it looks like a valid ID format but has no tasks...
+            pass
+            
+    if not task:
+        console.print(f"[red]Task or Run '{id_or_run}' not found (or has no tasks)[/red]")
         return
         
+    task_id = task["task_id"]
     file_path = task.get("error_file") if error else task.get("output_file")
     
     if not file_path:
@@ -671,16 +696,30 @@ def show_log(task_id, error):
         console.print(f.read())
 
 @bench_cli.command(name="script")
-@click.argument("task_id")
-def show_script(task_id):
-    """Show the job script for a task"""
+@click.argument("id_or_run")
+def show_script(id_or_run):
+    """Show the job script for a task or single-task run"""
     store = ResultStore()
-    task = store.get_task(task_id)
     
+    # Try finding as task first
+    task = store.get_task(id_or_run)
     if not task:
-        console.print(f"[red]Task {task_id} not found[/red]")
+        # Try finding as run
+        tasks = store.get_run_tasks(id_or_run)
+        if tasks:
+            if len(tasks) == 1:
+                task = tasks[0]
+            else:
+                console.print(f"[yellow]Run {id_or_run} has {len(tasks)} tasks. Please specify a task ID:[/yellow]")
+                for t in tasks:
+                    console.print(f"  - {t['task_id']}")
+                return
+                
+    if not task:
+        console.print(f"[red]Task or Run '{id_or_run}' not found (or has no tasks)[/red]")
         return
         
+    task_id = task["task_id"]
     file_path = task.get("script_file")
     
     if not file_path:
@@ -703,16 +742,30 @@ def show_script(task_id):
         console.print(syntax)
 
 @bench_cli.command(name="ls")
-@click.argument("task_id")
-def list_files(task_id):
+@click.argument("id_or_run")
+def list_files(id_or_run):
     """List files in the task's working directory"""
     store = ResultStore()
-    task = store.get_task(task_id)
     
+    # Try finding as task first
+    task = store.get_task(id_or_run)
     if not task:
-        console.print(f"[red]Task {task_id} not found[/red]")
+        # Try finding as run
+        tasks = store.get_run_tasks(id_or_run)
+        if tasks:
+            if len(tasks) == 1:
+                task = tasks[0]
+            else:
+                console.print(f"[yellow]Run {id_or_run} has {len(tasks)} tasks. Please specify a task ID:[/yellow]")
+                for t in tasks:
+                    console.print(f"  - {t['task_id']}")
+                return
+                
+    if not task:
+        console.print(f"[red]Task or Run '{id_or_run}' not found (or has no tasks)[/red]")
         return
-        
+
+    task_id = task["task_id"]
     work_dir = task.get("working_directory")
     
     if not work_dir:
@@ -755,3 +808,186 @@ def list_files(task_id):
             pass
             
     console.print(table)
+    console.print(table)
+
+@bench_cli.command(name="delete")
+@click.argument("id_or_run")
+@click.option("--force", is_flag=True, help="Force delete without confirmation")
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation")
+def delete_run(id_or_run, force, yes):
+    """Delete a benchmark run or task"""
+    store = ResultStore()
+    config = Config.load()
+    
+    # Try finding as task first
+    task = store.get_task(id_or_run)
+    run_id = None
+    if task:
+        run_id = task.get("run_id")
+    else:
+        # Check if it's a run ID (even if empty)
+        # We can verify by querying runs table directly or using get_runs filter
+        # but for now, let's assume if it looks like a Run ID we try to delete it
+        # Or better, check DB.
+        
+        # ResultStore doesn't have get_run methods exposed nicely yet.
+        # Let's peek into DB.
+        conn = sqlite3.connect(store.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT run_id FROM runs WHERE run_id=?", (id_or_run,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            run_id = row[0]
+            
+    if not run_id:
+        console.print(f"[red]Task or Run '{id_or_run}' not found[/red]")
+        return
+
+    if not (force or yes):
+        click.confirm(f"Are you sure you want to delete run '{run_id}' and all associated data?", abort=True)
+        
+    # 1. Get workspace dir to delete files
+    # We need to find where it lives.
+    # If we have tasks, use their WD.
+    # If valid run but no tasks (zombie), use expected path from new executor logic?
+    
+    tasks = store.get_run_tasks(run_id)
+    
+    # Cancel active jobs
+    jobs_to_wait = []
+    if tasks:
+        scheduler = SlurmBackend() # Or use config to decide backend? Typically Slurm for async.
+        
+        for t in tasks:
+            status = t.get("status")
+            job_id = t.get("job_id")
+            # Status can be string or int depending on version? DB stores string.
+            # Normalize status check
+            is_active = False
+            if isinstance(status, str):
+                is_active = status.lower() in ["running", "pending", "submitted"]
+            elif isinstance(status, int):
+                # Using TaskStatus enum logic? 
+                pass 
+            
+            if is_active and job_id:
+                try:
+                    console.print(f"Cancelling job {job_id} for task {t['task_id']}...")
+                    if scheduler.cancel_job(str(job_id)):
+                        console.print(f"[green]Cancelled job {job_id}[/green]")
+                        jobs_to_wait.append(str(job_id))
+                except Exception as e:
+                    console.print(f"[red]Error cancelling job {job_id}: {e}[/red]")
+                    
+    if jobs_to_wait:
+         with console.status(f"[bold blue]Waiting for {len(jobs_to_wait)} job(s) to terminate...[/bold blue]"):
+             if scheduler.wait_for_jobs(jobs_to_wait):
+                 console.print("[green]All jobs terminated[/green]")
+             else:
+                 console.print("[yellow]Timeout waiting for jobs to terminate. Proceeding with deletion anyway.[/yellow]")
+    work_dirs = set()
+    if tasks:
+        for t in tasks:
+            if t.get("working_directory"):
+                work_dirs.add(Path(t["working_directory"]))
+    else:
+        # Try to guess workspace for empty run based on new logic
+        # {workspace_dir}/workspaces/runs/{run_id}
+        ws_root = Path(config.system.workspace_dir or Path.cwd() / "benchpro")
+        runs_root = ws_root / "workspaces" / "runs"
+        possible_wd = runs_root / run_id
+        if possible_wd.exists():
+            work_dirs.add(possible_wd)
+            
+    # 2. Delete DB records
+    # Delete tasks first
+    conn = sqlite3.connect(store.db_path)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM tasks WHERE run_id=?", (run_id,))
+    deleted_tasks = cursor.rowcount
+    cursor.execute("DELETE FROM runs WHERE run_id=?", (run_id,))
+    conn.commit()
+    conn.close()
+    
+    console.print(f"[green]Deleted run record '{run_id}' and {deleted_tasks} tasks[/green]")
+    
+    # 3. Delete directories
+    import shutil
+    for wd in work_dirs:
+        try:
+            if wd.exists():
+                shutil.rmtree(wd)
+                console.print(f"[green]Deleted workspace: {wd}[/green]")
+        except Exception as e:
+            console.print(f"[red]Failed to delete workspace {wd}: {e}[/red]")
+@bench_cli.command(name="purge")
+@click.option("--force", is_flag=True, help="Force purge without confirmation")
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation")
+def purge_runs(force, yes):
+    """Purge all benchmark runs and data"""
+    if not (force or yes):
+        click.confirm("Are you sure you want to purge ALL benchmark runs and data? This cannot be undone.", abort=True)
+        
+    store = ResultStore()
+    config = Config.load()
+    
+    # 1. Get all tasks to find working directories before deleting records
+    # We need to be careful not to delete directories that are not in our workspace
+    # or are shared with builds (though builds should be separate).
+    
+    # Get all tasks
+    conn = sqlite3.connect(store.db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT working_directory FROM tasks")
+    rows = cursor.fetchall()
+    conn.close()
+    
+    working_dirs = set()
+    for row in rows:
+        if row[0]:
+            working_dirs.add(Path(row[0]))
+            
+    # 2. Clear database
+    count = store.clear_all_runs()
+    console.print(f"[green]Cleared {count} run records from database[/green]")
+    
+    # 3. Clear workspaces
+    # 3. Clear workspaces
+    root_dir = Path(config.system.workspace_dir or Path.cwd() / "benchpro")
+    workspaces_dir = root_dir / "workspaces"
+    runs_dir = workspaces_dir / "runs"
+    
+    deleted_dirs = 0
+    
+    # Strategy:
+    # We now isolate runs in workspaces/runs, so we can safely delete that entire directory
+    # or iterate its contents.
+    
+    if runs_dir.exists():
+        import shutil
+        for item in runs_dir.iterdir():
+            try:
+                if item.is_dir():
+                    shutil.rmtree(item)
+                    deleted_dirs += 1
+                else:
+                    item.unlink()
+            except Exception as e:
+                pass
+                
+        console.print(f"[green]Deleted {deleted_dirs} benchmark workspaces from {runs_dir}[/green]")
+    else:
+        # Also check for legacy workspaces in root?
+        # Maybe safer not to touch root workspaces automatically anymore to avoid deleting apps.
+        # If user wants to clean old runs, they can do it manually or we implement a targeted cleanup.
+        pass
+
+    if workspaces_dir.exists():
+         # Check if we should clean up workspaces_dir itself if empty?
+         # No.
+         pass
+         
+    if not runs_dir.exists() and deleted_dirs == 0:
+         console.print("[yellow]No runs directory found to purge[/yellow]")

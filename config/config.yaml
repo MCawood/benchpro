@@ -1,0 +1,29 @@
+
+
+systems:
+  vista:
+    name: vista
+    host_patterns: 
+      - ".*vista.*"
+    scheduler: slurm
+    workspace_dir: $SCRATCH/benchpro
+    default_walltime: 3600
+    max_walltime: 172800 # 48 hours
+    max_local_tasks: 1
+    partition: gg
+  darwin:
+    name: darwin
+    platform_patterns: 
+      - "darwin"
+    scheduler: local
+    workspace_dir: $HOME/benchpro
+    default_walltime: 3600
+    max_walltime: 86400
+    max_local_tasks: 4
+
+defaults:
+  compiler: null
+  mpi: null
+
+apps:
+  check_duplicates: true

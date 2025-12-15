@@ -55,9 +55,15 @@ class EnvConfigLoader:
         for key, data in config.items():
             if key == name or name in data.get("aliases", []):
                 # Return all aliases plus the key itself
-                aliases = data.get("aliases", [])
+                aliases = list(data.get("aliases", []))
                 if key not in aliases:
                     aliases.append(key)
+                
+                # Prioritize the requested name if it exists in the aliases
+                if name in aliases:
+                    aliases.remove(name)
+                    aliases.insert(0, name)
+                    
                 return aliases
                 
         # If not found, return name itself as fallback

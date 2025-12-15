@@ -36,6 +36,9 @@ class TemplateEngine:
         # This is a basic implementation; complex nested braces might need more care
         # but for ${var} and ${var.attr} it works well.
         
+        # Expand shell variables first (e.g. $HOME, $SCRATCH)
+        text = os.path.expandvars(text)
+
         # Regex to find ${...} but not \${...} (escaped)
         # We'll just do a simple replace for now as per requirements
         jinja_text = re.sub(r'\$\{([^}]+)\}', r'{{\1}}', text)

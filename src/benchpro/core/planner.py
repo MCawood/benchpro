@@ -82,6 +82,11 @@ class Planner:
                                 
                                 if build:
                                     activation_cmd = f"{build.activation_script} && "
+                                    # Check for active build job
+                                    if build.status in [TaskStatus.PENDING, TaskStatus.RUNNING] and build.job_id:
+                                        scheduler_deps = [str(build.job_id)]
+                                    else:
+                                        scheduler_deps = []
                                 else:
                                     # TODO: Handle missing build (fail or warn)
                                     # For now, just warn in command
@@ -111,6 +116,7 @@ class Planner:
                                 resources=res,
                                 command=command,
                                 metrics=metric_defs,
+                                scheduler_dependencies=scheduler_deps if 'scheduler_deps' in locals() else [],
                                 status=TaskStatus.PENDING
                             )
                             

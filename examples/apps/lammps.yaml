@@ -1,7 +1,7 @@
 name: lammps
 version: "2023.08.02"
 source: "https://github.com/lammps/lammps/archive/refs/tags/stable_2Aug2023_update2.tar.gz"
-build_template: "build_lammps.j2"
+build_template: "lammps.j2"
 build_label: "cmake_mpi"
 compiler: "gcc"
 mpi: "openmpi"

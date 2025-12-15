@@ -1,6 +1,28 @@
 import os
 from pathlib import Path
 from benchpro.core.resolver import Resolver
+from benchpro.core.results import ResultStore
+
+def get_installed_builds(ctx, param, incomplete):
+    """
+    Completion callback for installed application builds.
+    Returns a list of Build IDs matching the query.
+    """
+    try:
+        store = ResultStore()
+        # This might be slow if DB is large, but for CLI completion typical sizes it's fine.
+        builds = store.get_builds()
+        
+        matches = []
+        for b in builds:
+            bid = b.get("build_id", "")
+            if bid.startswith(incomplete):
+                matches.append(bid)
+                
+        return sorted(list(set(matches)))
+    except Exception:
+        # Fail silently for completion
+        return []
 
 def get_valid_apps(ctx, param, incomplete):
     """

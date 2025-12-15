@@ -1,38 +1,34 @@
 import json
 import os
-from datetime import datetime
+import gzip
+import base64
+import httpx
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
+from benchpro import __version__
 from benchpro.core.domain import Task, TaskStatus
 from benchpro.core.results import ResultStore
 from benchpro.core.scheduler import SlurmBackend, LocalBackend
 from benchpro.core.parser import ResultParser
+from benchpro.core.config import Config
 
 class CaptureService:
-    def __init__(self, result_store: ResultStore = None):
+    def __init__(self, result_store: ResultStore = None, config: Config = None):
         self.result_store = result_store or ResultStore()
         self.slurm = SlurmBackend()
         self.local = LocalBackend()
+        self.config = config or Config.load()
 
     def check_task_status(self, task: Task) -> TaskStatus:
         """Check and update task status."""
         if task.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
             return task.status
 
-        # If no job_id, we can't check status (unless it's local and we track PIDs, but currently we don't)
         if not task.job_id:
             return task.status
 
-        # Determine backend
-        # TODO: Store backend in Task? For now assume Slurm if job_id starts with "job_" (local) or not
-        # Actually LocalBackend returns "local_job" or similar.
-        # Slurm returns a number.
-        
-        # If job_id is "local_job" or similar, we assume it's done if we are here (sync execution)
-        # But if we support async local, we'd need PID.
-        # For now, let's assume Slurm if it looks like a number, otherwise skip.
-        
         if task.job_id.isdigit():
             # Slurm
             statuses = self.slurm.query_job_status([task.job_id])
@@ -42,13 +38,7 @@ class CaptureService:
                 if new_status != task.status:
                     print(f"Task {task.task_id} status changed: {task.status} -> {new_status}")
                     task.status = new_status
-                    self.result_store.save_task(task, task.suite_id) # suite_id might be wrong here if not passed, but save_task needs run_id?
-                    # Wait, save_task takes (task, run_id). Task object has suite_id.
-                    # We need run_id. Task table has run_id.
-                    # We need to fetch run_id for the task from DB if we don't have it.
-                    # But Task object doesn't have run_id field in domain.py (it does in DB).
-                    # Let's check domain.py.
-                    pass
+                    self.result_store.update_task_status(task.task_id, new_status)
         
         return task.status
 
@@ -61,9 +51,7 @@ class CaptureService:
         elif state in ["CANCELLED", "REVOKED"]:
             return TaskStatus.CANCELLED
         elif state in ["PENDING", "RUNNING", "SUSPENDED"]:
-            return TaskStatus.RUNNING # Map PENDING to RUNNING or keep PENDING?
-            # Domain has PENDING and RUNNING.
-            # If Slurm says PENDING, we should probably return PENDING.
+            return TaskStatus.RUNNING 
         if state == "PENDING":
             return TaskStatus.PENDING
         return TaskStatus.RUNNING
@@ -84,26 +72,15 @@ class CaptureService:
             return
 
         # Parse metrics
-        # We need to find the output file.
-        # Usually stdout/stderr or a specific log file.
-        # For now, let's look for standard slurm output files or just parse all .log files?
-        # Or maybe the Task should define expected output files?
-        # The PRD says "Clients are encouraged to submit logical individual artifacts (stdout, modules...)"
-        
-        # Let's try to find slurm-{job_id}.out or similar
         output_files = list(work_dir.glob("slurm-*.out"))
         if not output_files:
-            # Try finding any .log or .out file
             output_files = list(work_dir.glob("*.out")) + list(work_dir.glob("*.log"))
         
         metrics_data = {}
         if output_files:
-            # Use the most recent file?
             target_file = sorted(output_files, key=lambda p: p.stat().st_mtime)[-1]
             print(f"Parsing results from {target_file}")
             metrics_data = ResultParser.parse(target_file, task.metrics)
-            
-            # Update task metrics in DB
             self.result_store.save_metrics(task.task_id, metrics_data)
         else:
             print("No output files found to parse")
@@ -117,62 +94,114 @@ class CaptureService:
             json.dump(payload, f, indent=2)
         print(f"Generated submission payload: {payload_file}")
 
+        # Submit if configured
+        if self.config.system.results_server_url and self.config.system.api_token:
+            try:
+                self.submit_result(payload)
+            except Exception as e:
+                print(f"Failed to submit result: {e}")
+        else:
+            print("Results server not configured, skipping submission")
+
     def _generate_payload(self, task: Task, metrics: Dict[str, Any], work_dir: Path) -> Dict[str, Any]:
         """Generate the JSON payload for the backend."""
         
         # Convert metrics to list of FoMs
         foms = []
         for name, data in metrics.items():
-            foms.append({
+            fom = {
                 "name": name,
-                "value_numeric": data["value"],
-                "unit": data["unit"],
-                "value_type": "numeric",
-                "is_primary": False # Logic to determine primary?
-            })
+                "unit": data.get("unit"),
+                "is_primary": False 
+            }
+            # Check if value is numeric
+            try:
+                val = float(data["value"])
+                fom["value_numeric"] = val
+            except (ValueError, TypeError):
+                fom["value_text"] = str(data["value"])
+            
+            foms.append(fom)
             
         # Provenance artifacts
         artifacts = []
-        # Add stdout/stderr/logs
         for f in work_dir.glob("*"):
-            if f.is_file() and f.stat().st_size < 10 * 1024 * 1024: # 10MB limit
+            if f.is_file() and f.stat().st_size < 5 * 1024 * 1024: # 5MB limit per artifact
                 if f.suffix in [".out", ".err", ".log", ".txt", ".json", ".yaml", ".sh"]:
-                    artifacts.append({
-                        "name": f.name,
-                        "path": str(f) # We don't read content here to avoid memory issues, backend upload will handle it
-                        # But PRD says "data" field in DB. Client submission body has "provenance" which includes artifacts.
-                        # If we are generating a file to be sent later, we might not include full data yet.
-                        # But for now let's just list them.
-                    })
+                    artifacts.append(self._encode_artifact(f))
+
+        # Metadata
+        metadata = [
+            {"key": "working_directory", "value_text": str(work_dir)},
+            {"key": "job_id", "value_text": str(task.job_id)}
+        ]
+        
+        # Add environment variables if captured (not currently stored in Task, but maybe in env file?)
+        # For now, just basic metadata
 
         return {
             "client": {
-                "benchpro_version": "2.0.0", # TODO: Get actual version
-                "task_uuid": task.task_uuid
+                "benchpro_version": __version__,
+                "task_uuid": task.task_uuid,
+                "submit_timestamp": datetime.now(timezone.utc).isoformat()
             },
             "task": {
-                "label": task.task_id, # or suite_id?
-                "system": "unknown", # TODO: Get system from config/task
-                "architecture": "unknown",
-                "node_count": task.resources.nodes,
+                "label": task.task_id, 
+                "system": self.config.system.name,
                 "status": task.status.value,
-                "submit_time": None, # TODO
-                "start_time": None,
-                "end_time": None,
+                "submit_time": datetime.now(timezone.utc).isoformat(), # We don't track submit time yet
+                "node_count": task.resources.nodes,
                 "runtime_seconds": task.duration_ms / 1000 if task.duration_ms else None
-            },
-            "application": {
-                # TODO: Get application info if linked
-            },
-            "benchmark_definition": {
-                # TODO: Get bench def info
             },
             "figures_of_merit": foms,
             "provenance": {
-                "metadata": {
-                    "working_directory": str(work_dir),
-                    "job_id": task.job_id
-                },
+                "metadata": metadata,
                 "artifacts": artifacts
             }
         }
+
+    def _encode_artifact(self, file_path: Path) -> Dict[str, Any]:
+        """Encode a file as a provenance artifact."""
+        content = file_path.read_bytes()
+        
+        # Always gzip for now if > 1KB? Spec says optional.
+        # Let's gzip if > 1KB
+        if len(content) > 1024:
+            compressed = gzip.compress(content)
+            return {
+                "name": file_path.name,
+                "content_type": "text/plain", # TODO: Detect type
+                "encoding": "gzip",
+                "data": base64.b64encode(compressed).decode('ascii')
+            }
+        else:
+             return {
+                "name": file_path.name,
+                "content_type": "text/plain",
+                "encoding": "raw",
+                "data": base64.b64encode(content).decode('ascii') # Spec says base64 encoded content
+            }
+
+    def submit_result(self, payload: Dict[str, Any]):
+        """Submit result to the server."""
+        url = f"{self.config.system.results_server_url}/api/v1/task_runs"
+        token = self.config.system.api_token
+        
+        print(f"Submitting result to {url}...")
+        
+        response = httpx.post(
+            url,
+            json=payload,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=30.0
+        )
+        
+        if response.status_code == 201:
+            data = response.json()
+            if data.get('duplicate'):
+                print(f"Task already submitted (ID: {data.get('task_run_id')})")
+            else:
+                print(f"Task submitted successfully (ID: {data.get('task_run_id')})")
+        else:
+            print(f"Submission failed: {response.status_code} - {response.text}")
+            response.raise_for_status()

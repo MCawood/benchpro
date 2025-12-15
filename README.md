@@ -27,7 +27,7 @@ BenchPRO is typically installed as a system module. To use it:
 
 3. **Run a Task**
    ```bash
-   bp task run "echo Hello World" --nodes 1
+   bp bench run --command "echo Hello World" --nodes 1
    ```
 
 ### For Site Maintainers

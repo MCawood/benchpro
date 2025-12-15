@@ -1,4 +1,5 @@
 import abc
+import time
 import subprocess
 from typing import Dict, List, Optional
 
@@ -20,6 +21,11 @@ class SchedulerBackend(abc.ABC):
         """Query the status of multiple jobs. Returns a dict mapping job_id to status."""
         pass
 
+    @abc.abstractmethod
+    def wait_for_jobs(self, job_ids: List[str], timeout: int = 60, poll_interval: int = 2) -> bool:
+        """Wait for jobs to reach a terminal state. Returns True if all terminated, False on timeout."""
+        pass
+
 class SlurmBackend(SchedulerBackend):
     def submit_job(self, job: Job) -> str:
         """Submit a job via sbatch."""
@@ -39,7 +45,10 @@ class SlurmBackend(SchedulerBackend):
             stdout, stderr = process.communicate(input=job.script_content)
             
             if process.returncode != 0:
-                raise RuntimeError(f"sbatch failed: {stderr}")
+                error_msg = f"stderr: {stderr.strip()}" if stderr else ""
+                if stdout:
+                    error_msg += f"; stdout: {stdout.strip()}"
+                raise RuntimeError(f"sbatch failed: {error_msg}")
                 
             # Parse job ID (Submitted batch job 123456)
             job_id = stdout.strip().split()[-1]
@@ -95,8 +104,42 @@ class SlurmBackend(SchedulerBackend):
             return status_map
             
         except (subprocess.CalledProcessError, FileNotFoundError):
+            
             # Fallback or error
             return {}
+
+    def wait_for_jobs(self, job_ids: List[str], timeout: int = 60, poll_interval: int = 2) -> bool:
+        """Wait for Slurm jobs to terminate."""
+        if not job_ids:
+            return True
+            
+        start_time = time.time()
+        active_states = ["RUNNING", "PENDING", "SUSPENDED", "COMPLETING", "CONFIGURING", "RESIZING"]
+        
+        while True:
+            statuses = self.query_job_status(job_ids)
+            
+            # If a job is not in statuses, it might have been purged (completed long ago) or invalid.
+            # Usually safe to assume if it's gone from sacct, it's done? 
+            # Or sacct keeps history. If not in sacct, checking squeue might be better?
+            # query_job_status uses sacct.
+            
+            # Let's check which are still active
+            active = []
+            for jid in job_ids:
+                # If jid not in statuses, assume it's done (or invalid)
+                if jid in statuses:
+                    state = statuses[jid]
+                    if state in active_states:
+                        active.append(jid)
+                
+            if not active:
+                return True
+                
+            if time.time() - start_time > timeout:
+                return False
+                
+            time.sleep(poll_interval)
 
 class LocalBackend(SchedulerBackend):
     def submit_job(self, job: Job) -> str:
@@ -111,3 +154,7 @@ class LocalBackend(SchedulerBackend):
         # Local jobs are instantaneous in this MVP, so we don't really query them async
         # But if we did, we'd check process IDs
         return {}
+
+    def wait_for_jobs(self, job_ids: List[str], timeout: int = 60, poll_interval: int = 2) -> bool:
+        # Local jobs complete immediately/sycnronously in this implementation
+        return True

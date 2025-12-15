@@ -1,16 +1,28 @@
 import json
+import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from benchpro.core.domain import Task, TaskStatus
+from benchpro.core.config import Config
 
 class ResultStore:
     def __init__(self, db_path: Path = None):
         if db_path is None:
-            # Default to ~/.benchpro/results.db
-            db_dir = Path.home() / ".benchpro"
+            # Load full config to respect file settings
+            try:
+                config = Config.load()
+                if config.benchpro.config_dir:
+                     # expandvars handled by template engine usually, but safer to robustly expand
+                     db_dir = Path(os.path.expandvars(config.benchpro.config_dir)).expanduser()
+                else:
+                     db_dir = Config.get_user_config_dir()
+            except Exception as e:
+                # Fallback if config load fails
+                db_dir = Config.get_user_config_dir()
+                
             db_dir.mkdir(parents=True, exist_ok=True)
             db_path = db_dir / "results.db"
             
@@ -93,9 +105,28 @@ class ResultStore:
                 build_label TEXT,
                 build_timestamp TEXT,
                 activation_script TEXT,
+                status TEXT,
+                job_id TEXT,
+                modules JSON,
                 metadata JSON
             )
         """)
+        
+        # Migrate builds table if needed
+        try:
+            cursor.execute("ALTER TABLE builds ADD COLUMN status TEXT")
+        except sqlite3.OperationalError:
+            pass
+            
+        try:
+            cursor.execute("ALTER TABLE builds ADD COLUMN job_id TEXT")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE builds ADD COLUMN modules JSON")
+        except sqlite3.OperationalError:
+            pass
         
         # Metrics table
         cursor.execute("""
@@ -225,11 +256,13 @@ class ResultStore:
         }
         metadata_json = json.dumps(metadata)
         
+        modules_json = json.dumps(build.modules)
+        
         cursor.execute(
             """
             INSERT OR REPLACE INTO builds
-            (build_id, code, version, system, build_label, build_timestamp, activation_script, metadata)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (build_id, code, version, system, build_label, build_timestamp, activation_script, status, job_id, modules, metadata)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 build.build_id,
@@ -239,6 +272,9 @@ class ResultStore:
                 build.build_label,
                 build.build_timestamp,
                 build.activation_script,
+                build.status.value,
+                build.job_id,
+                modules_json,
                 metadata_json
             )
         )
@@ -259,6 +295,8 @@ class ResultStore:
         for row in rows:
             b = dict(row)
             metadata = json.loads(b.pop("metadata"))
+            if b.get("modules"):
+                b["modules"] = json.loads(b["modules"])
             b.update(metadata)
             builds.append(b)
             
@@ -378,6 +416,34 @@ class ResultStore:
             WHERE run_id NOT IN (SELECT DISTINCT run_id FROM tasks)
         """)
         
+        deleted_count = cursor.rowcount
+        
+        conn.commit()
+        conn.close()
+        return deleted_count
+
+    def clear_all_builds(self) -> int:
+        """Delete all builds. Returns number of builds deleted."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("DELETE FROM builds")
+        deleted_count = cursor.rowcount
+        
+        conn.commit()
+        conn.close()
+        return deleted_count
+
+    def clear_all_runs(self) -> int:
+        """Delete all runs, tasks, and metrics. Returns number of runs deleted."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Metrics are deleted via cascade if foreign keys enabled, but sqlite default often off
+        # Let's delete explicitly to be safe
+        cursor.execute("DELETE FROM metrics")
+        cursor.execute("DELETE FROM tasks")
+        cursor.execute("DELETE FROM runs")
         deleted_count = cursor.rowcount
         
         conn.commit()

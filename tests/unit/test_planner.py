@@ -7,12 +7,13 @@ def test_expand_matrix_basic():
     }
     base_res = {"threads": 1, "gpus": 0}
     
-    tasks = Planner.expand_matrix("test_suite", matrix, base_res)
+    benchmarks = Planner.expand_matrix("test_suite", matrix, base_res)
     
-    assert len(tasks) == 2
-    assert tasks[0].resources.nodes == 1
-    assert tasks[1].resources.nodes == 2
-    assert tasks[0].resources.ranks_per_node == 4
+    assert len(benchmarks) == 2
+    # Planner returns list of Benchmarks, each has a list of Tasks
+    assert benchmarks[0].tasks[0].resources.nodes == 1
+    assert benchmarks[1].tasks[0].resources.nodes == 2
+    assert benchmarks[0].tasks[0].resources.ranks_per_node == 4
 
 def test_expand_matrix_full_product():
     matrix = {
@@ -23,9 +24,9 @@ def test_expand_matrix_full_product():
     }
     base_res = {}
     
-    tasks = Planner.expand_matrix("test_suite", matrix, base_res)
-    # 2 nodes * 2 ranks * 1 thread * 1 gpu = 4 tasks
-    assert len(tasks) == 4
+    benchmarks = Planner.expand_matrix("test_suite", matrix, base_res)
+    # 2 nodes * 2 ranks * 1 thread * 1 gpu = 4 tasks -> 4 benchmarks
+    assert len(benchmarks) == 4
 
 def test_expand_matrix_params():
     matrix = {
@@ -37,9 +38,9 @@ def test_expand_matrix_params():
     }
     base_res = {"ranks_per_node": 1, "threads": 1, "gpus": 0}
     
-    tasks = Planner.expand_matrix("test_suite", matrix, base_res)
-    # 1 node * 2 p1 * 1 p2 = 2 tasks
-    assert len(tasks) == 2
-    assert tasks[0].parameters["p1"] == "a"
-    assert tasks[0].parameters["p2"] == 10
-    assert tasks[1].parameters["p1"] == "b"
+    benchmarks = Planner.expand_matrix("test_suite", matrix, base_res)
+    # 1 node * 2 p1 * 1 p2 = 2 tasks -> 2 benchmarks
+    assert len(benchmarks) == 2
+    assert benchmarks[0].tasks[0].parameters["p1"] == "a"
+    assert benchmarks[0].tasks[0].parameters["p2"] == 10
+    assert benchmarks[1].tasks[0].parameters["p1"] == "b"

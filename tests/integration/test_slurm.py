@@ -5,7 +5,12 @@ from benchpro.core.scheduler import SlurmBackend
 def test_slurm_submit_mock(mock_scheduler):
     # We can't easily test the real SlurmBackend without sbatch
     # But we can test that our MockSchedulerBackend works as expected
-    job = Job(job_id="test_job", script_content="#!/bin/bash\necho hello")
+    from benchpro.core.domain import ResourceRequest
+    job = Job(
+        job_id="test_job", 
+        script_content="#!/bin/bash\necho hello",
+        resources=ResourceRequest(nodes=1) # Required field
+    )
     job_id = mock_scheduler.submit_job(job)
     assert job_id.startswith("mock_job_")
     assert len(mock_scheduler.jobs) == 1

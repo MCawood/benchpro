@@ -2,6 +2,9 @@ import subprocess
 import shutil
 from pathlib import Path
 from typing import List, Optional
+from benchpro.core.logger import get_logger
+
+logger = get_logger()
 
 class ModuleHandler:
     def __init__(self):
@@ -21,7 +24,8 @@ class ModuleHandler:
                 timeout=2
             )
             return result.returncode == 0
-        except (subprocess.SubprocessError, FileNotFoundError, subprocess.TimeoutExpired):
+        except (subprocess.SubprocessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
+            logger.debug(f"Module system check failed: {e}")
             return False
 
     def validate_modules(self, modules: List[str]) -> bool:
@@ -41,8 +45,17 @@ class ModuleHandler:
                 text=True
             )
             return "SUCCESS" in result.stdout
-        except subprocess.SubprocessError:
+        except subprocess.SubprocessError as e:
+            logger.debug(f"Failed to validate modules {modules}: {e}")
             return False
+
+    def get_missing_modules(self, modules: List[str]) -> List[str]:
+        """Return list of modules that fail to load."""
+        missing = []
+        for mod in modules:
+            if not self.validate_modules([mod]):
+                missing.append(mod)
+        return missing
 
     def find_available_module(self, candidates: List[str]) -> Optional[str]:
         """
@@ -64,7 +77,8 @@ class ModuleHandler:
                 output = result.stderr.strip() + "\n" + result.stdout.strip()
                 if candidate in output or (output and not "No module" in output):
                     return candidate
-            except subprocess.SubprocessError:
+            except subprocess.SubprocessError as e:
+                logger.debug(f"Failed to check module availability for {candidate}: {e}")
                 continue
                 
         return None
@@ -114,7 +128,8 @@ class ModuleHandler:
                         resolved.append(mod)
                 else:
                     resolved.append(mod)
-            except subprocess.SubprocessError:
+            except subprocess.SubprocessError as e:
+                logger.warning(f"Failed to resolve default for {mod}: {e}")
                 resolved.append(mod)
                 
         return resolved
