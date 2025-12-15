@@ -1,6 +1,7 @@
 import os
 import pytest
 import shutil
+from typing import List, Dict
 from pathlib import Path
 from click.testing import CliRunner
 from benchpro.core.config import Config
@@ -23,8 +24,11 @@ class MockSchedulerBackend(SchedulerBackend):
         self.cancelled_jobs.append(job_id)
         return True
 
-    def query_job_status(self, job_id: str) -> str:
-        return "completed"
+    def query_job_status(self, job_ids: List[str]) -> Dict[str, str]:
+        return {jid: "completed" for jid in job_ids}
+
+    def wait_for_jobs(self, job_ids: List[str], timeout: int = 60, poll_interval: int = 2) -> bool:
+        return True
 
 # --- Fixtures ---
 

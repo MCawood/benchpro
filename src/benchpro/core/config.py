@@ -60,6 +60,9 @@ class JobConfig(BaseModel):
 class DefaultsConfig(BaseModel):
     compiler: Optional[str] = None
     mpi: Optional[str] = None
+    
+    class Config:
+        extra = "allow"
 
 class Config(BaseModel):
     benchpro: BenchProConfig = Field(default_factory=BenchProConfig)

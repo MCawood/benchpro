@@ -17,7 +17,7 @@ def test_config_interpolation(workspace):
     config = Config.load([config_path])
     
     expected_output = f"{workspace}/results"
-    assert config.defaults["output_dir"] == expected_output
+    assert config.defaults.output_dir == expected_output
 
 def test_config_layered_loading(workspace):
     """Test that user config overrides system config."""

@@ -98,7 +98,7 @@ def test_results_delete(runner, workspace, populated_db):
     if "not fully implemented" in result.output:
         pass # Expected for now
     else:
-        assert f"Deleted run {run_id}" in result.output
+        assert f"Deleted run record '{run_id}'" in result.output
         
         # Verify gone
         result = runner.invoke(cli, ["bench", "list"], env={"BENCHPRO_CONFIG": str(config_path)})

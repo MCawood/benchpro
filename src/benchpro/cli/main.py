@@ -175,7 +175,7 @@ def version():
 
 # Wrap the CLI entry point to handle exceptions
 # This ensures that when installed as an entry point, exceptions are handled
-cli = handle_exception(cli)
+main = handle_exception(cli)
 
 if __name__ == "__main__":
-    cli()
+    main()

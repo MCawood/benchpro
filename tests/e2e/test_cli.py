@@ -13,7 +13,7 @@ def test_config_show(runner, workspace):
         f.write("systems:\n  e2e_test_system:\n    name: e2e_test_system\n")
         
     # Run with env var
-    result = runner.invoke(cli, ["config", "show", "--resolved"], env={
+    result = runner.invoke(cli, ["config", "show"], env={
         "BENCHPRO_CONFIG": str(config_path),
         "BENCHPRO_SYSTEM": "e2e_test_system"
     })

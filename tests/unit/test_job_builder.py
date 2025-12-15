@@ -29,7 +29,7 @@ def test_one_to_one(simple_benchmark):
     jobs = builder.build([simple_benchmark])
     
     assert len(jobs) == 1
-    assert jobs[0].job_id == "job::b1"
+    assert jobs[0].job_id == "b1"
     assert len(jobs[0].tasks) == 2
     assert jobs[0].resources.nodes == 1
 

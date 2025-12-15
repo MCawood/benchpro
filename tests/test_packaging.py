@@ -80,8 +80,11 @@ def test_auto_init(temp_env):
     
     with open(config_path) as f:
         data = yaml.safe_load(f)
-        assert "system" in data
-        assert "defaults" in data
+        assert "benchpro" in data # Only this is guaranteed in file
+        
+    # Verify loaded object has defaults
+    assert config.system is not None
+    assert config.defaults is not None
 
 def test_profile_resolution(temp_env):
     """Test profile resolution hierarchy"""

@@ -188,9 +188,10 @@ def build_app(ctx, config_file, dry_run, scheduler):
             env_vars.update(compiler_env)
             
         # MPI env
-        mpi_env = env_loader.resolve_env(app_config.mpi.split("/")[0], mpi_version, "mpi")
-        if mpi_env:
-            env_vars.update(mpi_env)
+        if app_config.mpi:
+            mpi_env = env_loader.resolve_env(app_config.mpi.split("/")[0], mpi_version, "mpi")
+            if mpi_env:
+                env_vars.update(mpi_env)
             
         context["env"] = env_vars
         

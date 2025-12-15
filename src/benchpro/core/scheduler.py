@@ -34,9 +34,16 @@ class SlurmBackend(SchedulerBackend):
         
         # In a real implementation, we'd handle file writing properly
         # Here we just pipe to sbatch
+        
+        cmd = ["sbatch"]
+        # Add dependencies if present
+        if job.scheduler_dependencies:
+            deps = ":".join(job.scheduler_dependencies)
+            cmd.append(f"--dependency=afterok:{deps}")
+            
         try:
             process = subprocess.Popen(
-                ["sbatch"],
+                cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
